@@ -20,9 +20,18 @@ namespace SqliteOverlay
   {
   public:
     SqliteDatabase(string& dbFileName, bool createNew=false);
+    bool isAlive() const;
 
-  private:
+  protected:
+    /**
+     * @brief dbPtr the internal database handle
+     */
     unique_ptr<sqlite3, SqliteDeleter> dbPtr;
+
+    /**
+     * A counter for executed queries; for debugging purposes only
+     */
+    long queryCounter;
   };
 }
 

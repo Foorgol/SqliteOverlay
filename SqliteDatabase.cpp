@@ -32,11 +32,26 @@ namespace SqliteOverlay
     }
     if (err != SQLITE_OK)
     {
+      // delete the sqlite instance we've just created
+      SqliteDeleter sd;
+      sd(tmpPtr);
+
       throw invalid_argument(sqlite3_errmsg(tmpPtr));
     }
 
-
+    // we're all set
+    dbPtr = unique_ptr<sqlite3, SqliteDeleter>(tmpPtr);
+    queryCounter = 0;
   }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::isAlive() const
+  {
+    return (dbPtr != nullptr);
+  }
+
+  //----------------------------------------------------------------------------
 
   void SqliteDeleter::operator()(sqlite3* p)
   {
