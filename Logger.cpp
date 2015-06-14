@@ -30,22 +30,22 @@ namespace SqliteOverlay
       sender = "<<invalid>>";
     }
     
-    void Logger::warn (const string& msg)
+    void Logger::warn (const string& msg) const
     {
         log(LVL_WARN, msg);
     }
     
-    void Logger::critical (const string& msg)
+    void Logger::critical (const string& msg) const
     {
         log(LVL_CRITICAL, msg);
     }
     
-    void Logger::info (const string& msg)
+    void Logger::info (const string& msg) const
     {
         log(LVL_INFO, msg);
     }
     
-    void Logger::log(const int logLvl, const string& msg)
+    void Logger::log(const int logLvl, const string& msg) const
     {
         if (logLvl < threshold) return;
         
@@ -59,7 +59,7 @@ namespace SqliteOverlay
         clog << txt << endl;
     }
     
-    void Logger::log(const string& msg)
+    void Logger::log(const string& msg) const
     {
         log(defaultLevel, msg);
     }

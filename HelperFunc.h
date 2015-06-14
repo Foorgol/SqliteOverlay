@@ -10,24 +10,20 @@
  * don't use it at all.
  */
 
-#ifndef SAMPLEDB_H
-#define	SAMPLEDB_H
+#ifndef HELPERFUNC_H
+#define	HELPERFUNC_H
 
-#include "SqliteDatabase.h"
+#include <string>
+#include <vector>
 
-using namespace SqliteOverlay;
+using namespace std;
 
-class SampleDB : public SqliteDatabase
+namespace SqliteOverlay
 {
-public:
-  virtual void populateTables();
-  virtual void populateViews();
-  
-  SampleDB() : SqliteDatabase() {};
-  SampleDB(string sqliteFilename, bool createNew) : SqliteDatabase(sqliteFilename, createNew) {};
-  
-private:
-};
+  typedef vector<string> StringList;
 
-#endif	/* SAMPLEDB_H */
+  string commaSepStringFromStringList(const StringList& lst);
+  //QVariantList prepWhereClause(const QVariantList& params);
+}
+#endif	/* HELPERFUNC_H */
 

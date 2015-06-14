@@ -11,13 +11,15 @@
  */
 
 #include "SampleDB.h"
-#include <QString>
-#include <QList>
+#include "HelperFunc.h"
 
 void SampleDB::populateTables()
 {
-  QList<QString> col;
-  col << "i INTEGER" << "f DOUBLE" << "s VARCHAR(40)" << "d DATETIME";
+  StringList col;
+  col.push_back("i INTEGER");
+  col.push_back("f DOUBLE");
+  col.push_back("s VARCHAR(40)");
+  col.push_back("d DATETIME");
   tableCreationHelper("t1", col);
   tableCreationHelper("t2", col);
 }

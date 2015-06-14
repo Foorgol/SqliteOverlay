@@ -10,237 +10,108 @@
  * don't use it at all.
  */
 
+#include <gtest/gtest.h>
+
 #include "DatabaseTestScenario.h"
-#include "DbTab.h"
+//#include "DbTab.h"
 
-#include <QtSql/QSqlQuery>
-#include <QFile>
-#include <QtSql/QSqlError>
+namespace bfs = boost::filesystem;
 
-QSqlDatabase DatabaseTestScenario::getDbConn(dbOverlay::GenericDatabase::DB_ENGINE t)
+constexpr char DatabaseTestScenario::SQLITE_DB[];
+
+upSqlite3Db DatabaseTestScenario::getRawDbHandle() const
 {
-  if (QSqlDatabase::contains(DB_CONNECTION_NAME))
-  {
-    QSqlDatabase db = QSqlDatabase::database(DB_CONNECTION_NAME, true);
+  sqlite3* tmpPtr = nullptr;
+  int err = sqlite3_open(getSqliteFileName().c_str(), &tmpPtr);
 
-    // despite providing the database name using setDatabaseName,
-    // you must issue a USE SQL-command before actually accessing the database
-    if (t == dbOverlay::GenericDatabase::MYSQL)
-    {
-      QSqlQuery qry(db);
-      execQueryAndDumpError(qry, "USE " + MYSQL_DB);
-    }
-    
-    return db;
+  // cannot use gTest's assert-function here, because they only
+  // work if the function returns void
+  assert(err == SQLITE_OK);
+  assert(tmpPtr != nullptr);
+  assert(sqliteFileExists());
 
-  }
-
-  QSqlDatabase db;
-  
-  if (t == dbOverlay::GenericDatabase::SQLITE)
-  {
-    db = QSqlDatabase::addDatabase("QSQLITE", DB_CONNECTION_NAME);
-
-    db.setDatabaseName(getSqliteFileName());
-    
-  } else {
-    
-    db = QSqlDatabase::addDatabase("QMYSQL", DB_CONNECTION_NAME);
-    db.setHostName(MYSQL_HOST);
-    db.setDatabaseName(MYSQL_DB);
-    db.setPort(MYSQL_PORT);
-    db.setUserName(DB_USER);
-    db.setPassword(DB_PASSWD);
-  }
-  
-  if (!db.open())
-  {
-    QSqlError err = db.lastError();
-    log.warn("db.open() for " + db.hostName() + " using driver " + db.driverName() + " failed with: " + err.text());
-    CPPUNIT_ASSERT(false);
-  } else {
-    log.info("db.open() for " + db.hostName() + " using driver " + db.driverName() + " succeeded!");
-  }
-  
-  // despite providing the database name using setDatabaseName,
-  // you must issue a USE SQL-command before actually accessing the database
-  if (t == dbOverlay::GenericDatabase::MYSQL)
-  {
-    QSqlQuery qry(db);
-    execQueryAndDumpError(qry, "USE " + MYSQL_DB);
-  }
-  
-  return db;
-}
-
-//----------------------------------------------------------------------------
-    
-QSqlDatabase DatabaseTestScenario::getDbConn()
-{
-  if (QSqlDatabase::contains(DB_CONNECTION_NAME))
-  {
-    QSqlDatabase db = QSqlDatabase::database(DB_CONNECTION_NAME, true);
-
-    // despite providing the database name using setDatabaseName,
-    // you must issue a USE SQL-command before actually accessing the database
-    if (db.driverName() == "QMYSQL")
-    {
-      QSqlQuery qry(db);
-      execQueryAndDumpError(qry, "USE " + MYSQL_DB);
-    }
-    
-    return db;
-
-  }
-  
-  return getDbConn(dbOverlay::GenericDatabase::SQLITE);
-
+  return upSqlite3Db(tmpPtr);
 }
 
 //----------------------------------------------------------------------------
 
-void DatabaseTestScenario::cleanupMysql()
+void DatabaseTestScenario::TearDown()
 {
-  QSqlDatabase db = getDbConn(dbOverlay::GenericDatabase::MYSQL);
+  BasicTestFixture::TearDown();
+  //DbTab::clearTabCache();
   
-  db.exec("DROP DATABASE " + MYSQL_DB);
-  db.exec("CREATE DATABASE " + MYSQL_DB);
+  //qDebug() << "----------- DatabaseTestScenario tearDown() finished! -----------";
 }
 
 //----------------------------------------------------------------------------
 
-void DatabaseTestScenario::removeDbConn()
-{
-  if (QSqlDatabase::contains(DB_CONNECTION_NAME))
-  {
-    QSqlDatabase::removeDatabase(DB_CONNECTION_NAME);
-    CPPUNIT_ASSERT(!QSqlDatabase::contains(DB_CONNECTION_NAME));
-    qDebug() << "Removed database " + DB_CONNECTION_NAME + " from connection pool";
-  } else {
-    qDebug() << "Weird: could not remove database " + DB_CONNECTION_NAME + " from connection pool, because it's not existing";
-  }
-}
-
-//----------------------------------------------------------------------------
-
-void DatabaseTestScenario::tearDown()
-{
-  BasicTestClass::tearDown();
-  removeDbConn();
-  DbTab::clearTabCache();
-  
-  qDebug() << "----------- DatabaseTestScenario tearDown() finished! -----------";
-}
-
-//----------------------------------------------------------------------------
-
-QString DatabaseTestScenario::getSqliteFileName()
+string DatabaseTestScenario::getSqliteFileName() const
 {
   return genTestFilePath(SQLITE_DB);
 }
 
 //----------------------------------------------------------------------------
     
-bool DatabaseTestScenario::sqliteFileExists()
+bool DatabaseTestScenario::sqliteFileExists() const
 {
-  QFile f(getSqliteFileName());
-  return f.exists();
+  bfs::path dbPathObj(getSqliteFileName());
+
+  return bfs::exists(dbPathObj);
 }
 
 //----------------------------------------------------------------------------
 
-void DatabaseTestScenario::prepScenario01(dbOverlay::GenericDatabase::DB_ENGINE t)
+void DatabaseTestScenario::prepScenario01()
 {
-  QSqlDatabase db;
-  
-  if (t == dbOverlay::GenericDatabase::MYSQL)
-  {
-    cleanupMysql();
-    db = getDbConn(t);
-  } else {
-    CPPUNIT_ASSERT(!sqliteFileExists());
-    db = getDbConn(t);
-    CPPUNIT_ASSERT(sqliteFileExists());
-  }
+  ASSERT_FALSE(sqliteFileExists());
+  upSqlite3Db db = getRawDbHandle();
 
-  QString aiStr = (t == dbOverlay::GenericDatabase::MYSQL) ? "AUTO_INCREMENT" : "AUTOINCREMENT";
-  QString nowStr = (t == dbOverlay::GenericDatabase::MYSQL) ? "NOW()" : "date('now')";
-  QString viewStr = (t == dbOverlay::GenericDatabase::MYSQL) ? "CREATE OR REPLACE VIEW" : "CREATE VIEW IF NOT EXISTS";
+  string aiStr = "AUTOINCREMENT";
+  string nowStr = "date('now')";
+  string viewStr = "CREATE VIEW IF NOT EXISTS";
 
-  db.exec("CREATE TABLE IF NOT EXISTS t1 (id INTEGER NOT NULL PRIMARY KEY " + aiStr + "," +
-          " i INT, f DOUBLE, s VARCHAR(40), d DATETIME)");
-  db.exec("CREATE TABLE IF NOT EXISTS t2 (id INTEGER NOT NULL PRIMARY KEY " + aiStr + "," +
-          " i INT, f DOUBLE, s VARCHAR(40), d DATETIME)");
+  auto execStmt = [&](string _sql) {
+    sqlite3_stmt* stmt = nullptr;
+    int err = sqlite3_prepare_v2(db.get(), _sql.c_str(), -1, &stmt, nullptr);
+    ASSERT_EQ(SQLITE_OK, err);
+    ASSERT_TRUE(stmt != nullptr);
+    ASSERT_EQ(SQLITE_DONE, sqlite3_step(stmt));
+    ASSERT_EQ(SQLITE_OK, sqlite3_finalize(stmt));
+  };
 
-  db.exec("INSERT INTO t1 VALUES (NULL, 42, 23.23, 'Hallo', " + nowStr + ")");
-  db.exec("INSERT INTO t1 VALUES (NULL, NULL, 666.66, 'Hi', " + nowStr + ")");
-  db.exec("INSERT INTO t1 VALUES (NULL, 84, NULL, 'Ho', " + nowStr + ")");
-  db.exec("INSERT INTO t1 VALUES (NULL, 84, NULL, 'Hoi', " + nowStr + ")");
-  db.exec("INSERT INTO t1 VALUES (NULL, 84, 42.42, 'Ho', " + nowStr + ")");
+  string sql = "CREATE TABLE IF NOT EXISTS t1 (id INTEGER NOT NULL PRIMARY KEY " + aiStr + ",";
+  sql += " i INT, f DOUBLE, s VARCHAR(40), d DATETIME)";
+  execStmt(sql);
 
-  db.exec(viewStr + " v1 AS SELECT i, f, s FROM t1 WHERE i=84");
+  sql = "CREATE TABLE IF NOT EXISTS t2 (id INTEGER NOT NULL PRIMARY KEY " + aiStr + ",";
+  sql += " i INT, f DOUBLE, s VARCHAR(40), d DATETIME)";
+  execStmt(sql);
+
+  execStmt("INSERT INTO t1 VALUES (NULL, 42, 23.23, 'Hallo', " + nowStr + ")");
+  execStmt("INSERT INTO t1 VALUES (NULL, NULL, 666.66, 'Hi', " + nowStr + ")");
+  execStmt("INSERT INTO t1 VALUES (NULL, 84, NULL, 'Ho', " + nowStr + ")");
+  execStmt("INSERT INTO t1 VALUES (NULL, 84, NULL, 'Hoi', " + nowStr + ")");
+  execStmt("INSERT INTO t1 VALUES (NULL, 84, 42.42, 'Ho', " + nowStr + ")");
+
+  execStmt(viewStr + " v1 AS SELECT i, f, s FROM t1 WHERE i=84");
+
+  ASSERT_EQ(SQLITE_OK, sqlite3_close(db.get()));
 
 }
 
 //----------------------------------------------------------------------------
 
-void DatabaseTestScenario::execQueryAndDumpError(QSqlQuery& qry, const QString& sqlStatement)
-{
-  bool ok;
-  if (sqlStatement.length() != 0)
-  {
-    // simple statement
-    ok = qry.exec(sqlStatement);
-  } else {
-    // prepared statement, prepared externally
-    ok = qry.exec();
-  }
-  
-  if (!ok)
-  {
-    QString msg = "The following SQL query failed: " + QString("\n");
-    msg += "     " + qry.lastQuery() + QString("\n");
-    msg += "     Error: " + qry.lastError().text()  + QString("\n");
-    log.warn(msg);
-    CPPUNIT_ASSERT(false);
-  } else {
-    
-    int result;
-    if (qry.isSelect())
-    {
-      result = qry.size();
-    }
-    else
-    {
-      result = qry.numRowsAffected();
-    }
-    
-    QString msg = "The following SQL query was successfully executed: " + QString("\n");
-    msg += "     " + qry.lastQuery() + QString("\n");
-    msg += "     Rows affected: " + QString::number(result)  + QString("\n");
-    log.info(msg);  
-
-  }
-}
-
 //----------------------------------------------------------------------------
 
-SampleDB DatabaseTestScenario::getScenario01(dbOverlay::GenericDatabase::DB_ENGINE t)
+upSqliteDatabase DatabaseTestScenario::getScenario01()
 {
-  prepScenario01(t);
-  
-  if (t == dbOverlay::GenericDatabase::MYSQL)
-  {
-    SampleDB db(t, "localhost", 3306, "unittest", "unittest", "unittest");
-    db.populateTables();
-    db.populateViews();
-    return db;
-  }
+  prepScenario01();
 
-  SampleDB db(getSqliteFileName(), false);
-  db.populateTables();
-  db.populateViews();
-  return db;
+  SampleDB* tmpPtr = new SampleDB(getSqliteFileName(), false);
+  tmpPtr->populateTables();
+  tmpPtr->populateViews();
+
+  return upSqliteDatabase(tmpPtr);
 }
 
 //----------------------------------------------------------------------------

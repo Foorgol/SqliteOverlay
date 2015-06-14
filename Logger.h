@@ -14,6 +14,7 @@
 #define	LOGGER_H
 
 #include <string>
+#include <memory>
 
 using namespace std;
 
@@ -27,11 +28,11 @@ namespace SqliteOverlay
     Logger ();
     virtual ~Logger ();
 
-    void warn (const string& msg);
-    void critical (const string& msg);
-    void info (const string& msg);
-    void log(const int logLvl, const string& msg);
-    void log(const string& msg);
+    void warn (const string& msg) const;
+    void critical (const string& msg) const;
+    void info (const string& msg) const;
+    void log(const int logLvl, const string& msg) const;
+    void log(const string& msg) const;
     void setDefaultLevel(const int newDefaultLvl);
     void setLevel(const int newLvl);
     
@@ -48,6 +49,8 @@ namespace SqliteOverlay
     bool isValidLevel(const int lvl);
     
   };
+
+  typedef unique_ptr<Logger> upLogger;
 }
 
 #endif	/* LOGGER_H */

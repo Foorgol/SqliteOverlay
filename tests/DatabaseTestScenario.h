@@ -24,19 +24,17 @@ public:
 protected:
   static constexpr char SQLITE_DB[] = "SqliteTestDB.db";
 
-  //QSqlDatabase getDbConn(dbOverlay::GenericDatabase::DB_ENGINE t);
-  //QSqlDatabase getDbConn();
-  void removeDbConn();
-  
-  //void prepScenario01(dbOverlay::GenericDatabase::DB_ENGINE t);
-  //SampleDB getScenario01(dbOverlay::GenericDatabase::DB_ENGINE t);
+  upSqlite3Db getRawDbHandle() const;
+
+  void prepScenario01();
+  upSqliteDatabase getScenario01();
   
   //void execQueryAndDumpError(QSqlQuery& qry, const QString& sqlStatement="");
 
 public:
-  //virtual void tearDown ();
-  //QString getSqliteFileName();
-  //bool sqliteFileExists();
+  virtual void TearDown ();
+  string getSqliteFileName() const;
+  bool sqliteFileExists() const;
 };
 
 #endif	/* DATABASETESTSCENARIO_H */

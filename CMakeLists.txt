@@ -10,6 +10,8 @@ set(LIBS ${LIBS} ${SQLITE3_LIBRARIES})
 set(LIB_SOURCES
     SqliteDatabase.cpp
     Logger.cpp
+    SqlStatement.cpp
+    HelperFunc.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
@@ -33,8 +35,8 @@ set(LIB_SOURCES_TST
     tests/BasicTestClass.cpp
     tests/unitTestMain.cpp
     tests/tstDatabaseInit.cpp
-    #tests/DatabaseTestScenario.cpp
-    #tests/SampleDB.cpp
+    tests/DatabaseTestScenario.cpp
+    tests/SampleDB.cpp
 )
 
 find_package(GTest)

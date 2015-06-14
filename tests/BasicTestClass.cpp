@@ -35,12 +35,12 @@ void BasicTestFixture::TearDown()
 //  log.info("Deleted temporary directory " + tstDir.path() + " and all its contents");
 }
 
-string BasicTestFixture::getTestDir()
+string BasicTestFixture::getTestDir() const
 {
   return tstDirPath.native();
 }
 
-string BasicTestFixture::genTestFilePath(string fName)
+string BasicTestFixture::genTestFilePath(string fName) const
 {
   boostfs::path p = tstDirPath;
   p /= fName;

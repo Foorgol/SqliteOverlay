@@ -24,8 +24,8 @@ protected:
   virtual void SetUp ();
   virtual void TearDown ();
 
-  string getTestDir ();
-  string genTestFilePath(string fName);
+  string getTestDir () const;
+  string genTestFilePath(string fName) const;
   boostfs::path tstDirPath;
   unique_ptr<SqliteOverlay::Logger> log;
   void printStartMsg(string _tcName);
