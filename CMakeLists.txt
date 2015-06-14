@@ -9,6 +9,7 @@ set(LIBS ${LIBS} ${SQLITE3_LIBRARIES})
 
 set(LIB_SOURCES
     SqliteDatabase.cpp
+    Logger.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
@@ -24,3 +25,29 @@ set(LIB_VERSION_STRING ${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_P
 
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${LIB_VERSION_STRING}
                                           SOVERSION ${LIB_VERSION_MAJOR})
+
+#
+# Unit tests
+#
+set(LIB_SOURCES_TST
+    tests/BasicTestClass.cpp
+    tests/unitTestMain.cpp
+    tests/tstDatabaseInit.cpp
+    #tests/DatabaseTestScenario.cpp
+    #tests/SampleDB.cpp
+)
+
+find_package(GTest)
+find_package(Boost COMPONENTS filesystem system)
+
+if (GTEST_FOUND AND Boost_FOUND)
+    include_directories("." ${GTEST_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+    link_directories(".")
+
+    #add_executable(${PROJECT_NAME}_Tests EXCLUDE_FROM_ALL ${LIB_SOURCES} ${LIB_SOURCES_TST})
+    add_executable(${PROJECT_NAME}_Tests ${LIB_SOURCES} ${LIB_SOURCES_TST})
+    set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD 11)
+    set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD_REQUIRED ON)
+
+    target_link_libraries(${PROJECT_NAME}_Tests ${PROJECT_NAME} ${GTEST_BOTH_LIBRARIES} ${Boost_LIBRARIES})
+endif (GTEST_FOUND AND Boost_FOUND)

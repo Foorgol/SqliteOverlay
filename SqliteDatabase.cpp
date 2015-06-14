@@ -1,6 +1,7 @@
-#include "SqliteDatabase.h"
-
 #include <sys/stat.h>
+
+#include "SqliteDatabase.h"
+#include "Logger.h"
 
 using namespace std;
 
@@ -42,6 +43,10 @@ namespace SqliteOverlay
     // we're all set
     dbPtr = unique_ptr<sqlite3, SqliteDeleter>(tmpPtr);
     queryCounter = 0;
+
+    // prepare a logger
+    log = unique_ptr<Logger>(new Logger(dbFileName));
+    log->info("Ready for use");
   }
 
   //----------------------------------------------------------------------------

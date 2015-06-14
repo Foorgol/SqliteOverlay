@@ -6,6 +6,7 @@
 #include <string>
 #include <memory>
 
+#include "Logger.h"
 
 using namespace std;
 
@@ -32,6 +33,11 @@ namespace SqliteOverlay
      * A counter for executed queries; for debugging purposes only
      */
     long queryCounter;
+
+    /**
+     * A logger instance for debug messages
+     */
+    unique_ptr<Logger> log;
   };
 }
 
