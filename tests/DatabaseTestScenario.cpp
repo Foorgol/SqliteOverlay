@@ -108,7 +108,10 @@ void DatabaseTestScenario::prepScenario01()
 
   execStmt("INSERT INTO t1 VALUES (NULL, 42, 23.23, 'Hallo', " + nowStr + ")");
   execStmt("INSERT INTO t1 VALUES (NULL, NULL, 666.66, 'Hi', " + nowStr + ")");
-  execStmt("INSERT INTO t1 VALUES (NULL, 84, NULL, 'Ho', " + nowStr + ")");
+  sql = "INSERT INTO t1 VALUES (NULL, 84, NULL, '";
+  sql += u8"äöüÄÖÜ";
+  sql += "', " + nowStr + ")";
+  execStmt(sql);
   execStmt("INSERT INTO t1 VALUES (NULL, 84, NULL, 'Hoi', " + nowStr + ")");
   execStmt("INSERT INTO t1 VALUES (NULL, 84, 42.42, 'Ho', " + nowStr + ")");
 
@@ -126,11 +129,7 @@ upSqliteDatabase DatabaseTestScenario::getScenario01()
 {
   prepScenario01();
 
-  SampleDB* tmpPtr = new SampleDB(getSqliteFileName(), false);
-  tmpPtr->populateTables();
-  tmpPtr->populateViews();
-
-  return upSqliteDatabase(tmpPtr);
+  return SqliteDatabase::get<SampleDB>(getSqliteFileName(), false);
 }
 
 //----------------------------------------------------------------------------

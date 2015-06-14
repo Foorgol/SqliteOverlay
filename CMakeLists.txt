@@ -35,6 +35,7 @@ set(LIB_SOURCES_TST
     tests/BasicTestClass.cpp
     tests/unitTestMain.cpp
     tests/tstDatabaseInit.cpp
+    tests/tstDatabaseQueries.cpp
     tests/DatabaseTestScenario.cpp
     tests/SampleDB.cpp
 )

@@ -124,12 +124,36 @@ namespace SqliteOverlay
 
   bool SqlStatement::getInt(int colId, int* out) const
   {
-    if (!hasData()) return false;
-    if (out == nullptr) return false;
-    if (colId >= resultColCount) return false;
+    if (getColumnValue_prep<int>(colId, out))
+    {
+      *out = sqlite3_column_int(stmt, colId);
+      return true;
+    }
+    return false;
+  }
 
-    *out = sqlite3_column_int(stmt, colId);
-    return true;
+  //----------------------------------------------------------------------------
+
+  bool SqlStatement::getDouble(int colId, double* out) const
+  {
+    if (getColumnValue_prep<double>(colId, out))
+    {
+      *out = sqlite3_column_double(stmt, colId);
+      return true;
+    }
+    return false;
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqlStatement::getString(int colId, string* out) const
+  {
+    if (getColumnValue_prep<string>(colId, out))
+    {
+      *out = reinterpret_cast<const char*>(sqlite3_column_text(stmt, colId));
+      return true;
+    }
+    return false;
   }
 
   //----------------------------------------------------------------------------

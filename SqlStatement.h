@@ -24,8 +24,18 @@ namespace SqliteOverlay
     bool isDone() const;
 
     bool getInt(int colId, int* out) const;
+    bool getDouble(int colId, double* out) const;
+    bool getString(int colId, string* out) const;
 
   private:
+    template<class T>
+    bool getColumnValue_prep(int colId, T* out) const {
+      if (out == nullptr) return false;
+      if (!hasData()) return false;
+      if (colId >= resultColCount) return false;
+      return true;
+    }
+
     SqlStatement(sqlite3* dbPtr, const string& sqlTxt);
     sqlite3_stmt* stmt;
     bool _hasData;

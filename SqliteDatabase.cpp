@@ -46,12 +46,16 @@ namespace SqliteOverlay
 
     // we're all set
     dbPtr = unique_ptr<sqlite3, SqliteDeleter>(tmpPtr);
-    queryCounter = 0;
     foreignKeyCreationCache.clear();
 
     // prepare a logger
     log = unique_ptr<Logger>(new Logger(dbFileName));
     log->info("Ready for use");
+
+    // Explicitly enable support for foreign keys
+    // and disable synchronous writes for better performance
+    execNonQuery("PRAGMA foreign_keys = ON");
+    enforceSynchronousWrites(false);
   }
 
   //----------------------------------------------------------------------------
@@ -96,11 +100,11 @@ namespace SqliteOverlay
   bool SqliteDatabase::execNonQuery(const upSqlStatement& stmt) const
   {
     // execute the statement
-    if (stmt->step())
+    if (stmt->step(log.get()))
     {
       // if successful, execute further steps of the
       // statement until the execution is complete
-      while (!(stmt->isDone())) stmt->step();
+      while (!(stmt->isDone())) stmt->step(log.get());
     } else {
       // initial execution raised a failure
       return false;
@@ -120,7 +124,7 @@ namespace SqliteOverlay
       return nullptr;
     }
 
-    if (!(stmt->step()))
+    if (!(stmt->step(log.get())))
     {
       return nullptr;
     }
@@ -132,31 +136,52 @@ namespace SqliteOverlay
 
   bool SqliteDatabase::execContentQuery(const upSqlStatement& stmt)
   {
-    return stmt->step();
+    return stmt->step(log.get());
   }
 
   //----------------------------------------------------------------------------
 
   bool SqliteDatabase::execScalarQueryInt(const string& sqlStatement, int* out)
   {
-    if (out == nullptr) return false;
-
-    upSqlStatement stmt = execContentQuery(sqlStatement);
-    if (stmt == nullptr) return false;
-    if (!(stmt->hasData())) return false;
-
-    return stmt->getInt(0, out);
+    auto stmt = execScalarQuery_prep<int>(sqlStatement, out);
+    return (stmt == nullptr) ? false : stmt->getInt(0, out);
   }
 
   //----------------------------------------------------------------------------
 
   bool SqliteDatabase::execScalarQueryInt(const upSqlStatement& stmt, int* out) const
   {
-    bool isOk = stmt->step();
-    if (!isOk) return false;
-    if (!(stmt->hasData())) return false;
+    return execScalarQuery_prep<int>(stmt, out) ? stmt->getInt(0, out) : false;
+  }
 
-    return stmt->getInt(0, out);
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::execScalarQueryDouble(const string& sqlStatement, double* out)
+  {
+    auto stmt = execScalarQuery_prep<double>(sqlStatement, out);
+    return (stmt == nullptr) ? false : stmt->getDouble(0, out);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::execScalarQueryDouble(const upSqlStatement& stmt, double* out) const
+  {
+    return execScalarQuery_prep<double>(stmt, out) ? stmt->getDouble(0, out) : false;
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::execScalarQueryString(const string& sqlStatement, string* out)
+  {
+    auto stmt = execScalarQuery_prep<string>(sqlStatement, out);
+    return (stmt == nullptr) ? false : stmt->getString(0, out);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::execScalarQueryString(const upSqlStatement& stmt, string* out) const
+  {
+    return execScalarQuery_prep<string>(stmt, out) ? stmt->getString(0, out) : false;
   }
 
   //----------------------------------------------------------------------------
@@ -200,7 +225,91 @@ namespace SqliteOverlay
 
   void SqliteDatabase::viewCreationHelper(const string& viewName, const string& selectStmt)
   {
+    string sql = "CREATE VIEW IF NOT EXISTS";
 
+    sql += " " + viewName + " AS ";
+    sql += selectStmt;
+    execNonQuery(sql);
+  }
+
+  //----------------------------------------------------------------------------
+
+  StringList SqliteDatabase::allTableNames(bool getViews)
+  {
+    StringList result;
+
+    string sql = "SELECT name FROM sqlite_master WHERE type='";
+    sql += getViews ? "view" : "table";
+    sql +="';";
+    auto stmt = execContentQuery(sql);
+    while (stmt->hasData())
+    {
+      string tabName;
+      stmt->getString(0, &tabName);
+
+      // skip a special, internal table
+      if (tabName != "sqlite_sequence")
+      {
+        result.push_back(tabName);
+      }
+
+      stmt->step(log.get());
+    }
+
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  StringList SqliteDatabase::allViewNames()
+  {
+    return allTableNames(true);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::hasTable(const string& name, bool isView)
+  {
+    StringList allTabs = allTableNames(isView);
+    for(string n : allTabs)
+    {
+      if (n == name) return true;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::hasView(const string& name)
+  {
+    return hasTable(name, true);
+  }
+
+  //----------------------------------------------------------------------------
+
+  string SqliteDatabase::genForeignKeyClause(const string& keyName, const string& referedTable)
+  {
+    string ref = "FOREIGN KEY (" + keyName + ") REFERENCES " + referedTable + "(id)";
+    foreignKeyCreationCache.push_back(ref);
+    return keyName + " INTEGER";
+  }
+
+  //----------------------------------------------------------------------------
+
+  int SqliteDatabase::getLastInsertId()
+  {
+    int result = -1;
+    execScalarQueryInt("SELECT last_insert_rowid()", &result);
+
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqliteDatabase::setLogLevel(int newLvl)
+  {
+    log->setLevel(newLvl);
   }
 
   //----------------------------------------------------------------------------
