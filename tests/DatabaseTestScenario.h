@@ -13,6 +13,8 @@
 #ifndef DATABASETESTSCENARIO_H
 #define	DATABASETESTSCENARIO_H
 
+#include <sqlite3.h>
+
 #include "BasicTestClass.h"
 #include "SqliteDatabase.h"
 #include "SampleDB.h"
@@ -25,6 +27,7 @@ protected:
   static constexpr char SQLITE_DB[] = "SqliteTestDB.db";
 
   upSqlite3Db getRawDbHandle() const;
+  sqlite3_stmt* prepStatement(upSqlite3Db& db, const string& sql);
 
   void prepScenario01();
   upSqliteDatabase getScenario01();

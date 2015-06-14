@@ -35,9 +35,31 @@ upSqlite3Db DatabaseTestScenario::getRawDbHandle() const
 
 //----------------------------------------------------------------------------
 
+sqlite3_stmt* DatabaseTestScenario::prepStatement(upSqlite3Db& db, const string& sql)
+{
+  sqlite3_stmt* stmt = nullptr;
+  int err = sqlite3_prepare_v2(db.get(), sql.c_str(), -1, &stmt, nullptr);
+  assert(err == SQLITE_OK);
+  assert(stmt != nullptr);
+
+  return stmt;
+}
+
+//----------------------------------------------------------------------------
+
 void DatabaseTestScenario::TearDown()
 {
   BasicTestFixture::TearDown();
+
+  // delete the test database, if still existing
+  string dbFileName = getSqliteFileName();
+  bfs::path dbPathObj(dbFileName);
+  if (bfs::exists(dbPathObj))
+  {
+    ASSERT_TRUE(bfs::remove(dbPathObj));
+  }
+  ASSERT_FALSE(bfs::exists(dbPathObj));
+
   //DbTab::clearTabCache();
   
   //qDebug() << "----------- DatabaseTestScenario tearDown() finished! -----------";
@@ -71,10 +93,7 @@ void DatabaseTestScenario::prepScenario01()
   string viewStr = "CREATE VIEW IF NOT EXISTS";
 
   auto execStmt = [&](string _sql) {
-    sqlite3_stmt* stmt = nullptr;
-    int err = sqlite3_prepare_v2(db.get(), _sql.c_str(), -1, &stmt, nullptr);
-    ASSERT_EQ(SQLITE_OK, err);
-    ASSERT_TRUE(stmt != nullptr);
+    sqlite3_stmt* stmt = prepStatement(db, _sql);
     ASSERT_EQ(SQLITE_DONE, sqlite3_step(stmt));
     ASSERT_EQ(SQLITE_OK, sqlite3_finalize(stmt));
   };
