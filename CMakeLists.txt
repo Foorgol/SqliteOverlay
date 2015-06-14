@@ -12,6 +12,8 @@ set(LIB_SOURCES
     Logger.cpp
     SqlStatement.cpp
     HelperFunc.cpp
+    CommonTabularClass.cpp
+    #DbTab.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
@@ -38,6 +40,7 @@ set(LIB_SOURCES_TST
     tests/tstDatabaseQueries.cpp
     tests/DatabaseTestScenario.cpp
     tests/SampleDB.cpp
+    tests/tstCommonTabularClass.cpp
 )
 
 find_package(GTest)
