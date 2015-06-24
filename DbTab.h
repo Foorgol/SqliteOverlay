@@ -20,6 +20,8 @@
 
 namespace SqliteOverlay
 {
+  class TabRow;
+
   class DbTab : public CommonTabularClass
   {
     friend class SqliteDatabase;
@@ -46,11 +48,13 @@ namespace SqliteOverlay
     virtual ~DbTab ();
     int insertRow(const ColumnValueClause& ic);
     int insertRow();
-//    TabRow operator[](const int id) const;
-//    TabRow operator[](const QVariantList& args ) const;
-//    TabRow getSingleRowByColumnValue(const QVariantList& args = QVariantList()) const;
-//    TabRow getSingleRowByColumnValue(const QString& col, const QVariant& val) const;
-//    TabRow getSingleRowByWhereClause(const QString& where, const QVariantList& args = QVariantList()) const;
+    TabRow operator[](const int id) const;
+    TabRow operator[](const WhereClause& w ) const;
+    TabRow getSingleRowByColumnValue(const string& col, int val) const;
+    TabRow getSingleRowByColumnValue(const string& col, double val) const;
+    TabRow getSingleRowByColumnValue(const string& col, const string& val) const;
+    TabRow getSingleRowByColumnValueNull(const string& col) const;
+    TabRow getSingleRowByWhereClause(const WhereClause& w) const;
 //    CachingRowIterator getRowsByWhereClause(const QString& where, const QVariantList& args = QVariantList()) const;
 //    CachingRowIterator getRowsByColumnValue(const QVariantList& args = QVariantList()) const;
 //    CachingRowIterator getRowsByColumnValue(const QString& col, const QVariant& val) const;

@@ -14,6 +14,7 @@
 
 #include "DbTab.h"
 #include "HelperFunc.h"
+#include "TabRow.h"
 
 namespace SqliteOverlay
 {
@@ -55,21 +56,57 @@ namespace SqliteOverlay
     return insertRow(empty);
   }
 
-////----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 
-//  TabRow DbTab::operator [](const int id) const
-//  {
-//    return TabRow(db, tabName, id);
-//  }
+  TabRow DbTab::operator [](const int id) const
+  {
+    return TabRow(db, tabName, id);
+  }
 
-////----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 
-//  TabRow DbTab::operator [](const QVariantList& args) const
-//  {
-//    return TabRow(db, tabName, args);
-//  }
+  TabRow DbTab::operator [](const WhereClause& w) const
+  {
+    return TabRow(db, tabName, w);
+  }
 
-////----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+
+  TabRow DbTab::getSingleRowByColumnValue(const string& col, int val) const
+  {
+    WhereClause w;
+    w.addIntCol(col, val);
+    return TabRow(db, tabName, w);
+  }
+
+//----------------------------------------------------------------------------
+
+  TabRow DbTab::getSingleRowByColumnValue(const string& col, double val) const
+  {
+    WhereClause w;
+    w.addDoubleCol(col, val);
+    return TabRow(db, tabName, w);
+  }
+
+//----------------------------------------------------------------------------
+
+  TabRow DbTab::getSingleRowByColumnValue(const string& col, const string& val) const
+  {
+    WhereClause w;
+    w.addStringCol(col, val);
+    return TabRow(db, tabName, w);
+  }
+
+//----------------------------------------------------------------------------
+
+  TabRow DbTab::getSingleRowByColumnValueNull(const string& col) const
+  {
+    WhereClause w;
+    w.addNullCol(col);
+    return TabRow(db, tabName, w);
+  }
+
+//----------------------------------------------------------------------------
 
 //  DbTab::CachingRowIterator::CachingRowIterator(GenericDatabase* _db, const QString& _tabName, QSqlQuery& qry)
 //  : db(_db), tabName(_tabName)
@@ -197,48 +234,12 @@ namespace SqliteOverlay
 //    return result;
 //  }
 
-////----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 
-//  TabRow DbTab::getSingleRowByColumnValue(const QVariantList& args) const
-//  {
-//    DbTab::CachingRowIterator it = getRowsByColumnValue(args);
-//    if (!(it.isValid()))
-//    {
-//      throw std::invalid_argument("getSingleRowByColumnValue: no match!");
-//    }
-//    if (it.length() == 0)
-//    {
-//      throw std::invalid_argument("getSingleRowByColumnValue: no match!");
-//    }
-    
-//    return (*it);
-//  }
-
-////----------------------------------------------------------------------------
-
-//  TabRow DbTab::getSingleRowByColumnValue(const QString& col, const QVariant& val) const
-//  {
-//    QVariantList qvl;
-//    qvl << col << val;
-//    return getSingleRowByColumnValue(qvl);
-//  }
-
-////----------------------------------------------------------------------------
-
-//  TabRow DbTab::getSingleRowByWhereClause(const QString& where, const QVariantList& args) const
-//  {
-//    DbTab::CachingRowIterator it = getRowsByWhereClause(where, args);
-//    if (!(it.isValid()))
-//    {
-//      throw std::invalid_argument("getSingleRowByWhereClause: no match!");
-//    }
-//    if (it.length() == 0)
-//    {
-//      throw std::invalid_argument("getSingleRowByWhereClause: no match!");
-//    }
-    
-//    return (*it);
-//  }
+  TabRow DbTab::getSingleRowByWhereClause(const WhereClause& w) const
+  {
+    return TabRow(db, tabName, w);
+  }
 
 //----------------------------------------------------------------------------
 

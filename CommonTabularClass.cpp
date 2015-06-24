@@ -213,6 +213,15 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
+  int CommonTabularClass::getMatchCountForColumnValueNull(const string& col) const
+  {
+    WhereClause w;
+    w.addNullCol(col);
+    return getMatchCountForWhereClause(w);
+  }
+
+//----------------------------------------------------------------------------
+
   int CommonTabularClass::getMatchCountForWhereClause(const string& where) const
   {
     string sql = "SELECT COUNT(*) FROM " + tabName + " WHERE " + where;

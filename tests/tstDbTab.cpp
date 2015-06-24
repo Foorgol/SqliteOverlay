@@ -6,6 +6,7 @@
 #include "HelperFunc.h"
 #include "ClausesAndQueries.h"
 #include "DbTab.h"
+#include "TabRow.h"
 
 using namespace SqliteOverlay;
 
@@ -53,7 +54,6 @@ TEST_F(DatabaseTestScenario, DbTab_Insert)
 
 //----------------------------------------------------------------
 
-
 TEST_F(DatabaseTestScenario, DbTab_DeleteByWhere)
 {
   auto db = getScenario01();
@@ -82,6 +82,42 @@ TEST_F(DatabaseTestScenario, DbTab_DeleteByWhere)
   w.addIntCol("sdkjfsfd", 88);
   ASSERT_EQ(-1, t1->deleteRowsByWhereClause(w));
   ASSERT_EQ(2, t1->length());
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, DbTab_GetTabRow)
+{
+  auto db = getScenario01();
+  auto t1 = db->getTab("t1");
+  ASSERT_TRUE(t1 != nullptr);
+  WhereClause w;
+  w.addIntCol("id", 4);
+
+  // operator []
+  TabRow r = (*t1)[2];
+  ASSERT_EQ(2, r.getId());
+  r = (*t1)[w];
+  ASSERT_EQ(4, r.getId());
+
+  // by where clause
+  r = t1->getSingleRowByWhereClause(w);
+  ASSERT_EQ(4, r.getId());
+
+  // by column value
+  r = t1->getSingleRowByColumnValue("i", 84);
+  ASSERT_EQ(3, r.getId());
+  r = t1->getSingleRowByColumnValue("f", 23.23);
+  ASSERT_EQ(1, r.getId());
+  r = t1->getSingleRowByColumnValue("s", "Hi");
+  ASSERT_EQ(2, r.getId());
+  r = t1->getSingleRowByColumnValueNull("f");
+  ASSERT_EQ(3, r.getId());
+
+  // no test for illegal arguments here
+  // they are covered by the constructor tests for TabRow,
+  // because getSingleRowByXXX is mostly a wrapper for the
+  // TabRow ctor
 }
 
 //----------------------------------------------------------------

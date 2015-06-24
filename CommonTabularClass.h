@@ -61,6 +61,7 @@ namespace SqliteOverlay
     int getMatchCountForColumnValue(const string& col, const string& val) const;
     int getMatchCountForColumnValue(const string& col, int val) const;
     int getMatchCountForColumnValue(const string& col, double val) const;
+    int getMatchCountForColumnValueNull(const string& col) const;
     int length() const;
 
   protected:

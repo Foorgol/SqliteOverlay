@@ -89,14 +89,28 @@ namespace SqliteOverlay
     }
 
     // create and execute a "SELECT id FROM ..." from the where clause
+    // and only evaluate the first hit
     string sql = where.getSelectStmt(tabName, false);
-    int result;
-    bool isOk = db->execScalarQueryInt(sql, &result);
-    if ((!isOk) || (result < 1))
+    auto stmt = db->prepStatement(sql);
+    if (stmt == nullptr)
     {
-      throw std::invalid_argument("Received invalid where clause for row");
+      throw std::invalid_argument("Invalid where clause or no matches for where clause");
     }
-    rowId = result;
+    if (!(stmt->step()))
+    {
+      throw std::invalid_argument("Invalid where clause or no matches for where clause");
+    }
+
+    if (!(stmt->hasData()))
+    {
+      throw std::invalid_argument("Invalid where clause or no matches for where clause");
+    }
+
+    if (!(stmt->getInt(0, &rowId)))
+    {
+      throw std::invalid_argument("Invalid where clause or no matches for where clause");
+    }
+
     cachedWhereStatementForRow = " FROM " + tabName + " WHERE id = " + to_string(rowId);
 
     return true;
