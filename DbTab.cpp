@@ -108,74 +108,88 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-//  DbTab::CachingRowIterator::CachingRowIterator(GenericDatabase* _db, const QString& _tabName, QSqlQuery& qry)
-//  : db(_db), tabName(_tabName)
-//  {
-//    // no checks for the validity of _db and _tabName here, because
-//    // we assume that the constructor is only called internally with
-//    // pre-checked values
-//    idList = QList<int>();
-    
-//    // make sure that the query is valid
-//    if (!(qry.isActive()))
-//    {
-//      throw std::invalid_argument("CachingRowIterator: inactive query provided to constructor");
-//    }
-//    if (!(qry.isSelect()))
-//    {
-//      throw std::invalid_argument("CachingRowIterator: non-SELECT query provided to constructor");
-//    }
-    
-//    // iterate over all matches/results in the query and cache their row IDs
-//    if (qry.first())
-//    {
-//      do
-//      {
-//        idList << qry.value(0).toInt();  // we implicitly assume that column 0 is the ID column!
-//      }  while (qry.next());
-//    }
-    
-//    qry.finish();
-//    listIter = idList.begin();
-//  }
+  DbTab::CachingRowIterator::CachingRowIterator(SqliteDatabase* _db, const string& _tabName, upSqlStatement stmt)
+  : db(_db), tabName(_tabName)
+  {
+    // no checks for the validity of _db and _tabName here, because
+    // we assume that the constructor is only called internally with
+    // pre-checked values
 
+    idList.clear();
+    curIdx = 0;
+    cachedLength = 0;
+
+    // make sure that the query is valid
+    //
+    // IMPORTANT: we assume that the caller has executed the first step() call
+    // on the statement!
+    if (!(stmt->hasData()))
+    {
+      return; // empty table or invalid query... empty table is more likely... return, not throw
+    }
+    if (stmt->getColName(0) != "id")
+    {
+      throw std::invalid_argument("CachingRowIterator: invalid SELECT query provided to constructor");
+    }
+
+    // iterate over all matches/results in the query and cache their row IDs
+    do
+    {
+      int id;
+      stmt->getInt(0, &id);
+      idList.push_back(id);
+      stmt->step();
+    } while (!(stmt->isDone()));
+
+    curIdx = 0;
+    cachedLength = idList.size();
+  }
+
+
+//----------------------------------------------------------------------------
+
+  bool DbTab::CachingRowIterator::hasMore() const
+  {
+    return (curIdx < (cachedLength-1));
+  }
+
+//----------------------------------------------------------------------------
+
+  bool DbTab::CachingRowIterator::isEmpty() const
+  {
+    return (cachedLength == 0);
+  }
+
+//----------------------------------------------------------------------------
+
+  void DbTab::CachingRowIterator::operator ++()
+  {
+    ++curIdx;
+
+    if (curIdx >= cachedLength)
+    {
+      throw std::runtime_error("Iterated past the last item of the CachingRowIterator");
+    }
+  }
+
+//----------------------------------------------------------------------------
+
+  TabRow DbTab::CachingRowIterator::operator *() const
+  {
+    if (curIdx >= cachedLength)
+    {
+      throw std::runtime_error("Iterated past the last item of the CachingRowIterator");
+    }
+    int id = idList.at(curIdx);
+    return TabRow(db, tabName, id, true);
+  }
 
 ////----------------------------------------------------------------------------
 
-//  bool DbTab::CachingRowIterator::isEnd() const
-//  {
-//    return (listIter == idList.end());
-//  }
-
-////----------------------------------------------------------------------------
-
-//  bool DbTab::CachingRowIterator::isValid() const
-//  {
-//    return (idList.length() != 0);
-//  }
-
-////----------------------------------------------------------------------------
-
-//  void DbTab::CachingRowIterator::operator ++()
-//  {
-//    listIter++;
-//  }
-
-////----------------------------------------------------------------------------
-
-//  TabRow DbTab::CachingRowIterator::operator *() const
-//  {
-//    int id = *listIter;
-    
-//    return TabRow(db, tabName, id, true);
-//  }
-
-////----------------------------------------------------------------------------
-
-//  int DbTab::CachingRowIterator::length() const
-//  {
-//    return idList.length();
-//  }
+  int DbTab::CachingRowIterator::length() const
+  {
+    return cachedLength;
+  }
 
 ////----------------------------------------------------------------------------
 
@@ -220,19 +234,25 @@ namespace SqliteOverlay
 //    return getRowsByColumnValue(qvl);
 //  }
 
-////----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 
-//  DbTab::CachingRowIterator DbTab::getAllRows() const
-//  {
-//    QString sql = "SELECT id FROM " + tabName;
-//    unique_ptr<QSqlQuery> qry = unique_ptr<QSqlQuery>(db->execContentQuery(sql));
-//    if (qry == NULL) {
-//      throw std::invalid_argument("getAllRows: invalid table, has no ID column!");
-//    }
-    
-//    DbTab::CachingRowIterator result = DbTab::CachingRowIterator(db, tabName, *qry);
-//    return result;
-//  }
+  DbTab::CachingRowIterator DbTab::getAllRows() const
+  {
+    string sql = "SELECT id FROM " + tabName;
+    auto stmt = db->prepStatement(sql);
+
+    // this sql query should always succeed... but the test result anyway...
+    if (stmt == nullptr)
+    {
+      throw std::runtime_error("Weird... could query all rows");
+    }
+    if (!(stmt->step()))
+    {
+      throw std::runtime_error("Weird... could step into a query of all rows");
+    }
+
+    return DbTab::CachingRowIterator(db, tabName, std::move(stmt));
+  }
 
 //----------------------------------------------------------------------------
 

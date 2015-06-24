@@ -122,3 +122,35 @@ TEST_F(DatabaseTestScenario, DbTab_GetTabRow)
 
 //----------------------------------------------------------------
 
+TEST_F(DatabaseTestScenario, DbTab_GetAllRows)
+{
+  auto db = getScenario01();
+  auto t1 = db->getTab("t1");
+  ASSERT_TRUE(t1 != nullptr);
+
+  DbTab::CachingRowIterator it = t1->getAllRows();
+  ASSERT_EQ(5, it.length());
+  ASSERT_FALSE(it.isEmpty());
+
+  int id=0;
+  while (it.hasMore())
+  {
+    ++id;
+    TabRow r = *it;
+    ASSERT_EQ(id, r.getId());
+    ++it;
+  }
+  ASSERT_THROW(++it, std::runtime_error);
+
+  // test an empty table
+  auto t2 = db->getTab("t2");
+  it = t2->getAllRows();
+  ASSERT_EQ(0, it.length());
+  ASSERT_TRUE(it.isEmpty());
+  ASSERT_THROW(++it, std::runtime_error);
+  ASSERT_THROW(*it,  std::runtime_error);
+  ASSERT_THROW(++it, std::runtime_error);
+}
+
+//----------------------------------------------------------------
+

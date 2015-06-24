@@ -27,22 +27,25 @@ namespace SqliteOverlay
     friend class SqliteDatabase;
 
   public:
-//    class CachingRowIterator
-//    {
-//    public:
-//      CachingRowIterator(SqliteDatabase* db, const string& tabName, QSqlQuery& qry);
-//      void operator++();
-//      TabRow operator*() const;
-//      bool isEnd() const;
-//      bool isValid() const;
-//      int length() const;
+    class CachingRowIterator
+    {
+      friend class DbTab;
+
+    public:
+      void operator++();
+      TabRow operator*() const;
+      bool hasMore() const;
+      bool isEmpty() const;
+      int length() const;
       
-//    private:
-//      QList<int> idList;
-//      GenericDatabase* db;
-//      QString tabName;
-//      QList<int>::const_iterator listIter;
-//    };
+    private:
+      CachingRowIterator(SqliteDatabase* db, const string& tabName, upSqlStatement stmt);
+      vector<int> idList;
+      SqliteDatabase* db;
+      string tabName;
+      int curIdx;
+      int cachedLength;
+    };
     
   public:
     virtual ~DbTab ();
@@ -58,7 +61,7 @@ namespace SqliteOverlay
 //    CachingRowIterator getRowsByWhereClause(const QString& where, const QVariantList& args = QVariantList()) const;
 //    CachingRowIterator getRowsByColumnValue(const QVariantList& args = QVariantList()) const;
 //    CachingRowIterator getRowsByColumnValue(const QString& col, const QVariant& val) const;
-//    CachingRowIterator getAllRows() const;
+    CachingRowIterator getAllRows() const;
     int deleteRowsByWhereClause(const WhereClause& where) const;
     int deleteRowsByColumnValue(const string& col, const int val) const;
     int deleteRowsByColumnValue(const string& col, const double val) const;

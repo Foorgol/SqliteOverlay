@@ -29,6 +29,7 @@ namespace SqliteOverlay
     bool getString(int colId, string* out) const;
 
     int getColType(int colId) const;
+    string getColName(int colId) const;
     int isNull(int colId) const;
 
   private:

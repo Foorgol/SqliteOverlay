@@ -165,6 +165,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  string SqlStatement::getColName(int colId) const
+  {
+    return sqlite3_column_name(stmt, colId);
+  }
+
+  //----------------------------------------------------------------------------
+
   int SqlStatement::isNull(int colId) const
   {
     return (getColType(colId) == SQLITE_NULL);
