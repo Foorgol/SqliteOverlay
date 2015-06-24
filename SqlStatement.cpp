@@ -158,9 +158,37 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  int SqlStatement::getColType(int colId) const
+  {
+    return sqlite3_column_type(stmt, colId);
+  }
+
+  //----------------------------------------------------------------------------
+
+  int SqlStatement::isNull(int colId) const
+  {
+    return (getColType(colId) == SQLITE_NULL);
+  }
+
+  //----------------------------------------------------------------------------
+
   void SqlStatement::bindInt(int argPos, int val)
   {
     sqlite3_bind_int(stmt, argPos, val);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqlStatement::bindDouble(int argPos, double val)
+  {
+    sqlite3_bind_double(stmt, argPos, val);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqlStatement::bindString(int argPos, string& val)
+  {
+    sqlite3_bind_text(stmt, argPos, val.c_str(), -1, SQLITE_TRANSIENT);
   }
 
   //----------------------------------------------------------------------------

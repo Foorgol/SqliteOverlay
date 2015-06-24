@@ -3,6 +3,7 @@
 #include "SqliteDatabase.h"
 #include "Logger.h"
 #include "HelperFunc.h"
+#include "DbTab.h"
 
 using namespace std;
 
@@ -47,6 +48,7 @@ namespace SqliteOverlay
     // we're all set
     dbPtr = unique_ptr<sqlite3, SqliteDeleter>(tmpPtr);
     foreignKeyCreationCache.clear();
+    tabCache.clear();
 
     // prepare a logger
     log = unique_ptr<Logger>(new Logger(dbFileName));
@@ -56,6 +58,28 @@ namespace SqliteOverlay
     // and disable synchronous writes for better performance
     execNonQuery("PRAGMA foreign_keys = ON");
     enforceSynchronousWrites(false);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::execScalarQuery_prep(const upSqlStatement& stmt) const
+  {
+    bool isOk = stmt->step(log.get());
+    if (!isOk) return false;
+    if (!(stmt->hasData())) return false;
+
+    return true;
+  }
+
+  //----------------------------------------------------------------------------
+
+  upSqlStatement SqliteDatabase::execScalarQuery_prep(const string& sqlStatement)
+  {
+    upSqlStatement stmt = execContentQuery(sqlStatement);
+    if (stmt == nullptr) return nullptr;
+    if (!(stmt->hasData())) return nullptr;
+
+    return stmt;
   }
 
   //----------------------------------------------------------------------------
@@ -73,6 +97,18 @@ namespace SqliteOverlay
 
 //    return unique_ptr<SqliteDatabase>(tmpPtr);
 //  }
+
+  //----------------------------------------------------------------------------
+
+  SqliteDatabase::~SqliteDatabase()
+  {
+    auto it = tabCache.begin();
+    while (it != tabCache.end())
+    {
+      delete it->second;
+      ++it;
+    }
+  }
 
   //----------------------------------------------------------------------------
 
@@ -156,6 +192,48 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  unique_ptr<ScalarQueryResult<int>> SqliteDatabase::execScalarQueryInt(const upSqlStatement& stmt, bool skipPrep) const
+  {
+    if (!skipPrep)
+    {
+      if (!(execScalarQuery_prep(stmt)))
+      {
+        return nullptr;
+      }
+    }
+
+    ScalarQueryResult<int>* result;
+
+    if (stmt->isNull(0))
+    {
+      result = new ScalarQueryResult<int>();
+    } else {
+      int i;
+      if (!(stmt->getInt(0, &i)))
+      {
+        return nullptr;
+      }
+      result = new ScalarQueryResult<int>(i);
+    }
+
+    return unique_ptr<ScalarQueryResult<int>>(result);
+  }
+
+  //----------------------------------------------------------------------------
+
+  unique_ptr<ScalarQueryResult<int> > SqliteDatabase::execScalarQueryInt(const string& sqlStatement)
+  {
+    auto stmt = execScalarQuery_prep(sqlStatement);
+    if (stmt == nullptr)
+    {
+      return nullptr;
+    }
+
+    return execScalarQueryInt(stmt, true);
+  }
+
+  //----------------------------------------------------------------------------
+
   bool SqliteDatabase::execScalarQueryDouble(const string& sqlStatement, double* out)
   {
     auto stmt = execScalarQuery_prep<double>(sqlStatement, out);
@@ -171,6 +249,48 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  unique_ptr<ScalarQueryResult<double> > SqliteDatabase::execScalarQueryDouble(const upSqlStatement& stmt, bool skipPrep) const
+  {
+    if (!skipPrep)
+    {
+      if (!(execScalarQuery_prep(stmt)))
+      {
+        return nullptr;
+      }
+    }
+
+    ScalarQueryResult<double>* result;
+
+    if (stmt->isNull(0))
+    {
+      result = new ScalarQueryResult<double>();
+    } else {
+      double d;
+      if (!(stmt->getDouble(0, &d)))
+      {
+        return nullptr;
+      }
+      result = new ScalarQueryResult<double>(d);
+    }
+
+    return unique_ptr<ScalarQueryResult<double>>(result);
+  }
+
+  //----------------------------------------------------------------------------
+
+  unique_ptr<ScalarQueryResult<double> > SqliteDatabase::execScalarQueryDouble(const string& sqlStatement)
+  {
+    auto stmt = execScalarQuery_prep(sqlStatement);
+    if (stmt == nullptr)
+    {
+      return nullptr;
+    }
+
+    return execScalarQueryDouble(stmt, true);
+  }
+
+  //----------------------------------------------------------------------------
+
   bool SqliteDatabase::execScalarQueryString(const string& sqlStatement, string* out)
   {
     auto stmt = execScalarQuery_prep<string>(sqlStatement, out);
@@ -182,6 +302,48 @@ namespace SqliteOverlay
   bool SqliteDatabase::execScalarQueryString(const upSqlStatement& stmt, string* out) const
   {
     return execScalarQuery_prep<string>(stmt, out) ? stmt->getString(0, out) : false;
+  }
+
+  //----------------------------------------------------------------------------
+
+  unique_ptr<ScalarQueryResult<string> > SqliteDatabase::execScalarQueryString(const upSqlStatement& stmt, bool skipPrep) const
+  {
+    if (!skipPrep)
+    {
+      if (!(execScalarQuery_prep(stmt)))
+      {
+        return nullptr;
+      }
+    }
+
+    ScalarQueryResult<string>* result;
+
+    if (stmt->isNull(0))
+    {
+      result = new ScalarQueryResult<string>();
+    } else {
+      string s;
+      if (!(stmt->getString(0, &s)))
+      {
+        return nullptr;
+      }
+      result = new ScalarQueryResult<string>(s);
+    }
+
+    return unique_ptr<ScalarQueryResult<string>>(result);
+  }
+
+  //----------------------------------------------------------------------------
+
+  unique_ptr<ScalarQueryResult<string> > SqliteDatabase::execScalarQueryString(const string& sqlStatement)
+  {
+    auto stmt = execScalarQuery_prep(sqlStatement);
+    if (stmt == nullptr)
+    {
+      return nullptr;
+    }
+
+    return execScalarQueryString(stmt, true);
   }
 
   //----------------------------------------------------------------------------
@@ -307,9 +469,46 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  int SqliteDatabase::getRowsAffected()
+  {
+    return sqlite3_changes(dbPtr.get());
+  }
+
+  //----------------------------------------------------------------------------
+
   void SqliteDatabase::setLogLevel(int newLvl)
   {
     log->setLevel(newLvl);
+  }
+
+  //----------------------------------------------------------------------------
+
+  DbTab* SqliteDatabase::getTab(const string& tabName)
+  {
+    // try to find the tabl object in the cache
+    auto it = tabCache.find(tabName);
+
+    // if we have a hit, return the table object
+    if (it != tabCache.end())
+    {
+      return it->second;
+    }
+
+    // okay, we have a cache miss.
+    //
+    // check if the table exists
+    if (!(hasTable(tabName)))
+    {
+      return nullptr;
+    }
+
+    // the table name is valid, but the table
+    // has not yet been accessed. So we need to
+    // create a new tab object
+    DbTab* tab = new DbTab(this, tabName);
+    tabCache[tabName] = tab;
+
+    return tab;
   }
 
   //----------------------------------------------------------------------------

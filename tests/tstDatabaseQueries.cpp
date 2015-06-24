@@ -4,6 +4,7 @@
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"
 #include "HelperFunc.h"
+#include "ClausesAndQueries.h"
 
 using namespace SqliteOverlay;
 namespace bfs = boost::filesystem;
@@ -17,13 +18,34 @@ TEST_F(DatabaseTestScenario, QueryInt)
   string sql = "SELECT COUNT(*) FROM t1 WHERE id > 0";
   ASSERT_TRUE(db->execScalarQueryInt(sql, &result));
   ASSERT_EQ(5, result);
+  auto sqr = db->execScalarQueryInt(sql);
+  ASSERT_TRUE(sqr != nullptr);
+  ASSERT_FALSE(sqr->isNull());
+  ASSERT_EQ(5, sqr->get());
 
   // second version: SQL statement as statement
   result = 0;
   auto stmt = db->prepStatement(sql);
   ASSERT_TRUE(db->execScalarQueryInt(stmt, &result));
   ASSERT_EQ(5, result);
+  stmt = db->prepStatement(sql);
+  sqr = db->execScalarQueryInt(stmt);
+  ASSERT_TRUE(sqr != nullptr);
+  ASSERT_FALSE(sqr->isNull());
+  ASSERT_EQ(5, sqr->get());
 
+  // special case: query returning NULL column value
+  sql = "SELECT i FROM t1 WHERE id=2";
+  sqr = db->execScalarQueryInt(sql);
+  ASSERT_TRUE(sqr != nullptr);
+  ASSERT_TRUE(sqr->isNull());
+  ASSERT_THROW(sqr->get(), std::invalid_argument);
+
+  // special case: query returning no results
+  sql = "SELECT i FROM t1 WHERE id=9999";
+  sqr = db->execScalarQueryInt(sql);
+  ASSERT_TRUE(sqr == nullptr);
+  ASSERT_FALSE(db->execScalarQueryInt(sql, &result));
 }
 
 //----------------------------------------------------------------
@@ -59,12 +81,34 @@ TEST_F(DatabaseTestScenario, QueryDouble)
   string sql = "SELECT f FROM t1 WHERE id = 2";
   ASSERT_TRUE(db->execScalarQueryDouble(sql, &result));
   ASSERT_EQ(666.66, result);
+  auto sqr = db->execScalarQueryDouble(sql);
+  ASSERT_TRUE(sqr != nullptr);
+  ASSERT_FALSE(sqr->isNull());
+  ASSERT_EQ(666.66, sqr->get());
 
   // second version: SQL statement as statement
   result = 0;
   auto stmt = db->prepStatement(sql);
   ASSERT_TRUE(db->execScalarQueryDouble(stmt, &result));
   ASSERT_EQ(666.66, result);
+  stmt = db->prepStatement(sql);
+  sqr = db->execScalarQueryDouble(stmt);
+  ASSERT_TRUE(sqr != nullptr);
+  ASSERT_FALSE(sqr->isNull());
+  ASSERT_EQ(666.66, sqr->get());
+
+  // special case: query returning NULL column value
+  sql = "SELECT f FROM t1 WHERE id=3";
+  sqr = db->execScalarQueryDouble(sql);
+  ASSERT_TRUE(sqr != nullptr);
+  ASSERT_TRUE(sqr->isNull());
+  ASSERT_THROW(sqr->get(), std::invalid_argument);
+
+  // special case: query returning no results
+  sql = "SELECT i FROM t1 WHERE id=9999";
+  sqr = db->execScalarQueryDouble(sql);
+  ASSERT_TRUE(sqr == nullptr);
+  ASSERT_FALSE(db->execScalarQueryDouble(sql, &result));
 }
 
 //----------------------------------------------------------------
@@ -78,12 +122,27 @@ TEST_F(DatabaseTestScenario, QueryString)
   string sql = "SELECT s FROM t1 WHERE id = 5";
   ASSERT_TRUE(db->execScalarQueryString(sql, &result));
   ASSERT_EQ("Ho", result);
+  auto sqr = db->execScalarQueryString(sql);
+  ASSERT_TRUE(sqr != nullptr);
+  ASSERT_FALSE(sqr->isNull());
+  ASSERT_EQ("Ho", sqr->get());
 
   // second version: SQL statement as statement
   result = "xxx";
   auto stmt = db->prepStatement(sql);
   ASSERT_TRUE(db->execScalarQueryString(stmt, &result));
   ASSERT_EQ("Ho", result);
+  stmt = db->prepStatement(sql);
+  sqr = db->execScalarQueryString(stmt);
+  ASSERT_TRUE(sqr != nullptr);
+  ASSERT_FALSE(sqr->isNull());
+  ASSERT_EQ("Ho", sqr->get());
+
+  // special case: query returning no results
+  sql = "SELECT i FROM t1 WHERE id=9999";
+  sqr = db->execScalarQueryString(sql);
+  ASSERT_TRUE(sqr == nullptr);
+  ASSERT_FALSE(db->execScalarQueryString(sql, &result));
 }
 
 //----------------------------------------------------------------

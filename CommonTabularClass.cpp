@@ -177,7 +177,7 @@ namespace SqliteOverlay
 
   int CommonTabularClass::getMatchCountForWhereClause(const WhereClause& w) const
   {
-    string sql = w.getSql(tabName, true);
+    string sql = w.getSelectStmt(tabName, true);
     int cnt;
     bool isOk = db->execScalarQueryInt(sql, &cnt);
 
@@ -235,112 +235,6 @@ namespace SqliteOverlay
   }
 
 //----------------------------------------------------------------------------
-
-  WhereClause::WhereClause()
-  {
-    clear();
-  }
-
-  void WhereClause::clear()
-  {
-    sql.clear();
-    colCount = 0;
-  }
-
-//----------------------------------------------------------------------------
-
-  void WhereClause::addIntCol(const string& colName, int val)
-  {
-    addCol(colName, to_string(val));
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addIntCol(const string& colName, const string& op, int val)
-  {
-    addCol(colName, op, to_string(val));
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addDoubleCol(const string& colName, double val)
-  {
-    addCol(colName, to_string(val));
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addDoubleCol(const string& colName, const string& op, double val)
-  {
-    addCol(colName, op, to_string(val));
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addStringCol(const string& colName, const string& val)
-  {
-    addCol(colName, val, true);
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addStringCol(const string& colName, const string& op, const string& val)
-  {
-    addCol(colName, op, val, true);
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addNullCol(const string& colName)
-  {
-    if (colCount > 0)
-    {
-      sql += " AND ";
-    }
-    sql += colName + " IS NULL";
-
-    ++colCount;
-  }
-
-//----------------------------------------------------------------------------
-
-  string WhereClause::getSql(const string& tabName, bool countOnly) const
-  {
-    if (tabName.empty())
-    {
-      return string();
-    }
-
-    string result = "SELECT ";
-    if (countOnly) result += "COUNT(*)";
-    else result += "id";
-    result += " FROM " + tabName + " WHERE " + sql;
-
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addCol(const string& colName, const string& val, bool useQuotes)
-  {
-    addCol(colName, "=", val, useQuotes);
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addCol(const string& colName, const string& op, const string& val, bool useQuotes)
-  {
-    if (colCount > 0)
-    {
-      sql += " AND ";
-    }
-    sql += colName + op;
-    if (useQuotes) sql += "'" + val + "'";
-    else sql += val;
-
-    ++colCount;
-  }
-
 //----------------------------------------------------------------------------
 
 

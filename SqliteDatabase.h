@@ -6,15 +6,22 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 #include "Logger.h"
 #include "SqlStatement.h"
 #include "HelperFunc.h"
+//#include "ClausesAndQueries.h"
 
 using namespace std;
 
 namespace SqliteOverlay
 {
+  class DbTab;
+
+  template<class T>
+  class ScalarQueryResult;
+
   struct SqliteDeleter
   {
     void operator()(sqlite3* p);
@@ -25,8 +32,6 @@ namespace SqliteOverlay
   class SqliteDatabase
   {
   public:
-    //static unique_ptr<SqliteDatabase> get(string dbFileName = ":memory:", bool createNew=false);
-
     template<class T>
     static unique_ptr<T> get(string dbFileName = ":memory:", bool createNew=false) {
       T* tmpPtr;
@@ -41,6 +46,7 @@ namespace SqliteOverlay
       tmpPtr->populateViews();
       return unique_ptr<T>(tmpPtr);
     }
+    virtual ~SqliteDatabase();
 
     bool isAlive() const;
 
@@ -54,12 +60,21 @@ namespace SqliteOverlay
     bool execNonQuery(const upSqlStatement& stmt) const;
     upSqlStatement execContentQuery(const string& sqlStatement);
     bool execContentQuery(const upSqlStatement& stmt);
+
     bool execScalarQueryInt(const string& sqlStatement, int* out);
     bool execScalarQueryInt(const upSqlStatement& stmt, int* out) const;
+    unique_ptr<ScalarQueryResult<int>> execScalarQueryInt(const upSqlStatement& stmt, bool skipPrep=false) const;
+    unique_ptr<ScalarQueryResult<int>> execScalarQueryInt(const string& sqlStatement);
+
     bool execScalarQueryDouble(const string& sqlStatement, double* out);
     bool execScalarQueryDouble(const upSqlStatement& stmt, double* out) const;
+    unique_ptr<ScalarQueryResult<double>> execScalarQueryDouble(const upSqlStatement& stmt, bool skipPrep=false) const;
+    unique_ptr<ScalarQueryResult<double>> execScalarQueryDouble(const string& sqlStatement);
+
     bool execScalarQueryString(const string& sqlStatement, string* out);
     bool execScalarQueryString(const upSqlStatement& stmt, string* out) const;
+    unique_ptr<ScalarQueryResult<string>> execScalarQueryString(const upSqlStatement& stmt, bool skipPrep=false) const;
+    unique_ptr<ScalarQueryResult<string>> execScalarQueryString(const string& sqlStatement);
 
     void enforceSynchronousWrites(bool syncOn);
 
@@ -77,8 +92,11 @@ namespace SqliteOverlay
     string genForeignKeyClause(const string& keyName, const string& referedTable);
 
     int getLastInsertId();
+    int getRowsAffected();
 
     void setLogLevel(int newLvl);
+
+    DbTab* getTab (const string& tabName);
 
   protected:
     SqliteDatabase(string dbFileName = ":memory:", bool createNew=false);
@@ -107,6 +125,9 @@ namespace SqliteOverlay
       return true;
     }
 
+    bool execScalarQuery_prep(const upSqlStatement& stmt) const;
+    upSqlStatement execScalarQuery_prep(const string& sqlStatement);
+
     /**
      * @brief dbPtr the internal database handle
      */
@@ -116,6 +137,9 @@ namespace SqliteOverlay
      * A logger instance for debug messages
      */
     unique_ptr<Logger> log;
+
+    unordered_map<string, DbTab*> tabCache;
+
   };
 
   typedef unique_ptr<SqliteDatabase> upSqliteDatabase;

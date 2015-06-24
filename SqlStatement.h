@@ -16,7 +16,8 @@ namespace SqliteOverlay
     ~SqlStatement();
 
     void bindInt(int argPos, int val);
-    //void bindInt(string argName, int val);
+    void bindDouble(int argPos, double val);
+    void bindString(int argPos, string& val);
 
     bool step(const Logger* log=nullptr);
 
@@ -26,6 +27,9 @@ namespace SqliteOverlay
     bool getInt(int colId, int* out) const;
     bool getDouble(int colId, double* out) const;
     bool getString(int colId, string* out) const;
+
+    int getColType(int colId) const;
+    int isNull(int colId) const;
 
   private:
     template<class T>

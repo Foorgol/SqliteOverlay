@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "SqliteDatabase.h"
+#include "ClausesAndQueries.h"
 
 namespace SqliteOverlay
 {
@@ -43,30 +44,6 @@ namespace SqliteOverlay
   
   typedef vector<ColInfo> ColInfoList;
   
-  class WhereClause
-  {
-  public:
-    WhereClause();
-    void clear();
-
-    void addIntCol(const string& colName, int val);
-    void addIntCol(const string& colName, const string& op, int val);
-    void addDoubleCol(const string& colName, double val);
-    void addDoubleCol(const string& colName, const string& op, double val);
-    void addStringCol(const string& colName, const string& val);
-    void addStringCol(const string& colName, const string& op, const string& val);
-    void addNullCol(const string& colName);
-
-    string getSql(const string& tabName, bool countOnly) const;
-
-  private:
-    string sql;
-    int colCount;
-
-    void addCol(const string& colName, const string& val, bool useQuotes=false);
-    void addCol(const string& colName, const string& op, const string& val, bool useQuotes=false);
-  };
-
   class CommonTabularClass
   {
   public:

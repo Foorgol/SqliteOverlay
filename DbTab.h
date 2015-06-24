@@ -14,56 +14,54 @@
 #define	DBTAB_H
 
 #include "CommonTabularClass.h"
-#include "TabRow.h"
+#include "HelperFunc.h"
+#include "ClausesAndQueries.h"
 
-#include <QHash>
 
-namespace dbOverlay
+namespace SqliteOverlay
 {
-
   class DbTab : public CommonTabularClass
   {
+    friend class SqliteDatabase;
+
   public:
-    class CachingRowIterator
-    {
-    public:
-      CachingRowIterator(GenericDatabase* db, const QString& tabName, QSqlQuery& qry);
-      void operator++();
-      TabRow operator*() const;
-      bool isEnd() const;
-      bool isValid() const;
-      int length() const;
+//    class CachingRowIterator
+//    {
+//    public:
+//      CachingRowIterator(SqliteDatabase* db, const string& tabName, QSqlQuery& qry);
+//      void operator++();
+//      TabRow operator*() const;
+//      bool isEnd() const;
+//      bool isValid() const;
+//      int length() const;
       
-    private:
-      QList<int> idList;
-      GenericDatabase* db;
-      QString tabName;
-      QList<int>::const_iterator listIter;
-    };
+//    private:
+//      QList<int> idList;
+//      GenericDatabase* db;
+//      QString tabName;
+//      QList<int>::const_iterator listIter;
+//    };
     
   public:
-    static DbTab getTab (GenericDatabase* db, const QString& tabName);
-    static void clearTabCache();
-    //DbTab (const DbTab& orig);
     virtual ~DbTab ();
-    int insertRow(const QVariantList& args);
+    int insertRow(const ColumnValueClause& ic);
     int insertRow();
-    TabRow operator[](const int id) const;
-    TabRow operator[](const QVariantList& args ) const;
-    TabRow getSingleRowByColumnValue(const QVariantList& args = QVariantList()) const;
-    TabRow getSingleRowByColumnValue(const QString& col, const QVariant& val) const;
-    TabRow getSingleRowByWhereClause(const QString& where, const QVariantList& args = QVariantList()) const;
-    CachingRowIterator getRowsByWhereClause(const QString& where, const QVariantList& args = QVariantList()) const;
-    CachingRowIterator getRowsByColumnValue(const QVariantList& args = QVariantList()) const;
-    CachingRowIterator getRowsByColumnValue(const QString& col, const QVariant& val) const;
-    CachingRowIterator getAllRows() const;
-    int deleteRowsByWhereClause(const QString& where, const QVariantList& args = QVariantList()) const;
-    int deleteRowsByColumnValue(const QVariantList& args = QVariantList()) const;
-    int deleteRowsByColumnValue(const QString& col, const QVariant& val) const;
+//    TabRow operator[](const int id) const;
+//    TabRow operator[](const QVariantList& args ) const;
+//    TabRow getSingleRowByColumnValue(const QVariantList& args = QVariantList()) const;
+//    TabRow getSingleRowByColumnValue(const QString& col, const QVariant& val) const;
+//    TabRow getSingleRowByWhereClause(const QString& where, const QVariantList& args = QVariantList()) const;
+//    CachingRowIterator getRowsByWhereClause(const QString& where, const QVariantList& args = QVariantList()) const;
+//    CachingRowIterator getRowsByColumnValue(const QVariantList& args = QVariantList()) const;
+//    CachingRowIterator getRowsByColumnValue(const QString& col, const QVariant& val) const;
+//    CachingRowIterator getAllRows() const;
+    int deleteRowsByWhereClause(const WhereClause& where) const;
+    int deleteRowsByColumnValue(const string& col, const int val) const;
+    int deleteRowsByColumnValue(const string& col, const double val) const;
+    int deleteRowsByColumnValue(const string& col, const string& val) const;
 
   private:
-    static QHash<QString, DbTab> tabCache;
-    DbTab (GenericDatabase* db, const QString& tabName);
+    DbTab (SqliteDatabase* db, const string& tabName);
   };
 
 }
