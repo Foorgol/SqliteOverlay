@@ -141,10 +141,17 @@ namespace SqliteOverlay
       stmt->step();
     } while (!(stmt->isDone()));
 
-    curIdx = 0;
     cachedLength = idList.size();
   }
 
+//----------------------------------------------------------------------------
+
+  DbTab::CachingRowIterator::CachingRowIterator()
+    : db(nullptr), tabName("")
+  {
+    curIdx = -1;
+    cachedLength = 0;
+  }
 
 //----------------------------------------------------------------------------
 
@@ -184,55 +191,68 @@ namespace SqliteOverlay
     return TabRow(db, tabName, id, true);
   }
 
-////----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 
   int DbTab::CachingRowIterator::length() const
   {
     return cachedLength;
   }
 
-////----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 
-//  DbTab::CachingRowIterator DbTab::getRowsByWhereClause(const QString& where, const QVariantList& args) const
-//  {
-//    QString sql = "SELECT id FROM " + tabName + " WHERE " + where;
-//    unique_ptr<QSqlQuery> qry = unique_ptr<QSqlQuery>(db->execContentQuery(sql, args));
-//    if (qry == NULL) {
-//      throw std::invalid_argument("getRowsByWhereClause: invalid query!");
-//    }
-    
-//    DbTab::CachingRowIterator result = DbTab::CachingRowIterator(db, tabName, *qry);
-//    return result;
-//  }
+  DbTab::CachingRowIterator DbTab::getRowsByWhereClause(const WhereClause& w) const
+  {
+    string sql = w.getSelectStmt(tabName, false);
+    auto stmt = db->prepStatement(sql);
 
-////----------------------------------------------------------------------------
+    // in cause errors, return an empty CachingRowIterator
+    if (stmt == nullptr)
+    {
+      throw std::invalid_argument("getRowsByWhereClause: invalid query!");
+    }
+    if (!(stmt->step()))
+    {
+      return CachingRowIterator();
+    }
 
-//  DbTab::CachingRowIterator DbTab::getRowsByColumnValue(const QVariantList& args) const
-//  {
-//    QVariantList qvl;
-    
-//    qvl = prepWhereClause(args);  // don't catch exception, forward them to caller
-    
-//    QString sql = "SELECT id FROM " + tabName + " WHERE " + qvl.at(0).toString();
-//    qvl.removeFirst();
-//    unique_ptr<QSqlQuery> qry = unique_ptr<QSqlQuery>(db->execContentQuery(sql, qvl));
-//    if (qry == NULL) {
-//      throw std::invalid_argument("getRowsByColumnValue: invalid query!");
-//    }
-    
-//    DbTab::CachingRowIterator result = DbTab::CachingRowIterator(db, tabName, *qry);
-//    return result;
-//  }
+    return DbTab::CachingRowIterator(db, tabName, std::move(stmt));
+  }
 
-////----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 
-//  DbTab::CachingRowIterator DbTab::getRowsByColumnValue(const QString& col, const QVariant& val) const
-//  {
-//    QVariantList qvl;
-//    qvl << col << val;
+  DbTab::CachingRowIterator DbTab::getRowsByColumnValue(const string& col, int val) const
+  {
+    WhereClause w;
+    w.addIntCol(col, val);
+    return getRowsByWhereClause(w);
+  }
 
-//    return getRowsByColumnValue(qvl);
-//  }
+//----------------------------------------------------------------------------
+
+  DbTab::CachingRowIterator DbTab::getRowsByColumnValue(const string& col, double val) const
+  {
+    WhereClause w;
+    w.addDoubleCol(col, val);
+    return getRowsByWhereClause(w);
+  }
+
+//----------------------------------------------------------------------------
+
+  DbTab::CachingRowIterator DbTab::getRowsByColumnValue(const string& col, const string& val) const
+  {
+    WhereClause w;
+    w.addStringCol(col, val);
+    return getRowsByWhereClause(w);
+  }
+
+//----------------------------------------------------------------------------
+
+  DbTab::CachingRowIterator DbTab::getRowsByColumnValueNull(const string& col) const
+  {
+    WhereClause w;
+    w.addNullCol(col);
+    return getRowsByWhereClause(w);
+  }
 
 //----------------------------------------------------------------------------
 

@@ -154,3 +154,41 @@ TEST_F(DatabaseTestScenario, DbTab_GetAllRows)
 
 //----------------------------------------------------------------
 
+TEST_F(DatabaseTestScenario, DbTab_GetRowsByWhereClause)
+{
+  auto db = getScenario01();
+  auto t1 = db->getTab("t1");
+  ASSERT_TRUE(t1 != nullptr);
+
+  WhereClause w;
+  w.addIntCol("id", ">", 3);
+  DbTab::CachingRowIterator it = t1->getRowsByWhereClause(w);
+  ASSERT_EQ(2, it.length());
+  ASSERT_FALSE(it.isEmpty());
+
+  int id=3;
+  while (it.hasMore())
+  {
+    ++id;
+    TabRow r = *it;
+    ASSERT_EQ(id, r.getId());
+    ++it;
+  }
+  ASSERT_THROW(++it, std::runtime_error);
+
+  // test empty result
+  w.clear();
+  w.addIntCol("id", ">", 333);
+  it = t1->getRowsByWhereClause(w);
+  ASSERT_EQ(0, it.length());
+  ASSERT_TRUE(it.isEmpty());
+  ASSERT_FALSE(it.hasMore());
+
+  // test invalid query
+  w.clear();
+  w.addIntCol("kgjhdfkjg", 42);
+  ASSERT_THROW(t1->getRowsByWhereClause(w), std::invalid_argument);
+}
+
+//----------------------------------------------------------------
+

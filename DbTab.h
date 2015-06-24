@@ -40,6 +40,7 @@ namespace SqliteOverlay
       
     private:
       CachingRowIterator(SqliteDatabase* db, const string& tabName, upSqlStatement stmt);
+      CachingRowIterator();
       vector<int> idList;
       SqliteDatabase* db;
       string tabName;
@@ -58,9 +59,11 @@ namespace SqliteOverlay
     TabRow getSingleRowByColumnValue(const string& col, const string& val) const;
     TabRow getSingleRowByColumnValueNull(const string& col) const;
     TabRow getSingleRowByWhereClause(const WhereClause& w) const;
-//    CachingRowIterator getRowsByWhereClause(const QString& where, const QVariantList& args = QVariantList()) const;
-//    CachingRowIterator getRowsByColumnValue(const QVariantList& args = QVariantList()) const;
-//    CachingRowIterator getRowsByColumnValue(const QString& col, const QVariant& val) const;
+    CachingRowIterator getRowsByWhereClause(const WhereClause& w) const;
+    CachingRowIterator getRowsByColumnValue(const string& col, int val) const;
+    CachingRowIterator getRowsByColumnValue(const string& col, double val) const;
+    CachingRowIterator getRowsByColumnValue(const string& col, const string& val) const;
+    CachingRowIterator getRowsByColumnValueNull(const string& col) const;
     CachingRowIterator getAllRows() const;
     int deleteRowsByWhereClause(const WhereClause& where) const;
     int deleteRowsByColumnValue(const string& col, const int val) const;
