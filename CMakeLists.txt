@@ -48,6 +48,7 @@ set(LIB_SOURCES_TST
     tests/tstClausesAndQueries.cpp
     tests/tstDbTab.cpp
     tests/tstTabRow.cpp
+    tests/tstTimestamps.cpp
 )
 
 find_package(GTest)

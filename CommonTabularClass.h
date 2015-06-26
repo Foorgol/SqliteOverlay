@@ -17,6 +17,7 @@
 
 #include "SqliteDatabase.h"
 #include "ClausesAndQueries.h"
+#include "SqlStatement.h"
 
 namespace SqliteOverlay
 {
@@ -29,7 +30,7 @@ namespace SqliteOverlay
   public:
 
     ColInfo (int _cid, const string& _name, const string& _type)
-    : cid (_cid), name (_name), type (_type) { };
+    : cid (_cid), name (_name), type (_type) { }
 
     int getId () const;
     string getColName () const;
@@ -61,6 +62,7 @@ namespace SqliteOverlay
     int getMatchCountForColumnValue(const string& col, const string& val) const;
     int getMatchCountForColumnValue(const string& col, int val) const;
     int getMatchCountForColumnValue(const string& col, double val) const;
+    int getMatchCountForColumnValue(const string& col, const CommonTimestamp* pTimestamp) const;
     int getMatchCountForColumnValueNull(const string& col) const;
     int length() const;
 

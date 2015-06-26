@@ -201,6 +201,22 @@ namespace SqliteOverlay
     return result;
   }
 
+  //----------------------------------------------------------------------------
+
+  LocalTimestamp TabRow::getLocalTime(const string& colName) const
+  {
+    time_t rawTime = getInt(colName);
+    return LocalTimestamp(rawTime);
+  }
+
+  //----------------------------------------------------------------------------
+
+  UTCTimestamp TabRow::getUTCTime(const string& colName) const
+  {
+    time_t rawTime = getInt(colName);
+    return UTCTimestamp(rawTime);
+  }
+
 //----------------------------------------------------------------------------
 
   unique_ptr<ScalarQueryResult<int> > TabRow::getInt2(const string& colName) const
@@ -241,6 +257,50 @@ namespace SqliteOverlay
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
 
     return db->execScalarQueryString(sql);
+  }
+
+//----------------------------------------------------------------------------
+
+  unique_ptr<ScalarQueryResult<LocalTimestamp> > TabRow::getLocalTime2(const string& colName) const
+  {
+    if (colName.empty())
+    {
+      throw std::invalid_argument("Column access: received empty column name");
+    }
+
+    string sql = "SELECT " + colName + cachedWhereStatementForRow;
+
+    auto rawTime = db->execScalarQueryInt(sql);
+
+    if (rawTime->isNull())
+    {
+      return unique_ptr<ScalarQueryResult<LocalTimestamp>>(new ScalarQueryResult<LocalTimestamp>());
+    }
+
+    LocalTimestamp result(rawTime->get());
+    return unique_ptr<ScalarQueryResult<LocalTimestamp>>(new ScalarQueryResult<LocalTimestamp>(result));
+  }
+
+//----------------------------------------------------------------------------
+
+  unique_ptr<ScalarQueryResult<UTCTimestamp> > TabRow::getUTCTime2(const string& colName) const
+  {
+    if (colName.empty())
+    {
+      throw std::invalid_argument("Column access: received empty column name");
+    }
+
+    string sql = "SELECT " + colName + cachedWhereStatementForRow;
+
+    auto rawTime = db->execScalarQueryInt(sql);
+
+    if (rawTime->isNull())
+    {
+      return unique_ptr<ScalarQueryResult<UTCTimestamp>>(new ScalarQueryResult<UTCTimestamp>());
+    }
+
+    UTCTimestamp result(rawTime->get());
+    return unique_ptr<ScalarQueryResult<UTCTimestamp>>(new ScalarQueryResult<UTCTimestamp>(result));
   }
 
 //----------------------------------------------------------------------------

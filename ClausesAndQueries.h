@@ -5,15 +5,18 @@
 
 namespace SqliteOverlay {
 
+  class CommonTimestamp;
+
   class ColumnValueClause
   {
   public:
-    ColumnValueClause(){};
+    ColumnValueClause(){}
     void clear();
 
     void addIntCol(const string& colName, int val);
     void addDoubleCol(const string& colName, double val);
     void addStringCol(const string& colName, const string& val);
+    void addDateTimeCol(const string& colName, const CommonTimestamp* pTimestamp);
     void addNullCol(const string& colName);
 
     string getInsertStmt(const string& tabName) const;
@@ -39,6 +42,8 @@ namespace SqliteOverlay {
     void addDoubleCol(const string& colName, const string& op, double val);
     void addStringCol(const string& colName, const string& val);
     void addStringCol(const string& colName, const string& op, const string& val);
+    void addDateTimeCol(const string& colName, const CommonTimestamp* pTimestamp);
+    void addDateTimeCol(const string& colName, const string& op,  const CommonTimestamp* pTimestamp);
     void addNullCol(const string& colName);
 
     string getSelectStmt(const string& tabName, bool countOnly) const;

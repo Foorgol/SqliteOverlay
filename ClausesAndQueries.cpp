@@ -1,4 +1,5 @@
 #include "ClausesAndQueries.h"
+#include "SqlStatement.h"
 
 namespace SqliteOverlay {
 
@@ -27,6 +28,16 @@ namespace SqliteOverlay {
   void ColumnValueClause::addStringCol(const string& colName, const string& val)
   {
     addCol(colName, val, true);
+  }
+
+//----------------------------------------------------------------------------
+
+  void ColumnValueClause::addDateTimeCol(const string& colName, const CommonTimestamp* pTimestamp)
+  {
+    // thanks to polymorphism, this works for
+    // both LocalTimestamp and UTCTimestamp
+    time_t rawTime = pTimestamp->getRawTime();
+    addIntCol(colName, rawTime);
   }
 
 //----------------------------------------------------------------------------
@@ -155,6 +166,24 @@ namespace SqliteOverlay {
   void WhereClause::addStringCol(const string& colName, const string& op, const string& val)
   {
     addCol(colName, op, val, true);
+  }
+
+  void WhereClause::addDateTimeCol(const string& colName, const CommonTimestamp* pTimestamp)
+  {
+    // thanks to polymorphism, this works for
+    // both LocalTimestamp and UTCTimestamp
+    time_t rawTime = pTimestamp->getRawTime();
+    addIntCol(colName, rawTime);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void WhereClause::addDateTimeCol(const string& colName, const string& op, const CommonTimestamp* pTimestamp)
+  {
+    // thanks to polymorphism, this works for
+    // both LocalTimestamp and UTCTimestamp
+    time_t rawTime = pTimestamp->getRawTime();
+    addIntCol(colName, op, rawTime);
   }
 
   //----------------------------------------------------------------------------

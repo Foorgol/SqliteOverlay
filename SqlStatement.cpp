@@ -1,4 +1,7 @@
 #include <stdexcept>
+#include <ctime>
+#include <cstring>
+
 #include "SqlStatement.h"
 
 using namespace std;
@@ -158,6 +161,32 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  bool SqlStatement::getLocalTime(int colId, LocalTimestamp* out) const
+  {
+    if (getColumnValue_prep<LocalTimestamp>(colId, out))
+    {
+      time_t rawTime = sqlite3_column_int(stmt, colId);
+      *out = LocalTimestamp(rawTime);
+      return true;
+    }
+    return false;
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqlStatement::getUTCTime(int colId, UTCTimestamp* out) const
+  {
+    if (getColumnValue_prep<UTCTimestamp>(colId, out))
+    {
+      time_t rawTime = sqlite3_column_int(stmt, colId);
+      *out = UTCTimestamp(rawTime);
+      return true;
+    }
+    return false;
+  }
+
+  //----------------------------------------------------------------------------
+
   int SqlStatement::getColType(int colId) const
   {
     return sqlite3_column_type(stmt, colId);
@@ -196,6 +225,122 @@ namespace SqliteOverlay
   void SqlStatement::bindString(int argPos, string& val)
   {
     sqlite3_bind_text(stmt, argPos, val.c_str(), -1, SQLITE_TRANSIENT);
+  }
+
+  //----------------------------------------------------------------------------
+
+  CommonTimestamp::CommonTimestamp(int year, int month, int day, int hour, int min, int sec)
+  {
+    timestamp.tm_year = year - 1900;
+    timestamp.tm_mon = month - 1;
+    timestamp.tm_mday = day;
+    timestamp.tm_hour = hour;
+    timestamp.tm_min = min;
+    timestamp.tm_sec = sec;
+  }
+
+  //----------------------------------------------------------------------------
+
+  string CommonTimestamp::getISODate() const
+  {
+    return getFormattedString("%Y-%m-%d");
+  }
+
+  //----------------------------------------------------------------------------
+
+  string CommonTimestamp::getTime() const
+  {
+    return getFormattedString("%H:%M:%S");
+  }
+
+  //----------------------------------------------------------------------------
+
+  string CommonTimestamp::getTimestamp() const
+  {
+    return getFormattedString("%Y-%m-%d %H:%M:%S");
+  }
+
+  //----------------------------------------------------------------------------
+
+  string CommonTimestamp::getFormattedString(const string& fmt) const
+  {
+    char buf[80];
+    strftime(buf, 80, fmt.c_str(), &timestamp);
+    string result = string(buf);
+
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  UTCTimestamp::UTCTimestamp(int year, int month, int day, int hour, int min, int sec)
+    : CommonTimestamp(year, month, day, hour, min, sec)
+  {
+  }
+
+  //----------------------------------------------------------------------------
+
+  UTCTimestamp::UTCTimestamp(time_t rawTimeInUTC)
+    :CommonTimestamp(0,0,0,0,0,0)  // dummy values, will be overwritten anyway
+  {
+    // convert raw time to tm
+    tm* tmp = gmtime(&rawTimeInUTC);
+
+    // copy the contents over to our local struct
+    memcpy(&timestamp, tmp, sizeof(tm));
+  }
+
+  //----------------------------------------------------------------------------
+
+  UTCTimestamp::UTCTimestamp()
+    :UTCTimestamp(time(0))
+  {
+
+  }
+
+  //----------------------------------------------------------------------------
+
+  time_t UTCTimestamp::getRawTime() const
+  {
+    tm tmp;
+    memcpy(&tmp, &timestamp, sizeof(tm));
+    return timegm(&tmp);   // the parameter is not const, so we pass a copy
+  }
+
+  //----------------------------------------------------------------------------
+
+  LocalTimestamp::LocalTimestamp(int year, int month, int day, int hour, int min, int sec)
+    : CommonTimestamp(year, month, day, hour, min, sec)
+  {
+  }
+
+  //----------------------------------------------------------------------------
+
+  LocalTimestamp::LocalTimestamp(time_t rawTimeInUTC)
+    :CommonTimestamp(0,0,0,0,0,0)  // dummy values, will be overwritten anyway
+  {
+    // convert raw time to tm
+    tm* tmp = localtime(&rawTimeInUTC);
+
+    // copy the contents over to our local struct
+    memcpy(&timestamp, tmp, sizeof(tm));
+  }
+
+  //----------------------------------------------------------------------------
+
+  LocalTimestamp::LocalTimestamp()
+    :LocalTimestamp(time(0))
+  {
+
+  }
+
+  //----------------------------------------------------------------------------
+
+  time_t LocalTimestamp::getRawTime() const
+  {
+    tm tmp;
+    memcpy(&tmp, &timestamp, sizeof(tm));
+    return mktime(&tmp);   // the parameter is not const, so we pass a copy
   }
 
   //----------------------------------------------------------------------------

@@ -211,6 +211,19 @@ namespace SqliteOverlay
     return getMatchCountForWhereClause(w);
   }
 
+  //----------------------------------------------------------------------------
+
+  int CommonTabularClass::getMatchCountForColumnValue(const string& col, const CommonTimestamp* pTimestamp) const
+  {
+    // thanks to polymorphism, this works for
+    // both LocalTimestamp and UTCTimestamp
+    time_t rawTime = pTimestamp->getRawTime();
+
+    WhereClause w;
+    w.addIntCol(col, rawTime);
+    return getMatchCountForWhereClause(w);
+  }
+
 //----------------------------------------------------------------------------
 
   int CommonTabularClass::getMatchCountForColumnValueNull(const string& col) const

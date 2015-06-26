@@ -11,7 +11,6 @@
 #include "Logger.h"
 #include "SqlStatement.h"
 #include "HelperFunc.h"
-//#include "ClausesAndQueries.h"
 
 using namespace std;
 
