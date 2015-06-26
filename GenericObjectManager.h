@@ -33,6 +33,20 @@ namespace SqliteOverlay
     }
 
     template<class T>
+    vector<T> getObjectsByColumnValue(const DbTab& objectTab, const string& colName, double val) const
+    {
+      DbTab::CachingRowIterator it = objectTab.getRowsByColumnValue(colName, val);
+      return iterator2Objects<T>(it);
+    }
+
+    template<class T>
+    vector<T> getObjectsByColumnValue(const DbTab& objectTab, const string& colName, const string& val) const
+    {
+      DbTab::CachingRowIterator it = objectTab.getRowsByColumnValue(colName, val);
+      return iterator2Objects<T>(it);
+    }
+
+    template<class T>
     vector<T> getObjectsByWhereClause(const DbTab& objectTab, const WhereClause& w) const
     {
       DbTab::CachingRowIterator it = objectTab.getRowsByWhereClause(w);
@@ -60,6 +74,30 @@ namespace SqliteOverlay
 
     template<class T>
     unique_ptr<T> getSingleObjectByColumnValue(const DbTab& objectTab, const string& colName, int val) const
+    {
+      try
+      {
+        TabRow r = objectTab.getSingleRowByColumnValue(colName, val);
+        return unique_ptr<T>(new T(db, r));
+      } catch (std::exception e) {
+      }
+      return nullptr;
+    }
+
+    template<class T>
+    unique_ptr<T> getSingleObjectByColumnValue(const DbTab& objectTab, const string& colName, double val) const
+    {
+      try
+      {
+        TabRow r = objectTab.getSingleRowByColumnValue(colName, val);
+        return unique_ptr<T>(new T(db, r));
+      } catch (std::exception e) {
+      }
+      return nullptr;
+    }
+
+    template<class T>
+    unique_ptr<T> getSingleObjectByColumnValue(const DbTab& objectTab, const string& colName, const string& val) const
     {
       try
       {
