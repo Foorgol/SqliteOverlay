@@ -16,6 +16,8 @@ set(LIB_SOURCES
     DbTab.cpp
     TabRow.cpp
     ClausesAndQueries.cpp
+    GenericDatabaseObject.cpp
+    GenericObjectManager.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
