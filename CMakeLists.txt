@@ -18,6 +18,7 @@ set(LIB_SOURCES
     ClausesAndQueries.cpp
     GenericDatabaseObject.cpp
     GenericObjectManager.cpp
+    DateAndTime.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
@@ -49,6 +50,7 @@ set(LIB_SOURCES_TST
     tests/tstDbTab.cpp
     tests/tstTabRow.cpp
     tests/tstTimestamps.cpp
+    tests/tstDateTime.cpp
 )
 
 find_package(GTest)

@@ -8,54 +8,12 @@
 #include <sqlite3.h>
 
 #include "Logger.h"
+#include "DateAndTime.h"
 
 using namespace std;
 
 namespace SqliteOverlay
 {  
-  // a wrapper class for tm for storing timestamps
-  class CommonTimestamp
-  {
-  public:
-    CommonTimestamp(int year, int month, int day, int hour, int min, int sec);
-    virtual time_t getRawTime() const = 0;
-
-    string getISODate() const;
-    string getTime() const;
-    string getTimestamp() const;
-
-  private:
-    tm timestamp;
-    string getFormattedString(const string& fmt) const;
-  };
-
-  // an extension of struct tm to clearly indicate that local time
-  // is stored
-  class LocalTimestamp : public CommonTimestamp
-  {
-  public:
-    LocalTimestamp(int year, int month, int day, int hour, int min, int sec);
-    LocalTimestamp(time_t rawTimeInUTC);
-    LocalTimestamp();
-    virtual time_t getRawTime() const override;
-
-  private:
-    tm timestamp;
-  };
-
-  // an extension of struct tm to clearly indicate that UTC
-  // is stored
-  class UTCTimestamp : public CommonTimestamp
-  {
-  public:
-    UTCTimestamp(int year, int month, int day, int hour, int min, int sec);
-    UTCTimestamp(time_t rawTimeInUTC);
-    UTCTimestamp();
-    virtual time_t getRawTime() const override;
-
-  private:
-    tm timestamp;
-  };
 
   class SqlStatement
   {
