@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include <ctime>
+#include <cstring>
 
 #include <sqlite3.h>
 
@@ -21,7 +22,7 @@ namespace SqliteOverlay
   {
   public:
     CommonTimestamp(int year, int month, int day, int hour, int min, int sec);
-    virtual time_t getRawTime() const = 0;
+    time_t getRawTime() const;
 
     string getISODate() const;
     string getTime() const;
@@ -30,8 +31,34 @@ namespace SqliteOverlay
     static bool isValidDate(int year, int month, int day);
     static bool isLeapYear(int year);
 
-  private:
+    inline bool operator< (const CommonTimestamp& other) const
+    {
+      return (raw < other.raw);   // maybe I should use difftime() here...
+    }
+    inline bool operator> (const CommonTimestamp& other) const
+    {
+      return (other < (*this));
+    }
+    inline bool operator<= (const CommonTimestamp& other) const
+    {
+      return (!(other < *this));
+    }
+    inline bool operator>= (const CommonTimestamp& other) const
+    {
+      return (!(*this < other));
+    }
+    inline bool operator== (const CommonTimestamp& other) const
+    {
+      return (raw == other.raw);   // maybe I should use difftime() here...
+    }
+    inline bool operator!= (const CommonTimestamp& other) const
+    {
+      return (raw != other.raw);   // maybe I should use difftime() here...
+    }
+
+  protected:
     tm timestamp;
+    time_t raw;
     string getFormattedString(const string& fmt) const;
   };
 
@@ -40,13 +67,10 @@ namespace SqliteOverlay
   class LocalTimestamp : public CommonTimestamp
   {
   public:
-    LocalTimestamp(int year, int month, int day, int hour, int min, int sec);
+    static constexpr int DST_AS_OF_TODAY = 4242;
+    LocalTimestamp(int year, int month, int day, int hour, int min, int sec, int dstHours = DST_AS_OF_TODAY);
     LocalTimestamp(time_t rawTimeInUTC);
     LocalTimestamp();
-    virtual time_t getRawTime() const override;
-
-  private:
-    tm timestamp;
   };
 
   // an extension of struct tm to clearly indicate that UTC
@@ -57,10 +81,6 @@ namespace SqliteOverlay
     UTCTimestamp(int year, int month, int day, int hour, int min, int sec);
     UTCTimestamp(time_t rawTimeInUTC);
     UTCTimestamp();
-    virtual time_t getRawTime() const override;
-
-  private:
-    tm timestamp;
   };
 
 }

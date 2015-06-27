@@ -16,6 +16,17 @@ namespace SqliteOverlay
     timestamp.tm_hour = hour;
     timestamp.tm_min = min;
     timestamp.tm_sec = sec;
+
+    // this value has to be set by derived classes like
+    // UTCTimestamp or LocalTimestamp
+    raw = -1;
+  }
+
+  //----------------------------------------------------------------------------
+
+  time_t CommonTimestamp::getRawTime() const
+  {
+    return raw;
   }
 
   //----------------------------------------------------------------------------
@@ -110,6 +121,9 @@ namespace SqliteOverlay
   UTCTimestamp::UTCTimestamp(int year, int month, int day, int hour, int min, int sec)
     : CommonTimestamp(year, month, day, hour, min, sec)
   {
+    // call timegm() once to adjust all other field in the timestamp struct
+    // and to get the time_t value
+    raw = timegm(&timestamp);
   }
 
   //----------------------------------------------------------------------------
@@ -122,6 +136,12 @@ namespace SqliteOverlay
 
     // copy the contents over to our local struct
     memcpy(&timestamp, tmp, sizeof(tm));
+
+    // call timegm() once to adjust all other field in the timestamp struct
+    timegm(&timestamp);
+
+    // store the provided raw value
+    raw = rawTimeInUTC;
   }
 
   //----------------------------------------------------------------------------
@@ -134,18 +154,22 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  time_t UTCTimestamp::getRawTime() const
-  {
-    tm tmp;
-    memcpy(&tmp, &timestamp, sizeof(tm));
-    return timegm(&tmp);   // the parameter is not const, so we pass a copy
-  }
-
-  //----------------------------------------------------------------------------
-
-  LocalTimestamp::LocalTimestamp(int year, int month, int day, int hour, int min, int sec)
+  LocalTimestamp::LocalTimestamp(int year, int month, int day, int hour, int min, int sec, int dstHours)
     : CommonTimestamp(year, month, day, hour, min, sec)
   {
+    if (dstHours == DST_AS_OF_TODAY)
+    {
+      // retriee a tm of the current time
+      // and read the dstHours from it
+      time_t now = time(0);
+      struct tm* locTime = localtime(&now);
+      dstHours = locTime->tm_isdst;
+    }
+
+    timestamp.tm_isdst = dstHours;
+    // call mktime() once to adjust all other field in the timestamp struct
+    // and to get the time_t value
+    raw = mktime(&timestamp);
   }
 
   //----------------------------------------------------------------------------
@@ -158,6 +182,12 @@ namespace SqliteOverlay
 
     // copy the contents over to our local struct
     memcpy(&timestamp, tmp, sizeof(tm));
+
+    // call mktime() once to adjust all other field in the timestamp struct
+    mktime(&timestamp);
+
+    // store the provided raw value
+    raw = rawTimeInUTC;
   }
 
   //----------------------------------------------------------------------------
@@ -169,13 +199,6 @@ namespace SqliteOverlay
   }
 
   //----------------------------------------------------------------------------
-
-  time_t LocalTimestamp::getRawTime() const
-  {
-    tm tmp;
-    memcpy(&tmp, &timestamp, sizeof(tm));
-    return mktime(&tmp);   // the parameter is not const, so we pass a copy
-  }
 
   //----------------------------------------------------------------------------
 
