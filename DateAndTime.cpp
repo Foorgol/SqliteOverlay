@@ -154,6 +154,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  LocalTimestamp UTCTimestamp::toLocalTime() const
+  {
+    return LocalTimestamp(raw);
+  }
+
+  //----------------------------------------------------------------------------
+
   LocalTimestamp::LocalTimestamp(int year, int month, int day, int hour, int min, int sec, int dstHours)
     : CommonTimestamp(year, month, day, hour, min, sec)
   {
@@ -268,6 +275,13 @@ namespace SqliteOverlay
     :LocalTimestamp(time(0))
   {
 
+  }
+
+  //----------------------------------------------------------------------------
+
+  UTCTimestamp LocalTimestamp::toUTC() const
+  {
+    return UTCTimestamp(raw);
   }
 
   //----------------------------------------------------------------------------

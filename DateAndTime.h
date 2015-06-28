@@ -64,6 +64,7 @@ namespace SqliteOverlay
 
   // an extension of struct tm to clearly indicate that local time
   // is stored
+  class UTCTimestamp;
   class LocalTimestamp : public CommonTimestamp
   {
   public:
@@ -72,6 +73,7 @@ namespace SqliteOverlay
     LocalTimestamp(int year, int month, int day, int hour, int min, int sec, int dstHours = DST_GUESSED);
     LocalTimestamp(time_t rawTimeInUTC);
     LocalTimestamp();
+    UTCTimestamp toUTC() const;
   };
 
   // an extension of struct tm to clearly indicate that UTC
@@ -82,6 +84,7 @@ namespace SqliteOverlay
     UTCTimestamp(int year, int month, int day, int hour, int min, int sec);
     UTCTimestamp(time_t rawTimeInUTC);
     UTCTimestamp();
+    LocalTimestamp toLocalTime() const;
   };
 
 }
