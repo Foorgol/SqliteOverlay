@@ -66,7 +66,7 @@ namespace SqliteOverlay
       vector<T> result;
       while (it.hasMore())
       {
-        result.append(T(db, *it));
+        result.push_back(T(db, *it));
         ++it;
       }
       return result;
