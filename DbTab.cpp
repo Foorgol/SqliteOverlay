@@ -155,9 +155,16 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  bool DbTab::CachingRowIterator::hasMore() const
+  bool DbTab::CachingRowIterator::isEnd() const
   {
-    return (curIdx < (cachedLength-1));
+    return (curIdx  == cachedLength);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool DbTab::CachingRowIterator::pointsToElement() const
+  {
+    return (curIdx < cachedLength);
   }
 
 //----------------------------------------------------------------------------
@@ -173,9 +180,9 @@ namespace SqliteOverlay
   {
     ++curIdx;
 
-    if (curIdx >= cachedLength)
+    if (curIdx > cachedLength)
     {
-      throw std::runtime_error("Iterated past the last item of the CachingRowIterator");
+      curIdx = cachedLength;
     }
   }
 
@@ -185,7 +192,7 @@ namespace SqliteOverlay
   {
     if (curIdx >= cachedLength)
     {
-      throw std::runtime_error("Iterated past the last item of the CachingRowIterator");
+      throw std::runtime_error("Access past the last item of the CachingRowIterator");
     }
     int id = idList.at(curIdx);
     return TabRow(db, tabName, id, true);

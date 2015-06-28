@@ -133,23 +133,20 @@ TEST_F(DatabaseTestScenario, DbTab_GetAllRows)
   ASSERT_FALSE(it.isEmpty());
 
   int id=0;
-  while (it.hasMore())
+  while (!(it.isEnd()))
   {
     ++id;
     TabRow r = *it;
     ASSERT_EQ(id, r.getId());
     ++it;
   }
-  ASSERT_THROW(++it, std::runtime_error);
 
   // test an empty table
   auto t2 = db->getTab("t2");
   it = t2->getAllRows();
   ASSERT_EQ(0, it.length());
   ASSERT_TRUE(it.isEmpty());
-  ASSERT_THROW(++it, std::runtime_error);
   ASSERT_THROW(*it,  std::runtime_error);
-  ASSERT_THROW(++it, std::runtime_error);
 }
 
 //----------------------------------------------------------------
@@ -167,14 +164,13 @@ TEST_F(DatabaseTestScenario, DbTab_GetRowsByWhereClause)
   ASSERT_FALSE(it.isEmpty());
 
   int id=3;
-  while (it.hasMore())
+  while (!(it.isEnd()))
   {
     ++id;
     TabRow r = *it;
     ASSERT_EQ(id, r.getId());
     ++it;
   }
-  ASSERT_THROW(++it, std::runtime_error);
 
   // test empty result
   w.clear();
@@ -182,7 +178,7 @@ TEST_F(DatabaseTestScenario, DbTab_GetRowsByWhereClause)
   it = t1->getRowsByWhereClause(w);
   ASSERT_EQ(0, it.length());
   ASSERT_TRUE(it.isEmpty());
-  ASSERT_FALSE(it.hasMore());
+  ASSERT_TRUE(it.isEnd());
 
   // test invalid query
   w.clear();

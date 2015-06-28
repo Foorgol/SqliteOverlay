@@ -34,7 +34,8 @@ namespace SqliteOverlay
     public:
       void operator++();
       TabRow operator*() const;
-      bool hasMore() const;
+      bool isEnd() const;
+      bool pointsToElement() const;
       bool isEmpty() const;
       int length() const;
       

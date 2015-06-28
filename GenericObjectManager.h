@@ -64,7 +64,7 @@ namespace SqliteOverlay
     vector<T> iterator2Objects(DbTab::CachingRowIterator& it) const
     {
       vector<T> result;
-      while (it.hasMore())
+      while (it.pointsToElement())
       {
         result.push_back(T(db, *it));
         ++it;
