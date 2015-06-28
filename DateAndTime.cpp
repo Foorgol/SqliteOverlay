@@ -157,7 +157,7 @@ namespace SqliteOverlay
   LocalTimestamp::LocalTimestamp(int year, int month, int day, int hour, int min, int sec, int dstHours)
     : CommonTimestamp(year, month, day, hour, min, sec)
   {
-    if (dstHours == DST_AS_OF_TODAY)
+    if (dstHours == DST_AS_RIGHT_NOW)
     {
       // retriee a tm of the current time
       // and read the dstHours from it
@@ -166,9 +166,81 @@ namespace SqliteOverlay
       dstHours = locTime->tm_isdst;
     }
 
-    timestamp.tm_isdst = dstHours;
+    if (dstHours == DST_GUESSED)
+    {
+      // a little helper function to (re-)set the values in timestamp
+      auto resetTimestamp = [&]() {
+        timestamp.tm_year = year - 1900;
+        timestamp.tm_mon = month - 1;
+        timestamp.tm_mday = day;
+        timestamp.tm_hour = hour;
+      };
+
+      dstHours = 0;
+      timestamp.tm_isdst = 0;
+
+      // call mktime() to adjust timezone settings etc.
+      mktime(&timestamp);
+
+      // maybe mktime has modified the values of tm_hour (and in corner cases
+      // of day, month or year) because we provided wrong DST settings
+      //
+      // In this case, it's most likely sufficient to reset the values
+      // for date and time and call mktime() again, because the previous
+      // call to mktime() has applied the right DST and timezone settings
+      // to "timestamp".
+      resetTimestamp();
+      mktime(&timestamp);
+      dstHours = timestamp.tm_isdst;
+
+      // Maybe we still have a mismatch. In this case, we need to
+      // determine the correct DST value.
+      // But instead of calculating the correct DST (which is a nightmare if
+      // year, month and date also changed), we use brute force and try
+      // different DST settings until we get the intended result
+      if (timestamp.tm_hour != hour)
+      {
+        int guessedDST = 1;
+        while (guessedDST != 12)
+        {
+          dstHours = guessedDST;   // try positive DST
+          timestamp.tm_isdst = dstHours;
+          resetTimestamp();
+          mktime(&timestamp);
+          if (timestamp.tm_hour == hour)
+          {
+            break;
+          }
+
+          dstHours = -guessedDST;   // try negative DST
+          timestamp.tm_isdst = dstHours;
+          resetTimestamp();
+          mktime(&timestamp);
+          if (timestamp.tm_hour == hour)
+          {
+            break;
+          }
+
+          ++guessedDST;
+        }
+
+        if (guessedDST == 12)
+        {
+          throw std::runtime_error("Couldn't guess DST correctly!");
+        }
+      }
+    }
+
+
+    // at this point, "dstHours" contains either...
+    //   * the user-provided value;
+    //   * the guessed DST value as per algorithm above; or
+    //   * the current value of the local timezone
+
+
     // call mktime() once to adjust all other field in the timestamp struct
     // and to get the time_t value
+    timestamp.tm_isdst = dstHours;
     raw = mktime(&timestamp);
   }
 

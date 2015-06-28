@@ -67,8 +67,9 @@ namespace SqliteOverlay
   class LocalTimestamp : public CommonTimestamp
   {
   public:
-    static constexpr int DST_AS_OF_TODAY = 4242;
-    LocalTimestamp(int year, int month, int day, int hour, int min, int sec, int dstHours = DST_AS_OF_TODAY);
+    static constexpr int DST_AS_RIGHT_NOW = 4242;
+    static constexpr int DST_GUESSED = 8888;
+    LocalTimestamp(int year, int month, int day, int hour, int min, int sec, int dstHours = DST_GUESSED);
     LocalTimestamp(time_t rawTimeInUTC);
     LocalTimestamp();
   };
