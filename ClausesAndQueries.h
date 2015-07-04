@@ -45,15 +45,20 @@ namespace SqliteOverlay {
     void addDateTimeCol(const string& colName, const CommonTimestamp* pTimestamp);
     void addDateTimeCol(const string& colName, const string& op,  const CommonTimestamp* pTimestamp);
     void addNullCol(const string& colName);
+    void addNotNullCol(const string& colName);
 
     string getSelectStmt(const string& tabName, bool countOnly) const;
     string getDeleteStmt(const string& tabName) const;
 
     bool isEmpty() const;
 
+    void setOrderColumn_Asc(const string& colName);
+    void setOrderColumn_Desc(const string& colName);
+
   private:
     string sql;
     int colCount;
+    string orderBy;
 
     void addCol(const string& colName, const string& val, bool useQuotes=false);
     void addCol(const string& colName, const string& op, const string& val, bool useQuotes=false);

@@ -332,6 +332,24 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
+  bool TabRow::update(const string& colName, const LocalTimestamp& newVal) const
+  {
+    ColumnValueClause cvc;
+    cvc.addDateTimeCol(colName, &newVal);
+    return update(cvc);
+  }
+
+//----------------------------------------------------------------------------
+
+  bool TabRow::update(const string& colName, const UTCTimestamp& newVal) const
+  {
+    ColumnValueClause cvc;
+    cvc.addDateTimeCol(colName, &newVal);
+    return update(cvc);
+  }
+
+//----------------------------------------------------------------------------
+
   SqliteDatabase* TabRow::getDb()
   {
     return db;

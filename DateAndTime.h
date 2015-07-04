@@ -87,6 +87,9 @@ namespace SqliteOverlay
     LocalTimestamp toLocalTime() const;
   };
 
+  typedef unique_ptr<LocalTimestamp> upLocalTimestamp;
+  typedef unique_ptr<UTCTimestamp> upUTCTimestamp;
+
 }
 
 #endif /* DATEANDTIME_H */

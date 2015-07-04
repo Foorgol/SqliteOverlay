@@ -123,6 +123,7 @@ namespace SqliteOverlay {
   void WhereClause::clear()
   {
     sql.clear();
+    orderBy.clear();
     colCount = 0;
   }
 
@@ -199,6 +200,19 @@ namespace SqliteOverlay {
     ++colCount;
   }
 
+  //----------------------------------------------------------------------------
+
+  void WhereClause::addNotNullCol(const string& colName)
+  {
+    if (colCount > 0)
+    {
+      sql += " AND ";
+    }
+    sql += colName + " IS NOT NULL";
+
+    ++colCount;
+  }
+
 //----------------------------------------------------------------------------
 
   string WhereClause::getSelectStmt(const string& tabName, bool countOnly) const
@@ -212,6 +226,11 @@ namespace SqliteOverlay {
     if (countOnly) result += "COUNT(*)";
     else result += "id";
     result += " FROM " + tabName + " WHERE " + sql;
+
+    if (!(orderBy.empty()))
+    {
+      result += orderBy;
+    }
 
     return result;
   }
@@ -236,6 +255,18 @@ namespace SqliteOverlay {
   bool WhereClause::isEmpty() const
   {
     return (colCount == 0);
+  }
+
+//----------------------------------------------------------------------------
+
+  void WhereClause::setOrderColumn_Asc(const string& colName)
+  {
+    orderBy = " ORDER BY " + colName + " ASC";
+  }
+
+  void WhereClause::setOrderColumn_Desc(const string& colName)
+  {
+    orderBy = " ORDER BY " + colName + " DESC";
   }
 
 //----------------------------------------------------------------------------
