@@ -85,6 +85,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  bool CommonTimestamp::isValidTime(int hour, int min, int sec)
+  {
+    return ((hour >= 0) && (hour < 24) && (min >=0) && (min < 60) && (sec >= 0) && (sec < 60));
+  }
+
+  //----------------------------------------------------------------------------
+
   bool CommonTimestamp::isLeapYear(int year)
   {
     if ((year % 4) != 0)
@@ -121,6 +128,15 @@ namespace SqliteOverlay
   UTCTimestamp::UTCTimestamp(int year, int month, int day, int hour, int min, int sec)
     : CommonTimestamp(year, month, day, hour, min, sec)
   {
+    if (!isValidDate(year, month, day))
+    {
+      throw std::invalid_argument("Invalid date values!");
+    }
+    if (!isValidTime(hour, min, sec))
+    {
+      throw std::invalid_argument("Invalid time values!");
+    }
+
     // call timegm() once to adjust all other field in the timestamp struct
     // and to get the time_t value
     raw = timegm(&timestamp);
@@ -164,6 +180,15 @@ namespace SqliteOverlay
   LocalTimestamp::LocalTimestamp(int year, int month, int day, int hour, int min, int sec, int dstHours)
     : CommonTimestamp(year, month, day, hour, min, sec)
   {
+    if (!isValidDate(year, month, day))
+    {
+      throw std::invalid_argument("Invalid date values!");
+    }
+    if (!isValidTime(hour, min, sec))
+    {
+      throw std::invalid_argument("Invalid time values!");
+    }
+
     if (dstHours == DST_AS_RIGHT_NOW)
     {
       // retriee a tm of the current time
@@ -285,6 +310,61 @@ namespace SqliteOverlay
   }
 
   //----------------------------------------------------------------------------
+
+  unique_ptr<LocalTimestamp> LocalTimestamp::fromISODate(const string& isoDate, int hour, int min, int sec, int dstHours)
+  {
+    //
+    // split the string into its components
+    //
+
+    // find the first "-"
+    size_t posFirstDash = isoDate.find('-');
+    if (posFirstDash != 4)    // the first dash must always be at position 4 (4-digit year!)
+    {
+      return nullptr;
+    }
+    string sYear = isoDate.substr(0, 4);
+
+    // find the second "-"
+    size_t posSecondDash = isoDate.find('-', 5);
+    if (posSecondDash == string::npos)
+    {
+      return nullptr;
+    }
+    string sMonth = isoDate.substr(5, posSecondDash - 5 + 1);
+
+    // get the day
+    if (posSecondDash >= (isoDate.length() - 1))    // the dash is the last character ==> no day string
+    {
+      return nullptr;
+    }
+    string sDay = isoDate.substr(posSecondDash+1, string::npos);
+
+    // try to convert the string into ints
+    int year;
+    int month;
+    int day;
+    try
+    {
+      year = stoi(sYear);
+      month = stoi(sMonth);
+      day = stoi(sDay);
+    } catch (exception e) {
+      return nullptr;
+    }
+
+    // try to construct a new LocalTimestamp from these ints
+    LocalTimestamp* result;
+    try
+    {
+      result = new LocalTimestamp(year, month, day, hour, min, sec, dstHours);
+    } catch (exception e) {
+      return nullptr;   // invalid parameters
+    }
+
+    // return the result
+    return upLocalTimestamp(result);
+  }
 
   //----------------------------------------------------------------------------
 

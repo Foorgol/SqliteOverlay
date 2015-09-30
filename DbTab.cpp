@@ -207,6 +207,21 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
+  double DbTab::CachingRowIterator::getPercentage() const
+  {
+    if (cachedLength == 0)
+    {
+      return -1;
+    }
+    if ((cachedLength == 1) && (curIdx >= 0))
+    {
+      return 1.0;
+    }
+    return curIdx / (cachedLength -1.0);
+  }
+
+//----------------------------------------------------------------------------
+
   DbTab::CachingRowIterator DbTab::getRowsByWhereClause(const WhereClause& w) const
   {
     string sql = w.getSelectStmt(tabName, false);

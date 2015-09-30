@@ -261,12 +261,24 @@ namespace SqliteOverlay {
 
   void WhereClause::setOrderColumn_Asc(const string& colName)
   {
-    orderBy = " ORDER BY " + colName + " ASC";
+    if (orderBy.empty())
+    {
+      orderBy = " ORDER BY ";
+    } else {
+      orderBy += ", ";
+    }
+    orderBy += colName + " ASC";
   }
 
   void WhereClause::setOrderColumn_Desc(const string& colName)
   {
-    orderBy = " ORDER BY " + colName + " DESC";
+    if (orderBy.empty())
+    {
+      orderBy = " ORDER BY ";
+    } else {
+      orderBy += ", ";
+    }
+    orderBy += colName + " DESC";
   }
 
 //----------------------------------------------------------------------------

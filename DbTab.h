@@ -38,6 +38,7 @@ namespace SqliteOverlay
       bool pointsToElement() const;
       bool isEmpty() const;
       int length() const;
+      double getPercentage() const;
       
     private:
       CachingRowIterator(SqliteDatabase* db, const string& tabName, upSqlStatement stmt);

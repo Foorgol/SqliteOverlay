@@ -161,3 +161,26 @@ TEST(Timestamps, testDstGuessing)
   lt = LocalTimestamp(expectedEpochVal);
   ASSERT_EQ("2015-01-27 11:00:00", lt.getTimestamp());
 }
+
+//----------------------------------------------------------------------------
+
+TEST(Timestamps, testLocalTimestampFromISODate)
+{
+  ASSERT_EQ(nullptr, LocalTimestamp::fromISODate("skjfh"));
+  ASSERT_EQ(nullptr, LocalTimestamp::fromISODate("2000"));
+  ASSERT_EQ(nullptr, LocalTimestamp::fromISODate("20000"));
+  ASSERT_EQ(nullptr, LocalTimestamp::fromISODate("2000-"));
+  ASSERT_EQ(nullptr, LocalTimestamp::fromISODate("2000-03"));
+  ASSERT_EQ(nullptr, LocalTimestamp::fromISODate("2000-05-"));
+  ASSERT_EQ(nullptr, LocalTimestamp::fromISODate("2000-05-sdfd"));
+  ASSERT_EQ(nullptr, LocalTimestamp::fromISODate("200-05-03"));
+  ASSERT_EQ(nullptr, LocalTimestamp::fromISODate("3000-05-03"));
+  ASSERT_EQ(nullptr, LocalTimestamp::fromISODate("2000-15-03"));
+
+  upLocalTimestamp t = LocalTimestamp::fromISODate("2000-05-03");
+  ASSERT_TRUE(t != nullptr);
+  ASSERT_EQ("2000-05-03", t->getISODate());
+  t = LocalTimestamp::fromISODate("2000-5-3");
+  ASSERT_TRUE(t != nullptr);
+  ASSERT_EQ("2000-05-03", t->getISODate());
+}

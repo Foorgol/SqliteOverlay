@@ -29,6 +29,7 @@ namespace SqliteOverlay
     string getTimestamp() const;
 
     static bool isValidDate(int year, int month, int day);
+    static bool isValidTime(int hour, int min, int sec);
     static bool isLeapYear(int year);
 
     inline bool operator< (const CommonTimestamp& other) const
@@ -74,6 +75,8 @@ namespace SqliteOverlay
     LocalTimestamp(time_t rawTimeInUTC);
     LocalTimestamp();
     UTCTimestamp toUTC() const;
+
+    static unique_ptr<LocalTimestamp> fromISODate(const string& isoDate, int hour=12, int min=0, int sec=0, int dstHours = DST_GUESSED);
   };
 
   // an extension of struct tm to clearly indicate that UTC

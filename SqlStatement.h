@@ -23,7 +23,7 @@ namespace SqliteOverlay
 
     void bindInt(int argPos, int val);
     void bindDouble(int argPos, double val);
-    void bindString(int argPos, string& val);
+    void bindString(int argPos, const string& val);
 
     bool step(const Logger* log=nullptr);
 
