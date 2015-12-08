@@ -28,6 +28,7 @@ set(LIB_SOURCES
     GenericDatabaseObject.cpp
     GenericObjectManager.cpp
     DateAndTime.cpp
+    KeyValueTab.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
