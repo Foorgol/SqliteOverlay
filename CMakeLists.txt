@@ -7,6 +7,15 @@ find_package(SQLite3 REQUIRED)
 include_directories(${SQLITE3_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${SQLITE3_LIBRARIES})
 
+# detect if we are on windows, because for windows
+# we have to use special code for timegm()
+#
+# see DateAndTime.cpp
+#
+IF (WIN32)
+  add_definitions(-DIS_WINDOWS_BUILD)
+ENDIF()
+
 set(LIB_SOURCES
     SqliteDatabase.cpp
     Logger.cpp
