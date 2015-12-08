@@ -184,15 +184,16 @@ namespace SqliteOverlay
     if (hasKey(key))
     {
       string sql;
-      sql = "UPDATE " + tabName + " SET " + string(VAL_COL_NAME) + " = ? ";
-      sql += "WHERE " + string(KEY_COL_NAME) + "='?'";
+      sql = "UPDATE " + tabName + " SET " + string(VAL_COL_NAME) + " = ?1 ";
+      sql += "WHERE " + string(KEY_COL_NAME) + "=?2";
       result = db->prepStatement(sql);
       result->bindString(2, key);
     } else {
       string sql;
       sql = "INSERT INTO " + tabName + " (" + string(KEY_COL_NAME) + ", " + string(VAL_COL_NAME) + ") ";
-      sql += "VALUES (?, ?)";
-      result->bindString(1, key);
+      sql += "VALUES (?2, ?1)";
+      result = db->prepStatement(sql);
+      result->bindString(2, key);
     }
 
     // the "value" is the only remaining parameter in the prepared statement
