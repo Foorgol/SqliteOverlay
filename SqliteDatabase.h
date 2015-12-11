@@ -57,6 +57,8 @@ namespace SqliteOverlay
     }
     virtual ~SqliteDatabase();
 
+    bool close(bool forceDeleteTabObjects=false);
+    void resetTabCache();
     bool isAlive() const;
 
     // disable copying of the database object

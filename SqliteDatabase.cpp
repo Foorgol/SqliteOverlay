@@ -102,12 +102,36 @@ namespace SqliteOverlay
 
   SqliteDatabase::~SqliteDatabase()
   {
+    resetTabCache();
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::close(bool forceDeleteTabObjects)
+  {
+    if (dbPtr == nullptr) return true;
+
+    int result = sqlite3_close(dbPtr.get());
+    if ((result != SQLITE_OK) && !forceDeleteTabObjects) return false;
+
+    resetTabCache();
+
+    dbPtr = nullptr;
+
+    return (result == SQLITE_OK);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqliteDatabase::resetTabCache()
+  {
     auto it = tabCache.begin();
     while (it != tabCache.end())
     {
       delete it->second;
       ++it;
     }
+    tabCache.clear();
   }
 
   //----------------------------------------------------------------------------
