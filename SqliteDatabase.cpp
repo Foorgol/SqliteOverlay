@@ -487,9 +487,30 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  string SqliteDatabase::genForeignKeyClause(const string& keyName, const string& referedTable)
+  string SqliteDatabase::genForeignKeyClause(const string& keyName, const string& referedTable, CONSISTENCY_ACTION onDelete, CONSISTENCY_ACTION onUpdate)
   {
+    // a little helper to translate a CONSISTENCY_ACTION value into a string
+    auto ca2string = [](CONSISTENCY_ACTION ca) -> string {
+      switch (ca)
+      {
+        case CONSISTENCY_ACTION::NO_ACTION:
+          return "NO ACTION";
+        case CONSISTENCY_ACTION::SET_NULL:
+          return "SET NULL";
+        case CONSISTENCY_ACTION::SET_DEFAULT:
+          return "SET DEFAULT";
+        case CONSISTENCY_ACTION::CASCADE:
+          return "CASCADE";
+        case CONSISTENCY_ACTION::RESTRICT:
+          return "RESTRICT";
+      }
+      return "";
+    };
+
     string ref = "FOREIGN KEY (" + keyName + ") REFERENCES " + referedTable + "(id)";
+    ref += " ON DELETE " + ca2string(onDelete);
+    ref += " ON UPDATE " + ca2string(onUpdate);
+
     foreignKeyCreationCache.push_back(ref);
     return keyName + " INTEGER";
   }

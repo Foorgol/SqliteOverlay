@@ -16,6 +16,15 @@ using namespace std;
 
 namespace SqliteOverlay
 {
+  enum class CONSISTENCY_ACTION
+  {
+    SET_NULL,
+    SET_DEFAULT,
+    CASCADE,
+    RESTRICT,
+    NO_ACTION
+  };
+
   class DbTab;
 
   template<class T>
@@ -91,7 +100,9 @@ namespace SqliteOverlay
 
     bool hasTable(const string& name, bool isView=false);
     bool hasView(const string& name);
-    string genForeignKeyClause(const string& keyName, const string& referedTable);
+    string genForeignKeyClause(const string& keyName, const string& referedTable,
+                               CONSISTENCY_ACTION onDelete=CONSISTENCY_ACTION::NO_ACTION,
+                               CONSISTENCY_ACTION onUpdate=CONSISTENCY_ACTION::NO_ACTION);
 
     int getLastInsertId();
     int getRowsAffected();
