@@ -82,6 +82,9 @@ namespace SqliteOverlay
 
     void tableCreationHelper(const string& tabName, const vector<string>& colDefs);
     void viewCreationHelper(const string& viewName, const string& selectStmt);
+    void indexCreationHelper(const string& tabName, const string& idxName, const StringList& colNames, bool isUnique=false);
+    void indexCreationHelper(const string& tabName, const string& idxName, const string& colName, bool isUnique=false);
+    void indexCreationHelper(const string& tabName, const string& colName, bool isUnique=false);
 
     StringList allTableNames(bool getViews=false);
     StringList allViewNames();

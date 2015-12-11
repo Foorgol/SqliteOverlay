@@ -396,6 +396,43 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const StringList &colNames, bool isUnique)
+  {
+    if (idxName.empty()) return;
+    if (!(hasTable(tabName))) return;
+
+    string sql = "CREATE ";
+    if (isUnique) sql += "UNIQUE ";
+    sql += "INDEX IF NOT EXISTS ";
+    sql += idxName + " ON " + tabName + " (";
+    sql += commaSepStringFromStringList(colNames) + ")";
+    execNonQuery(sql);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const string &colName, bool isUnique)
+  {
+    StringList colList;
+    colList.push_back(colName);
+    indexCreationHelper(tabName, idxName, colList, isUnique);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &colName, bool isUnique)
+  {
+    if (tabName.empty()) return;
+    if (colName.empty()) return;
+
+    // auto-create a canonical index name
+    string idxName = tabName + "_" + colName;
+
+    indexCreationHelper(tabName, idxName, colName, isUnique);
+  }
+
+  //----------------------------------------------------------------------------
+
   StringList SqliteDatabase::allTableNames(bool getViews)
   {
     StringList result;
