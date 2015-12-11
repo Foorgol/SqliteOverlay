@@ -1,5 +1,5 @@
-#ifndef SQLSTATEMENT_H
-#define SQLSTATEMENT_H
+#ifndef SQLITE_OVERLAY_SQLSTATEMENT_H
+#define SQLITE_OVERLAY_SQLSTATEMENT_H
 
 #include <string>
 #include <memory>

@@ -225,9 +225,23 @@ namespace SqliteOverlay
   DbTab::CachingRowIterator DbTab::getRowsByWhereClause(const WhereClause& w) const
   {
     string sql = w.getSelectStmt(tabName, false);
+
+    return getRowsByWhereClause(sql, true);
+  }
+
+//----------------------------------------------------------------------------
+
+  DbTab::CachingRowIterator DbTab::getRowsByWhereClause(const string& w, bool isWhereClauseOnly) const
+  {
+    string sql = w;
+    if (isWhereClauseOnly)
+    {
+      sql = "SELECT id FROM " + tabName + " WHERE " + w;
+    }
+
     auto stmt = db->prepStatement(sql);
 
-    // in cause errors, return an empty CachingRowIterator
+    // in case of errors, return an empty CachingRowIterator
     if (stmt == nullptr)
     {
       throw std::invalid_argument("getRowsByWhereClause: invalid query!");

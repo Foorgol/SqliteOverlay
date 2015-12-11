@@ -10,8 +10,8 @@
  * don't use it at all.
  */
 
-#ifndef DBTAB_H
-#define	DBTAB_H
+#ifndef SQLITE_OVERLAY_DBTAB_H
+#define	SQLITE_OVERLAY_DBTAB_H
 
 #include "CommonTabularClass.h"
 #include "HelperFunc.h"
@@ -62,6 +62,7 @@ namespace SqliteOverlay
     TabRow getSingleRowByColumnValueNull(const string& col) const;
     TabRow getSingleRowByWhereClause(const WhereClause& w) const;
     CachingRowIterator getRowsByWhereClause(const WhereClause& w) const;
+    CachingRowIterator getRowsByWhereClause(const string& w, bool isWhereClauseOnly=true) const;
     CachingRowIterator getRowsByColumnValue(const string& col, int val) const;
     CachingRowIterator getRowsByColumnValue(const string& col, double val) const;
     CachingRowIterator getRowsByColumnValue(const string& col, const string& val) const;

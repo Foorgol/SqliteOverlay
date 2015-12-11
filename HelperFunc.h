@@ -10,8 +10,8 @@
  * don't use it at all.
  */
 
-#ifndef HELPERFUNC_H
-#define	HELPERFUNC_H
+#ifndef SQLITE_OVERLAY_HELPERFUNC_H
+#define	SQLITE_OVERLAY_HELPERFUNC_H
 
 #include <string>
 #include <vector>

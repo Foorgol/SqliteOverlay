@@ -1,5 +1,5 @@
-#ifndef DATEANDTIME_H
-#define DATEANDTIME_H
+#ifndef SQLITE_OVERLAY_DATEANDTIME_H
+#define SQLITE_OVERLAY_DATEANDTIME_H
 
 #include <string>
 #include <memory>

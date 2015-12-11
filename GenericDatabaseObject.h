@@ -5,8 +5,8 @@
  * Created on 18. Februar 2014, 14:25
  */
 
-#ifndef GENERICDATABASEOBJECT_H
-#define	GENERICDATABASEOBJECT_H
+#ifndef SQLITE_OVERLAY_GENERICDATABASEOBJECT_H
+#define	SQLITE_OVERLAY_GENERICDATABASEOBJECT_H
 
 #include <string>
 #include "TabRow.h"

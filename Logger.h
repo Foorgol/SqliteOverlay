@@ -10,8 +10,8 @@
  * don't use it at all.
  */
 
-#ifndef LOGGER_H
-#define	LOGGER_H
+#ifndef SQLITE_OVERLAY_LOGGER_H
+#define	SQLITE_OVERLAY_LOGGER_H
 
 #include <string>
 #include <memory>

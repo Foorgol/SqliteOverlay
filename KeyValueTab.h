@@ -16,8 +16,8 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEYVALUETAB_H
-#define	KEYVALUETAB_H
+#ifndef SQLITE_OVERLAY_KEYVALUETAB_H
+#define	SQLITE_OVERLAY_KEYVALUETAB_H
 
 #include <memory>
 

@@ -1,5 +1,5 @@
-#ifndef SQLITEDATABASE_H
-#define	SQLITEDATABASE_H
+#ifndef SQLITE_OVERLAY_SQLITEDATABASE_H
+#define	SQLITE_OVERLAY_SQLITEDATABASE_H
 
 #include <sqlite3.h>
 
@@ -22,7 +22,8 @@ namespace SqliteOverlay
     SET_DEFAULT,
     CASCADE,
     RESTRICT,
-    NO_ACTION
+    NO_ACTION,
+    __NOT_SET
   };
 
   class DbTab;

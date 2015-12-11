@@ -10,8 +10,8 @@
  * don't use it at all.
  */
 
-#ifndef TABROW_H
-#define	TABROW_H
+#ifndef SQLITE_OVERLAY_TABROW_H
+#define	SQLITE_OVERLAY_TABROW_H
 
 #include "SqliteDatabase.h"
 #include "CommonTabularClass.h"

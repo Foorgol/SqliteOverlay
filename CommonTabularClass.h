@@ -10,8 +10,8 @@
  * don't use it at all.
  */
 
-#ifndef COMMONTABULARCLASS_H
-#define	COMMONTABULARCLASS_H
+#ifndef SQLITE_OVERLAY_COMMONTABULARCLASS_H
+#define	SQLITE_OVERLAY_COMMONTABULARCLASS_H
 
 #include <vector>
 
