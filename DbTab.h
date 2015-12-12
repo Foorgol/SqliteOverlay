@@ -52,8 +52,8 @@ namespace SqliteOverlay
     
   public:
     virtual ~DbTab ();
-    int insertRow(const ColumnValueClause& ic);
-    int insertRow();
+    int insertRow(const ColumnValueClause& ic, int* errCodeOut=nullptr);
+    int insertRow(int* errCodeOut=nullptr);
     TabRow operator[](const int id) const;
     TabRow operator[](const WhereClause& w ) const;
     TabRow getSingleRowByColumnValue(const string& col, int val) const;
@@ -68,10 +68,10 @@ namespace SqliteOverlay
     CachingRowIterator getRowsByColumnValue(const string& col, const string& val) const;
     CachingRowIterator getRowsByColumnValueNull(const string& col) const;
     CachingRowIterator getAllRows() const;
-    int deleteRowsByWhereClause(const WhereClause& where) const;
-    int deleteRowsByColumnValue(const string& col, const int val) const;
-    int deleteRowsByColumnValue(const string& col, const double val) const;
-    int deleteRowsByColumnValue(const string& col, const string& val) const;
+    int deleteRowsByWhereClause(const WhereClause& where, int* errCodeOut=nullptr) const;
+    int deleteRowsByColumnValue(const string& col, const int val, int* errCodeOut=nullptr) const;
+    int deleteRowsByColumnValue(const string& col, const double val, int* errCodeOut=nullptr) const;
+    int deleteRowsByColumnValue(const string& col, const string& val, int* errCodeOut=nullptr) const;
 
   private:
     DbTab (SqliteDatabase* db, const string& tabName);

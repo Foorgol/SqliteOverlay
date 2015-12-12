@@ -33,10 +33,10 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  int DbTab::insertRow(const ColumnValueClause& ic)
+  int DbTab::insertRow(const ColumnValueClause& ic, int* errCodeOut)
   {
     string sql = ic.getInsertStmt(tabName);
-    bool isOk = db->execNonQuery(sql);
+    bool isOk = db->execNonQuery(sql, errCodeOut);
     if (!isOk)
     {
       // insert failed
@@ -49,11 +49,11 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  int DbTab::insertRow()
+  int DbTab::insertRow(int* errCodeOut)
   {
     ColumnValueClause empty;
 
-    return insertRow(empty);
+    return insertRow(empty, errCodeOut);
   }
 
 //----------------------------------------------------------------------------
@@ -226,7 +226,7 @@ namespace SqliteOverlay
   {
     string sql = w.getSelectStmt(tabName, false);
 
-    return getRowsByWhereClause(sql, true);
+    return getRowsByWhereClause(sql, false);
   }
 
 //----------------------------------------------------------------------------
@@ -239,7 +239,7 @@ namespace SqliteOverlay
       sql = "SELECT id FROM " + tabName + " WHERE " + w;
     }
 
-    auto stmt = db->prepStatement(sql);
+    auto stmt = db->prepStatement(sql, nullptr);
 
     // in case of errors, return an empty CachingRowIterator
     if (stmt == nullptr)
@@ -295,9 +295,9 @@ namespace SqliteOverlay
   DbTab::CachingRowIterator DbTab::getAllRows() const
   {
     string sql = "SELECT id FROM " + tabName;
-    auto stmt = db->prepStatement(sql);
+    auto stmt = db->prepStatement(sql, nullptr);
 
-    // this sql query should always succeed... but the test result anyway...
+    // this sql query should always succeed... but test the result anyway...
     if (stmt == nullptr)
     {
       throw std::runtime_error("Weird... could query all rows");
@@ -319,11 +319,11 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  int DbTab::deleteRowsByWhereClause(const WhereClause& where) const
+  int DbTab::deleteRowsByWhereClause(const WhereClause& where, int* errCodeOut) const
   {
     string sql = where.getDeleteStmt(tabName);
 
-    bool isOk = db->execNonQuery(sql);
+    bool isOk = db->execNonQuery(sql, errCodeOut);
     if (!isOk)
     {
       // delete failed
@@ -336,29 +336,29 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  int DbTab::deleteRowsByColumnValue(const string& col, const int val) const
+  int DbTab::deleteRowsByColumnValue(const string& col, const int val, int* errCodeOut) const
   {
     WhereClause w;
     w.addIntCol(col, val);
-    return deleteRowsByWhereClause(w);
+    return deleteRowsByWhereClause(w, errCodeOut);
   }
 
 //----------------------------------------------------------------------------
 
-  int DbTab::deleteRowsByColumnValue(const string& col, const double val) const
+  int DbTab::deleteRowsByColumnValue(const string& col, const double val, int* errCodeOut) const
   {
     WhereClause w;
     w.addDoubleCol(col, val);
-    return deleteRowsByWhereClause(w);
+    return deleteRowsByWhereClause(w, errCodeOut);
   }
 
 //----------------------------------------------------------------------------
 
-  int DbTab::deleteRowsByColumnValue(const string& col, const string& val) const
+  int DbTab::deleteRowsByColumnValue(const string& col, const string& val, int* errCodeOut) const
   {
     WhereClause w;
     w.addStringCol(col, val);
-    return deleteRowsByWhereClause(w);
+    return deleteRowsByWhereClause(w, errCodeOut);
   }
 
 //----------------------------------------------------------------------------

@@ -52,13 +52,16 @@ TEST_F(DatabaseTestScenario, KeyValueTab_SettersAndGetters)
   //
 
   // set value for new key
+  int err;
   ASSERT_TRUE(rawTab->getMatchCountForColumnValue("K", "i") == 0);
-  kvt->set("i", 42);
+  kvt->set("i", 42, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
   ASSERT_TRUE(rawTab->getMatchCountForColumnValue("K", "i") == 1);
   ASSERT_TRUE(kvt->getInt("i") == 42);
 
   // update value for existing key
-  kvt->set("i", 23);
+  kvt->set("i", 23, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
   ASSERT_TRUE(rawTab->getMatchCountForColumnValue("K", "i") == 1);
   ASSERT_TRUE(kvt->getInt("i") == 23);
 
@@ -71,12 +74,14 @@ TEST_F(DatabaseTestScenario, KeyValueTab_SettersAndGetters)
 
   // set value for new key
   ASSERT_TRUE(rawTab->getMatchCountForColumnValue("K", "d") == 0);
-  kvt->set("d", 42.42);
+  kvt->set("d", 42.42, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
   ASSERT_TRUE(rawTab->getMatchCountForColumnValue("K", "d") == 1);
   ASSERT_TRUE(kvt->getDouble("d") == 42.42);
 
   // update value for existing key
-  kvt->set("d", 23.23);
+  kvt->set("d", 23.23, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
   ASSERT_TRUE(rawTab->getMatchCountForColumnValue("K", "d") == 1);
   ASSERT_TRUE(kvt->getDouble("d") == 23.23);
 
@@ -89,12 +94,14 @@ TEST_F(DatabaseTestScenario, KeyValueTab_SettersAndGetters)
 
   // set value for new key
   ASSERT_TRUE(rawTab->getMatchCountForColumnValue("K", "s") == 0);
-  kvt->set("s", "abc");
+  kvt->set("s", "abc", &err);
+  ASSERT_EQ(SQLITE_DONE, err);
   ASSERT_TRUE(rawTab->getMatchCountForColumnValue("K", "s") == 1);
   ASSERT_EQ("abc", (*kvt)["s"]);
 
   // update value for existing key
-  kvt->set("s", "xyz");
+  kvt->set("s", "xyz", &err);
+  ASSERT_EQ(SQLITE_DONE, err);
   ASSERT_TRUE(rawTab->getMatchCountForColumnValue("K", "s") == 1);
   ASSERT_TRUE((*kvt)["s"] == "xyz");
 

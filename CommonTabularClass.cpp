@@ -81,7 +81,7 @@ namespace SqliteOverlay
   ColInfoList CommonTabularClass::allColDefs() const
   {
     ColInfoList result;
-    auto stmt = db->execContentQuery("PRAGMA table_info(" + tabName + ")");
+    auto stmt = db->execContentQuery("PRAGMA table_info(" + tabName + ")", nullptr);
       
     while (stmt->hasData())
     {
@@ -179,7 +179,7 @@ namespace SqliteOverlay
   {
     string sql = w.getSelectStmt(tabName, true);
     int cnt;
-    bool isOk = db->execScalarQueryInt(sql, &cnt);
+    bool isOk = db->execScalarQueryInt(sql, &cnt, nullptr);
 
     return isOk ? cnt : -1;
   }
@@ -240,7 +240,7 @@ namespace SqliteOverlay
     string sql = "SELECT COUNT(*) FROM " + tabName + " WHERE " + where;
 
     int cnt;
-    bool isOk = db->execScalarQueryInt(sql, &cnt);
+    bool isOk = db->execScalarQueryInt(sql, &cnt, nullptr);
 
     return isOk ? cnt : -1;
   }
@@ -252,7 +252,7 @@ namespace SqliteOverlay
   {
     string sql = "SELECT count(*) FROM " + tabName;
     int result;
-    db->execScalarQueryInt(sql, &result);
+    db->execScalarQueryInt(sql, &result, nullptr);
     return result;
   }
 

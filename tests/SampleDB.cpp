@@ -20,11 +20,11 @@ void SampleDB::populateTables()
   col.push_back("f DOUBLE");
   col.push_back("s VARCHAR(40)");
   col.push_back("d DATETIME");
-  tableCreationHelper("t1", col);
-  tableCreationHelper("t2", col);
+  tableCreationHelper("t1", col, nullptr);
+  tableCreationHelper("t2", col, nullptr);
 }
 
 void SampleDB::populateViews()
 {
-  viewCreationHelper("v1", "SELECT i,f,s FROM t1 WHERE i=84");
+  viewCreationHelper("v1", "SELECT i,f,s FROM t1 WHERE i=84", nullptr);
 }

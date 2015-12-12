@@ -21,6 +21,7 @@
 
 #include "KeyValueTab.h"
 #include "HelperFunc.h"
+#include "TableCreator.h"
 
 namespace SqliteOverlay
 {
@@ -30,7 +31,7 @@ namespace SqliteOverlay
     
 //----------------------------------------------------------------------------
 
-  unique_ptr<KeyValueTab> KeyValueTab::getTab(SqliteDatabase* _db, const string& _tabName, bool createNewIfMissing)
+  unique_ptr<KeyValueTab> KeyValueTab::getTab(SqliteDatabase* _db, const string& _tabName, bool createNewIfMissing, int* errCodeOut)
   {
     if (_db == nullptr) return nullptr;
     if (_tabName.empty()) return nullptr;
@@ -41,12 +42,10 @@ namespace SqliteOverlay
       if (!createNewIfMissing) return nullptr;
 
       // create a new table
-      StringList col;
-      string keyColDef = string(KEY_COL_NAME) + " VARCHAR(" + to_string(MAX_KEY_LEN) +")";
-      string valColDef = string(VAL_COL_NAME) + " TEXT";
-      col.push_back(keyColDef);
-      col.push_back(valColDef);
-      _db->tableCreationHelper(_tabName, col);
+      TableCreator tc{_db};
+      tc.addVarchar(KEY_COL_NAME, MAX_KEY_LEN, true, CONFLICT_CLAUSE::ROLLBACK, true, CONFLICT_CLAUSE::ROLLBACK);
+      tc.addText(VAL_COL_NAME);
+      tc.createTableAndResetCreator(_tabName, errCodeOut);
     }
 
     // return a new instance of KeyValueTab
@@ -55,37 +54,37 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void KeyValueTab::set(const string& key, const string& val) const
+  void KeyValueTab::set(const string& key, const string& val, int* errCodeOut) const
   {
-    auto stmt = prepInsertUpdateStatementForKey(key);
+    auto stmt = prepInsertUpdateStatementForKey(key, errCodeOut);
     if (stmt != nullptr)
     {
       stmt->bindString(1, val);
-      db->execNonQuery(stmt);
+      db->execNonQuery(stmt, errCodeOut);
     }
   }
 
   //----------------------------------------------------------------------------
 
-  void KeyValueTab::set(const string& key, int val) const
+  void KeyValueTab::set(const string& key, int val, int* errCodeOut) const
   {
-    auto stmt = prepInsertUpdateStatementForKey(key);
+    auto stmt = prepInsertUpdateStatementForKey(key, errCodeOut);
     if (stmt != nullptr)
     {
       stmt->bindInt(1, val);
-      db->execNonQuery(stmt);
+      db->execNonQuery(stmt, errCodeOut);
     }
   }
 
   //----------------------------------------------------------------------------
 
-  void KeyValueTab::set(const string& key, double val) const
+  void KeyValueTab::set(const string& key, double val, int* errCodeOut) const
   {
-    auto stmt = prepInsertUpdateStatementForKey(key);
+    auto stmt = prepInsertUpdateStatementForKey(key, errCodeOut);
     if (stmt != nullptr)
     {
       stmt->bindDouble(1, val);
-      db->execNonQuery(stmt);
+      db->execNonQuery(stmt, errCodeOut);
     }
   }
 
@@ -94,6 +93,11 @@ namespace SqliteOverlay
   KeyValueTab::KeyValueTab(SqliteDatabase* _db, const string& _tabName)
     :db(_db), tabName(_tabName), tab(db->getTab(tabName))
   {
+    // does the requeted tab exist?
+    if (tab == nullptr)
+    {
+      throw std::invalid_argument("KeyValueTab ctor: table " + tabName + " does not exist.");
+    }
     // make sure that the table has the columns for keys and values
     if (!(tab->hasColumn(KEY_COL_NAME)))
     {
@@ -147,35 +151,35 @@ namespace SqliteOverlay
 
   unique_ptr<ScalarQueryResult<int> > KeyValueTab::getInt2(const string& key) const
   {
-    auto qry = db->prepStatement(valSelectStatement);
+    auto qry = db->prepStatement(valSelectStatement, nullptr);
     qry->bindString(1, key);
 
-    return db->execScalarQueryInt(qry);
+    return db->execScalarQueryInt(qry, nullptr);
   }
 
   //----------------------------------------------------------------------------
 
   unique_ptr<ScalarQueryResult<double> > KeyValueTab::getDouble2(const string& key) const
   {
-    auto qry = db->prepStatement(valSelectStatement);
+    auto qry = db->prepStatement(valSelectStatement, nullptr);
     qry->bindString(1, key);
 
-    return db->execScalarQueryDouble(qry);
+    return db->execScalarQueryDouble(qry, nullptr);
   }
 
   //----------------------------------------------------------------------------
 
   unique_ptr<ScalarQueryResult<string> > KeyValueTab::getString2(const string& key) const
   {
-    auto qry = db->prepStatement(valSelectStatement);
+    auto qry = db->prepStatement(valSelectStatement, nullptr);
     qry->bindString(1, key);
 
-    return db->execScalarQueryString(qry);
+    return db->execScalarQueryString(qry, nullptr);
   }
 
   //----------------------------------------------------------------------------
 
-  upSqlStatement KeyValueTab::prepInsertUpdateStatementForKey(const string& key) const
+  upSqlStatement KeyValueTab::prepInsertUpdateStatementForKey(const string& key, int* errCodeOut) const
   {
     if (key.empty()) return nullptr;
     if (key.length() > MAX_KEY_LEN) return nullptr;
@@ -186,13 +190,13 @@ namespace SqliteOverlay
       string sql;
       sql = "UPDATE " + tabName + " SET " + string(VAL_COL_NAME) + " = ?1 ";
       sql += "WHERE " + string(KEY_COL_NAME) + "=?2";
-      result = db->prepStatement(sql);
+      result = db->prepStatement(sql, errCodeOut);
       result->bindString(2, key);
     } else {
       string sql;
       sql = "INSERT INTO " + tabName + " (" + string(KEY_COL_NAME) + ", " + string(VAL_COL_NAME) + ") ";
       sql += "VALUES (?2, ?1)";
-      result = db->prepStatement(sql);
+      result = db->prepStatement(sql, errCodeOut);
       result->bindString(2, key);
     }
 

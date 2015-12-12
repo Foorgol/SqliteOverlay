@@ -56,15 +56,24 @@ namespace SqliteOverlay
 
     // Explicitly enable support for foreign keys
     // and disable synchronous writes for better performance
-    execNonQuery("PRAGMA foreign_keys = ON");
+    execNonQuery("PRAGMA foreign_keys = ON", &err);
+    if (err != SQLITE_DONE)
+    {
+      // delete the sqlite instance we've just created
+      SqliteDeleter sd;
+      sd(tmpPtr);
+
+      throw invalid_argument(sqlite3_errmsg(tmpPtr));
+    }
+
     enforceSynchronousWrites(false);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execScalarQuery_prep(const upSqlStatement& stmt) const
+  bool SqliteDatabase::execScalarQuery_prep(const upSqlStatement& stmt, int* errCodeOut) const
   {
-    bool isOk = stmt->step(log.get());
+    bool isOk = stmt->step(errCodeOut, log.get());
     if (!isOk) return false;
     if (!(stmt->hasData())) return false;
 
@@ -73,9 +82,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  upSqlStatement SqliteDatabase::execScalarQuery_prep(const string& sqlStatement)
+  upSqlStatement SqliteDatabase::execScalarQuery_prep(const string& sqlStatement, int* errCodeOut)
   {
-    upSqlStatement stmt = execContentQuery(sqlStatement);
+    upSqlStatement stmt = execContentQuery(sqlStatement, errCodeOut);
     if (stmt == nullptr) return nullptr;
     if (!(stmt->hasData())) return nullptr;
 
@@ -143,28 +152,31 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execNonQuery(const string& sqlStatement)
+  bool SqliteDatabase::execNonQuery(const string& sqlStatement, int* errCodeOut)
   {
-    upSqlStatement stmt = prepStatement(sqlStatement);
+    upSqlStatement stmt = prepStatement(sqlStatement, errCodeOut);
     if (stmt == nullptr)
     {
       // invalid statement
       return false;
     }
 
-    return execNonQuery(stmt);
+    return execNonQuery(stmt, errCodeOut);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execNonQuery(const upSqlStatement& stmt) const
+  bool SqliteDatabase::execNonQuery(const upSqlStatement& stmt, int* errCodeOut) const
   {
     // execute the statement
-    if (stmt->step(log.get()))
+    if (stmt->step(errCodeOut, log.get()))
     {
       // if successful, execute further steps of the
       // statement until the execution is complete
-      while (!(stmt->isDone())) stmt->step(log.get());
+      while (!(stmt->isDone()))
+      {
+        if (!(stmt->step(errCodeOut, log.get()))) return false;
+      }
     } else {
       // initial execution raised a failure
       return false;
@@ -175,16 +187,16 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  upSqlStatement SqliteDatabase::execContentQuery(const string& sqlStatement)
+  upSqlStatement SqliteDatabase::execContentQuery(const string& sqlStatement, int* errCodeOut)
   {
-    upSqlStatement stmt = prepStatement(sqlStatement);
+    upSqlStatement stmt = prepStatement(sqlStatement, errCodeOut);
     if (stmt == nullptr)
     {
       // invalid statement
       return nullptr;
     }
 
-    if (!(stmt->step(log.get())))
+    if (!(stmt->step(errCodeOut, log.get())))
     {
       return nullptr;
     }
@@ -194,33 +206,33 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execContentQuery(const upSqlStatement& stmt)
+  bool SqliteDatabase::execContentQuery(const upSqlStatement& stmt, int* errCodeOut)
   {
-    return stmt->step(log.get());
+    return stmt->step(errCodeOut, log.get());
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execScalarQueryInt(const string& sqlStatement, int* out)
+  bool SqliteDatabase::execScalarQueryInt(const string& sqlStatement, int* out, int* errCodeOut)
   {
-    auto stmt = execScalarQuery_prep<int>(sqlStatement, out);
+    auto stmt = execScalarQuery_prep<int>(sqlStatement, out, errCodeOut);
     return (stmt == nullptr) ? false : stmt->getInt(0, out);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execScalarQueryInt(const upSqlStatement& stmt, int* out) const
+  bool SqliteDatabase::execScalarQueryInt(const upSqlStatement& stmt, int* out, int* errCodeOut) const
   {
-    return execScalarQuery_prep<int>(stmt, out) ? stmt->getInt(0, out) : false;
+    return execScalarQuery_prep<int>(stmt, out, errCodeOut) ? stmt->getInt(0, out) : false;
   }
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<int>> SqliteDatabase::execScalarQueryInt(const upSqlStatement& stmt, bool skipPrep) const
+  unique_ptr<ScalarQueryResult<int>> SqliteDatabase::execScalarQueryInt(const upSqlStatement& stmt, int* errCodeOut, bool skipPrep) const
   {
     if (!skipPrep)
     {
-      if (!(execScalarQuery_prep(stmt)))
+      if (!(execScalarQuery_prep(stmt, errCodeOut)))
       {
         return nullptr;
       }
@@ -245,39 +257,39 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<int> > SqliteDatabase::execScalarQueryInt(const string& sqlStatement)
+  unique_ptr<ScalarQueryResult<int> > SqliteDatabase::execScalarQueryInt(const string& sqlStatement, int* errCodeOut)
   {
-    auto stmt = execScalarQuery_prep(sqlStatement);
+    auto stmt = execScalarQuery_prep(sqlStatement, errCodeOut);
     if (stmt == nullptr)
     {
       return nullptr;
     }
 
-    return execScalarQueryInt(stmt, true);
+    return execScalarQueryInt(stmt, errCodeOut, true);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execScalarQueryDouble(const string& sqlStatement, double* out)
+  bool SqliteDatabase::execScalarQueryDouble(const string& sqlStatement, double* out, int* errCodeOut)
   {
-    auto stmt = execScalarQuery_prep<double>(sqlStatement, out);
+    auto stmt = execScalarQuery_prep<double>(sqlStatement, out, errCodeOut);
     return (stmt == nullptr) ? false : stmt->getDouble(0, out);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execScalarQueryDouble(const upSqlStatement& stmt, double* out) const
+  bool SqliteDatabase::execScalarQueryDouble(const upSqlStatement& stmt, double* out, int* errCodeOut) const
   {
-    return execScalarQuery_prep<double>(stmt, out) ? stmt->getDouble(0, out) : false;
+    return execScalarQuery_prep<double>(stmt, out, errCodeOut) ? stmt->getDouble(0, out) : false;
   }
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<double> > SqliteDatabase::execScalarQueryDouble(const upSqlStatement& stmt, bool skipPrep) const
+  unique_ptr<ScalarQueryResult<double> > SqliteDatabase::execScalarQueryDouble(const upSqlStatement& stmt, int* errCodeOut, bool skipPrep) const
   {
     if (!skipPrep)
     {
-      if (!(execScalarQuery_prep(stmt)))
+      if (!(execScalarQuery_prep(stmt, errCodeOut)))
       {
         return nullptr;
       }
@@ -302,39 +314,39 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<double> > SqliteDatabase::execScalarQueryDouble(const string& sqlStatement)
+  unique_ptr<ScalarQueryResult<double> > SqliteDatabase::execScalarQueryDouble(const string& sqlStatement, int* errCodeOut)
   {
-    auto stmt = execScalarQuery_prep(sqlStatement);
+    auto stmt = execScalarQuery_prep(sqlStatement, errCodeOut);
     if (stmt == nullptr)
     {
       return nullptr;
     }
 
-    return execScalarQueryDouble(stmt, true);
+    return execScalarQueryDouble(stmt, errCodeOut, true);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execScalarQueryString(const string& sqlStatement, string* out)
+  bool SqliteDatabase::execScalarQueryString(const string& sqlStatement, string* out, int* errCodeOut)
   {
-    auto stmt = execScalarQuery_prep<string>(sqlStatement, out);
+    auto stmt = execScalarQuery_prep<string>(sqlStatement, out, errCodeOut);
     return (stmt == nullptr) ? false : stmt->getString(0, out);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execScalarQueryString(const upSqlStatement& stmt, string* out) const
+  bool SqliteDatabase::execScalarQueryString(const upSqlStatement& stmt, string* out, int* errCodeOut) const
   {
-    return execScalarQuery_prep<string>(stmt, out) ? stmt->getString(0, out) : false;
+    return execScalarQuery_prep<string>(stmt, out, errCodeOut) ? stmt->getString(0, out) : false;
   }
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<string> > SqliteDatabase::execScalarQueryString(const upSqlStatement& stmt, bool skipPrep) const
+  unique_ptr<ScalarQueryResult<string> > SqliteDatabase::execScalarQueryString(const upSqlStatement& stmt, int* errCodeOut, bool skipPrep) const
   {
     if (!skipPrep)
     {
-      if (!(execScalarQuery_prep(stmt)))
+      if (!(execScalarQuery_prep(stmt, errCodeOut)))
       {
         return nullptr;
       }
@@ -359,20 +371,20 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<string> > SqliteDatabase::execScalarQueryString(const string& sqlStatement)
+  unique_ptr<ScalarQueryResult<string> > SqliteDatabase::execScalarQueryString(const string& sqlStatement, int* errCodeOut)
   {
-    auto stmt = execScalarQuery_prep(sqlStatement);
+    auto stmt = execScalarQuery_prep(sqlStatement, errCodeOut);
     if (stmt == nullptr)
     {
       return nullptr;
     }
 
-    return execScalarQueryString(stmt, true);
+    return execScalarQueryString(stmt, errCodeOut, true);
   }
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::enforceSynchronousWrites(bool syncOn)
+  bool SqliteDatabase::enforceSynchronousWrites(bool syncOn)
   {
     string sql = "PRAGMA synchronous = O";
     if (syncOn)
@@ -384,12 +396,14 @@ namespace SqliteOverlay
       sql += "FF";
     }
 
-    execNonQuery(sql);
+    int err;
+    execNonQuery(sql, &err);
+    return (err == SQLITE_OK);
   }
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::tableCreationHelper(const string& tabName, const vector<string>& colDefs)
+  void SqliteDatabase::tableCreationHelper(const string& tabName, const vector<string>& colDefs, int* errCodeOut)
   {
     string sql = "CREATE TABLE IF NOT EXISTS " + tabName + " (";
     sql += "id INTEGER NOT NULL PRIMARY KEY ";
@@ -404,23 +418,23 @@ namespace SqliteOverlay
     }
 
     sql += ");";
-    execNonQuery(sql);
+    execNonQuery(sql, errCodeOut);
   }
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::viewCreationHelper(const string& viewName, const string& selectStmt)
+  void SqliteDatabase::viewCreationHelper(const string& viewName, const string& selectStmt, int* errCodeOut)
   {
     string sql = "CREATE VIEW IF NOT EXISTS";
 
     sql += " " + viewName + " AS ";
     sql += selectStmt;
-    execNonQuery(sql);
+    execNonQuery(sql, errCodeOut);
   }
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const StringList &colNames, bool isUnique)
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const StringList &colNames, bool isUnique, int* errCodeOut)
   {
     if (idxName.empty()) return;
     if (!(hasTable(tabName))) return;
@@ -430,21 +444,21 @@ namespace SqliteOverlay
     sql += "INDEX IF NOT EXISTS ";
     sql += idxName + " ON " + tabName + " (";
     sql += commaSepStringFromStringList(colNames) + ")";
-    execNonQuery(sql);
+    execNonQuery(sql, errCodeOut);
   }
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const string &colName, bool isUnique)
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const string &colName, bool isUnique, int* errCodeOut)
   {
     StringList colList;
     colList.push_back(colName);
-    indexCreationHelper(tabName, idxName, colList, isUnique);
+    indexCreationHelper(tabName, idxName, colList, isUnique, errCodeOut);
   }
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &colName, bool isUnique)
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &colName, bool isUnique, int* errCodeOut)
   {
     if (tabName.empty()) return;
     if (colName.empty()) return;
@@ -452,7 +466,7 @@ namespace SqliteOverlay
     // auto-create a canonical index name
     string idxName = tabName + "_" + colName;
 
-    indexCreationHelper(tabName, idxName, colName, isUnique);
+    indexCreationHelper(tabName, idxName, colName, isUnique, errCodeOut);
   }
 
   //----------------------------------------------------------------------------
@@ -464,7 +478,7 @@ namespace SqliteOverlay
     string sql = "SELECT name FROM sqlite_master WHERE type='";
     sql += getViews ? "view" : "table";
     sql +="';";
-    auto stmt = execContentQuery(sql);
+    auto stmt = execContentQuery(sql, nullptr);
     while (stmt->hasData())
     {
       string tabName;
@@ -476,7 +490,7 @@ namespace SqliteOverlay
         result.push_back(tabName);
       }
 
-      stmt->step(log.get());
+      stmt->step(nullptr, log.get());
     }
 
     return result;
@@ -543,10 +557,7 @@ namespace SqliteOverlay
 
   int SqliteDatabase::getLastInsertId()
   {
-    int result = -1;
-    execScalarQueryInt("SELECT last_insert_rowid()", &result);
-
-    return result;
+    return sqlite3_last_insert_rowid(dbPtr.get());
   }
 
   //----------------------------------------------------------------------------
@@ -595,9 +606,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  upSqlStatement SqliteDatabase::prepStatement(const string& sqlText)
+  upSqlStatement SqliteDatabase::prepStatement(const string& sqlText, int* errCodeOut)
   {
-    return SqlStatement::get(dbPtr.get(), sqlText, log.get());
+    return SqlStatement::get(dbPtr.get(), sqlText, errCodeOut, log.get());
   }
 
   //----------------------------------------------------------------------------

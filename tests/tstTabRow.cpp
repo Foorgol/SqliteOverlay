@@ -89,13 +89,13 @@ TEST_F(DatabaseTestScenario, TabRow_Update)
 
   // simple updates of one colum
   ASSERT_EQ(42, r.getInt("i"));
-  ASSERT_TRUE(r.update("i", 88));
+  ASSERT_TRUE(r.update("i", 88, nullptr));
   ASSERT_EQ(88, r.getInt("i"));
   ASSERT_EQ(23.23, r.getDouble("f"));
-  ASSERT_TRUE(r.update("f", 12.34));
+  ASSERT_TRUE(r.update("f", 12.34, nullptr));
   ASSERT_EQ(12.34, r.getDouble("f"));
   ASSERT_EQ("Hallo", r["s"]);
-  ASSERT_TRUE(r.update("s", "xyz"));
+  ASSERT_TRUE(r.update("s", "xyz", nullptr));
   ASSERT_EQ("xyz", r["s"]);
 
   // update multiple columns at once
@@ -103,7 +103,7 @@ TEST_F(DatabaseTestScenario, TabRow_Update)
   cvc.addIntCol("i", 55);
   cvc.addNullCol("f");
   cvc.addStringCol("s", "xxx");
-  ASSERT_TRUE(r.update(cvc));
+  ASSERT_TRUE(r.update(cvc, nullptr));
   ASSERT_EQ(55, r.getInt("i"));
   ASSERT_EQ("xxx", r["s"]);
   auto d = r.getDouble2("f");
@@ -111,9 +111,9 @@ TEST_F(DatabaseTestScenario, TabRow_Update)
   ASSERT_TRUE(d->isNull());
 
   // invalid column names
-  ASSERT_FALSE(r.update("xycyxcyx", 88));
-  ASSERT_FALSE(r.update("yxcyc", 12.34));
-  ASSERT_FALSE(r.update("ycyxcm", "xyz"));
+  ASSERT_FALSE(r.update("xycyxcyx", 88, nullptr));
+  ASSERT_FALSE(r.update("yxcyc", 12.34, nullptr));
+  ASSERT_FALSE(r.update("ycyxcm", "xyz", nullptr));
 }
 
 //----------------------------------------------------------------
@@ -127,7 +127,7 @@ TEST_F(DatabaseTestScenario, TabRow_OperatorEqual)
   ASSERT_EQ(1, r2.getId());
 
   DbTab* t2 = db->getTab("t2");
-  ASSERT_EQ(1, t2->insertRow());
+  ASSERT_EQ(1, t2->insertRow(nullptr));
   TabRow r3(db.get(), "t2", 1);
 
   ASSERT_TRUE(r1 == r2); // same tab, same ID
@@ -146,11 +146,11 @@ TEST_F(DatabaseTestScenario, TabRow_Erase)
   ASSERT_TRUE(t1 != nullptr);
 
   int oldLen = t1->length();
-  ASSERT_TRUE(r.erase());
+  ASSERT_TRUE(r.erase(nullptr));
   ASSERT_EQ(oldLen-1, t1->length());
   ASSERT_EQ(-1, r.getId());
 
-  // make the old row doesn't exists anymore
+  // make sure the old row doesn't exists anymore
   ASSERT_THROW(TabRow(db.get(), "t1", 1), std::invalid_argument);
 }
 

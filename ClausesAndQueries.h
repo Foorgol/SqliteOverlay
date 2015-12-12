@@ -79,7 +79,7 @@ namespace SqliteOverlay {
     {
     }
 
-    virtual ~ScalarQueryResult(){};
+    virtual ~ScalarQueryResult(){}
 
     bool isNull()
     {

@@ -91,7 +91,7 @@ namespace SqliteOverlay
     // create and execute a "SELECT id FROM ..." from the where clause
     // and only evaluate the first hit
     string sql = where.getSelectStmt(tabName, false);
-    auto stmt = db->prepStatement(sql);
+    auto stmt = db->prepStatement(sql, nullptr);
     if (stmt == nullptr)
     {
       throw std::invalid_argument("Invalid where clause or no matches for where clause");
@@ -125,7 +125,7 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::update(const ColumnValueClause& cvc) const
+  bool TabRow::update(const ColumnValueClause& cvc, int* errCodeOut) const
   {
     if (!(cvc.hasColumns()))
     {
@@ -135,7 +135,7 @@ namespace SqliteOverlay
     // create and execute the SQL statement
     string sql = cvc.getUpdateStmt(tabName, rowId);
 
-    return db->execNonQuery(sql);
+    return db->execNonQuery(sql, errCodeOut);
   }
 
 //----------------------------------------------------------------------------
@@ -149,7 +149,7 @@ namespace SqliteOverlay
     
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
     string result;
-    bool isOk = db->execScalarQueryString(sql, &result);
+    bool isOk = db->execScalarQueryString(sql, &result, nullptr);
     
     if (!isOk)
     {
@@ -170,7 +170,7 @@ namespace SqliteOverlay
 
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
     int result;
-    bool isOk = db->execScalarQueryInt(sql, &result);
+    bool isOk = db->execScalarQueryInt(sql, &result, nullptr);
 
     if (!isOk)
     {
@@ -191,7 +191,7 @@ namespace SqliteOverlay
 
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
     double result;
-    bool isOk = db->execScalarQueryDouble(sql, &result);
+    bool isOk = db->execScalarQueryDouble(sql, &result, nullptr);
 
     if (!isOk)
     {
@@ -228,7 +228,7 @@ namespace SqliteOverlay
 
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
 
-    return db->execScalarQueryInt(sql);
+    return db->execScalarQueryInt(sql, nullptr);
   }
 
 //----------------------------------------------------------------------------
@@ -242,7 +242,7 @@ namespace SqliteOverlay
 
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
 
-    return db->execScalarQueryDouble(sql);
+    return db->execScalarQueryDouble(sql, nullptr);
   }
 
 //----------------------------------------------------------------------------
@@ -256,7 +256,7 @@ namespace SqliteOverlay
 
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
 
-    return db->execScalarQueryString(sql);
+    return db->execScalarQueryString(sql, nullptr);
   }
 
 //----------------------------------------------------------------------------
@@ -270,7 +270,7 @@ namespace SqliteOverlay
 
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
 
-    auto rawTime = db->execScalarQueryInt(sql);
+    auto rawTime = db->execScalarQueryInt(sql, nullptr);
 
     if (rawTime->isNull())
     {
@@ -292,7 +292,7 @@ namespace SqliteOverlay
 
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
 
-    auto rawTime = db->execScalarQueryInt(sql);
+    auto rawTime = db->execScalarQueryInt(sql, nullptr);
 
     if (rawTime->isNull())
     {
@@ -305,47 +305,47 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::update(const string& colName, const int newVal) const
+  bool TabRow::update(const string& colName, const int newVal, int* errCodeOut) const
   {
     ColumnValueClause cvc;
     cvc.addIntCol(colName, newVal);
-    return update(cvc);
+    return update(cvc, errCodeOut);
   }
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::update(const string& colName, const double newVal) const
+  bool TabRow::update(const string& colName, const double newVal, int* errCodeOut) const
   {
     ColumnValueClause cvc;
     cvc.addDoubleCol(colName, newVal);
-    return update(cvc);
+    return update(cvc, errCodeOut);
   }
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::update(const string& colName, const string newVal) const
+  bool TabRow::update(const string& colName, const string newVal, int* errCodeOut) const
   {
     ColumnValueClause cvc;
     cvc.addStringCol(colName, newVal);
-    return update(cvc);
+    return update(cvc, errCodeOut);
   }
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::update(const string& colName, const LocalTimestamp& newVal) const
+  bool TabRow::update(const string& colName, const LocalTimestamp& newVal, int* errCodeOut) const
   {
     ColumnValueClause cvc;
     cvc.addDateTimeCol(colName, &newVal);
-    return update(cvc);
+    return update(cvc, errCodeOut);
   }
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::update(const string& colName, const UTCTimestamp& newVal) const
+  bool TabRow::update(const string& colName, const UTCTimestamp& newVal, int* errCodeOut) const
   {
     ColumnValueClause cvc;
     cvc.addDateTimeCol(colName, &newVal);
-    return update(cvc);
+    return update(cvc, errCodeOut);
   }
 
 //----------------------------------------------------------------------------
@@ -357,10 +357,10 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::erase()
+  bool TabRow::erase(int* errCodeOut)
   {
     string sql = "DELETE FROM " + tabName + " WHERE id = " + to_string(rowId);
-    bool success = db->execNonQuery(sql);
+    bool success = db->execNonQuery(sql, errCodeOut);
     
     // make this instance unusable by setting the ID to an invalid value
     if (success)

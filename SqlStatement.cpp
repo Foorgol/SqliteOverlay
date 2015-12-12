@@ -9,7 +9,7 @@ using namespace std;
 
 namespace SqliteOverlay
 {
-  SqlStatement::SqlStatement(sqlite3* dbPtr, const string& sqlTxt)
+  SqlStatement::SqlStatement(sqlite3* dbPtr, const string& sqlTxt, int* errCodeOut)
     :stmt(nullptr), _hasData(false), _isDone(false), resultColCount(-1), stepCount(0)
   {
     if (dbPtr == nullptr)
@@ -23,6 +23,7 @@ namespace SqliteOverlay
     }
 
     int err = sqlite3_prepare_v2(dbPtr, sqlTxt.c_str(), -1, &stmt, nullptr);
+    if (errCodeOut != nullptr) *errCodeOut = err;
     if (err != SQLITE_OK)
     {
       throw invalid_argument(sqlite3_errmsg(dbPtr));
@@ -31,12 +32,12 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<SqlStatement> SqlStatement::get(sqlite3* dbPtr, const string& sqlTxt, const Logger* log)
+  unique_ptr<SqlStatement> SqlStatement::get(sqlite3* dbPtr, const string& sqlTxt, int* errCodeOut, const Logger* log)
   {
     SqlStatement* tmpPtr;
     try
     {
-      tmpPtr = new SqlStatement(dbPtr, sqlTxt);
+      tmpPtr = new SqlStatement(dbPtr, sqlTxt, errCodeOut);
     } catch (exception e) {
       if (log != nullptr)
       {
@@ -65,7 +66,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqlStatement::step(const Logger* log)
+  bool SqlStatement::step(int* errCodeOut, const Logger* log)
   {
     if (_isDone)
     {
@@ -78,11 +79,20 @@ namespace SqliteOverlay
         msg += "'";
         log->warn(msg);
       }
+      if (errCodeOut != nullptr)
+      {
+        *errCodeOut = SQLITE_DONE;
+      }
+
       return false;
     }
 
     int err = sqlite3_step(stmt);
     ++stepCount;
+    if (errCodeOut != nullptr)
+    {
+      *errCodeOut = err;
+    }
 
     _hasData = (err == SQLITE_ROW);
     _isDone = (err == SQLITE_DONE);

@@ -34,12 +34,12 @@ namespace SqliteOverlay
     virtual ~TabRow ();
     int getId() const;
 
-    bool update(const ColumnValueClause& cvc) const;
-    bool update(const string& colName, const int newVal) const;
-    bool update(const string& colName, const double newVal) const;
-    bool update(const string& colName, const string newVal) const;
-    bool update(const string& colName, const LocalTimestamp& newVal) const;
-    bool update(const string& colName, const UTCTimestamp& newVal) const;
+    bool update(const ColumnValueClause& cvc, int* errCodeOut=nullptr) const;
+    bool update(const string& colName, const int newVal, int* errCodeOut=nullptr) const;
+    bool update(const string& colName, const double newVal, int* errCodeOut=nullptr) const;
+    bool update(const string& colName, const string newVal, int* errCodeOut=nullptr) const;
+    bool update(const string& colName, const LocalTimestamp& newVal, int* errCodeOut=nullptr) const;
+    bool update(const string& colName, const UTCTimestamp& newVal, int* errCodeOut=nullptr) const;
 
     string operator[](const string& colName) const;
     int getInt(const string& colName) const;
@@ -63,7 +63,7 @@ namespace SqliteOverlay
     }
 
     SqliteDatabase* getDb();
-    bool erase();
+    bool erase(int* errCodeOut=nullptr);
     
   protected:
     /**

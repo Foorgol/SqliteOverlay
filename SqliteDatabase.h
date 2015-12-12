@@ -66,37 +66,37 @@ namespace SqliteOverlay
     SqliteDatabase& operator=(const SqliteDatabase&) = delete;
 
     // statements and queries
-    upSqlStatement prepStatement(const string& sqlText);
-    bool execNonQuery(const string& sqlStatement);
-    bool execNonQuery(const upSqlStatement& stmt) const;
-    upSqlStatement execContentQuery(const string& sqlStatement);
-    bool execContentQuery(const upSqlStatement& stmt);
+    upSqlStatement prepStatement(const string& sqlText, int* errCodeOut=nullptr);
+    bool execNonQuery(const string& sqlStatement, int* errCodeOut=nullptr);
+    bool execNonQuery(const upSqlStatement& stmt, int* errCodeOut=nullptr) const;
+    upSqlStatement execContentQuery(const string& sqlStatement, int* errCodeOut=nullptr);
+    bool execContentQuery(const upSqlStatement& stmt, int* errCodeOut=nullptr);
 
-    bool execScalarQueryInt(const string& sqlStatement, int* out);
-    bool execScalarQueryInt(const upSqlStatement& stmt, int* out) const;
-    unique_ptr<ScalarQueryResult<int>> execScalarQueryInt(const upSqlStatement& stmt, bool skipPrep=false) const;
-    unique_ptr<ScalarQueryResult<int>> execScalarQueryInt(const string& sqlStatement);
+    bool execScalarQueryInt(const string& sqlStatement, int* out, int* errCodeOut);
+    bool execScalarQueryInt(const upSqlStatement& stmt, int* out, int* errCodeOut) const;
+    unique_ptr<ScalarQueryResult<int>> execScalarQueryInt(const upSqlStatement& stmt, int* errCodeOut=nullptr, bool skipPrep=false) const;
+    unique_ptr<ScalarQueryResult<int>> execScalarQueryInt(const string& sqlStatement, int* errCodeOut=nullptr);
 
-    bool execScalarQueryDouble(const string& sqlStatement, double* out);
-    bool execScalarQueryDouble(const upSqlStatement& stmt, double* out) const;
-    unique_ptr<ScalarQueryResult<double>> execScalarQueryDouble(const upSqlStatement& stmt, bool skipPrep=false) const;
-    unique_ptr<ScalarQueryResult<double>> execScalarQueryDouble(const string& sqlStatement);
+    bool execScalarQueryDouble(const string& sqlStatement, double* out, int* errCodeOut);
+    bool execScalarQueryDouble(const upSqlStatement& stmt, double* out, int* errCodeOut) const;
+    unique_ptr<ScalarQueryResult<double>> execScalarQueryDouble(const upSqlStatement& stmt, int* errCodeOut=nullptr, bool skipPrep=false) const;
+    unique_ptr<ScalarQueryResult<double>> execScalarQueryDouble(const string& sqlStatement, int* errCodeOut=nullptr);
 
-    bool execScalarQueryString(const string& sqlStatement, string* out);
-    bool execScalarQueryString(const upSqlStatement& stmt, string* out) const;
-    unique_ptr<ScalarQueryResult<string>> execScalarQueryString(const upSqlStatement& stmt, bool skipPrep=false) const;
-    unique_ptr<ScalarQueryResult<string>> execScalarQueryString(const string& sqlStatement);
+    bool execScalarQueryString(const string& sqlStatement, string* out, int* errCodeOut);
+    bool execScalarQueryString(const upSqlStatement& stmt, string* out, int* errCodeOut) const;
+    unique_ptr<ScalarQueryResult<string>> execScalarQueryString(const upSqlStatement& stmt, int* errCodeOut=nullptr, bool skipPrep=false) const;
+    unique_ptr<ScalarQueryResult<string>> execScalarQueryString(const string& sqlStatement, int* errCodeOut=nullptr);
 
-    void enforceSynchronousWrites(bool syncOn);
+    bool enforceSynchronousWrites(bool syncOn);
 
-    virtual void populateTables() {};
-    virtual void populateViews() {};
+    virtual void populateTables() {}
+    virtual void populateViews() {}
 
-    void tableCreationHelper(const string& tabName, const vector<string>& colDefs);
-    void viewCreationHelper(const string& viewName, const string& selectStmt);
-    void indexCreationHelper(const string& tabName, const string& idxName, const StringList& colNames, bool isUnique=false);
-    void indexCreationHelper(const string& tabName, const string& idxName, const string& colName, bool isUnique=false);
-    void indexCreationHelper(const string& tabName, const string& colName, bool isUnique=false);
+    void tableCreationHelper(const string& tabName, const vector<string>& colDefs, int* errCodeOut=nullptr);
+    void viewCreationHelper(const string& viewName, const string& selectStmt, int* errCodeOut=nullptr);
+    void indexCreationHelper(const string& tabName, const string& idxName, const StringList& colNames, bool isUnique=false, int* errCodeOut=nullptr);
+    void indexCreationHelper(const string& tabName, const string& idxName, const string& colName, bool isUnique=false, int* errCodeOut=nullptr);
+    void indexCreationHelper(const string& tabName, const string& colName, bool isUnique=false, int* errCodeOut=nullptr);
 
     StringList allTableNames(bool getViews=false);
     StringList allViewNames();
@@ -119,11 +119,11 @@ namespace SqliteOverlay
     vector<string> foreignKeyCreationCache;
 
     template<class T>
-    upSqlStatement execScalarQuery_prep(const string& sqlStatement, T* out)
+    upSqlStatement execScalarQuery_prep(const string& sqlStatement, T* out, int* errCodeOut)
     {
       if (out == nullptr) return nullptr;
 
-      upSqlStatement stmt = execContentQuery(sqlStatement);
+      upSqlStatement stmt = execContentQuery(sqlStatement, errCodeOut);
       if (stmt == nullptr) return nullptr;
       if (!(stmt->hasData())) return nullptr;
 
@@ -131,18 +131,18 @@ namespace SqliteOverlay
     }
 
     template<class T>
-    bool execScalarQuery_prep(const upSqlStatement& stmt, T* out) const
+    bool execScalarQuery_prep(const upSqlStatement& stmt, T* out, int* errCodeOut) const
     {
       if (out == nullptr) return false;
-      bool isOk = stmt->step(log.get());
+      bool isOk = stmt->step(errCodeOut, log.get());
       if (!isOk) return false;
       if (!(stmt->hasData())) return false;
 
       return true;
     }
 
-    bool execScalarQuery_prep(const upSqlStatement& stmt) const;
-    upSqlStatement execScalarQuery_prep(const string& sqlStatement);
+    bool execScalarQuery_prep(const upSqlStatement& stmt, int* errCodeOut) const;
+    upSqlStatement execScalarQuery_prep(const string& sqlStatement, int* errCodeOut);
 
     /**
      * @brief dbPtr the internal database handle

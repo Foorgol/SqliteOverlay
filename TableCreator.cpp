@@ -76,7 +76,7 @@ namespace SqliteOverlay
       colDef += " UNIQUE";
       if (uniqueConflictClause != CONFLICT_CLAUSE::__NOT_SET)
       {
-        colDef += " " + conflictClause2String(uniqueConflictClause);
+        colDef += " ON CONFLICT " + conflictClause2String(uniqueConflictClause);
       }
     }
 
@@ -85,7 +85,7 @@ namespace SqliteOverlay
       colDef += " NOT NULL";
       if (notNullConflictClause != CONFLICT_CLAUSE::__NOT_SET)
       {
-        colDef += " " + conflictClause2String(notNullConflictClause);
+        colDef += " ON CONFLICT " + conflictClause2String(notNullConflictClause);
       }
     }
 
@@ -145,7 +145,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  DbTab* TableCreator::createTableAndResetCreator(const string& tabName)
+  DbTab* TableCreator::createTableAndResetCreator(const string& tabName, int* errCodeOut)
   {
     string sql = "CREATE TABLE IF NOT EXISTS " + tabName + " (";
     sql += "id INTEGER NOT NULL PRIMARY KEY ";
@@ -161,7 +161,7 @@ namespace SqliteOverlay
 
     sql += ");";
 
-    db->execNonQuery(sql);
+    db->execNonQuery(sql, errCodeOut);
     reset();
 
     return db->getTab(tabName);

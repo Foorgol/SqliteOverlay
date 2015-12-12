@@ -32,12 +32,12 @@ namespace SqliteOverlay
   {
   public:
     // getter for a key-value-table
-    static unique_ptr<KeyValueTab> getTab(SqliteDatabase* _db, const string& _tabName, bool createNewIfMissing=true);
+    static unique_ptr<KeyValueTab> getTab(SqliteDatabase* _db, const string& _tabName, bool createNewIfMissing=true, int* errCodeOut=nullptr);
 
     // setting of values
-    void set(const string& key, const string& val) const;
-    void set(const string& key, int val) const;
-    void set(const string& key, double val) const;
+    void set(const string& key, const string& val, int* errCodeOut) const;
+    void set(const string& key, int val, int* errCodeOut) const;
+    void set(const string& key, double val, int* errCodeOut) const;
 
     // getters, type 1 (throws exception if key is not existing or empty)
     string operator[](const string& key) const;
@@ -57,7 +57,7 @@ namespace SqliteOverlay
     SqliteDatabase* db;
     string tabName;
     DbTab* tab;
-    upSqlStatement prepInsertUpdateStatementForKey(const string& key) const;
+    upSqlStatement prepInsertUpdateStatementForKey(const string& key, int* errCodeOut) const;
     string valSelectStatement;
 
     static constexpr char KEY_COL_NAME[] = "K";

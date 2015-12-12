@@ -18,14 +18,14 @@ namespace SqliteOverlay
   class SqlStatement
   {
   public:
-    static unique_ptr<SqlStatement> get(sqlite3* dbPtr, const string& sqlTxt, const Logger* log=nullptr);
+    static unique_ptr<SqlStatement> get(sqlite3* dbPtr, const string& sqlTxt, int* errCodeOut=nullptr, const Logger* log=nullptr);
     ~SqlStatement();
 
     void bindInt(int argPos, int val);
     void bindDouble(int argPos, double val);
     void bindString(int argPos, const string& val);
 
-    bool step(const Logger* log=nullptr);
+    bool step(int* errCodeOut=nullptr, const Logger* log=nullptr);
 
     bool hasData() const;
     bool isDone() const;
@@ -49,7 +49,7 @@ namespace SqliteOverlay
       return true;
     }
 
-    SqlStatement(sqlite3* dbPtr, const string& sqlTxt);
+    SqlStatement(sqlite3* dbPtr, const string& sqlTxt, int* errCodeOut);
     sqlite3_stmt* stmt;
     bool _hasData;
     bool _isDone;
