@@ -30,6 +30,7 @@ set(LIB_SOURCES
     DateAndTime.cpp
     KeyValueTab.cpp
     TableCreator.cpp
+    Transaction.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})

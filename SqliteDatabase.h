@@ -109,6 +109,7 @@ namespace SqliteOverlay
 
     int getLastInsertId();
     int getRowsAffected();
+    bool isAutoCommit() const;
 
     void setLogLevel(int newLvl);
 

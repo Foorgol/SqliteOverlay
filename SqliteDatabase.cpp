@@ -569,6 +569,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  bool SqliteDatabase::isAutoCommit() const
+  {
+    return sqlite3_get_autocommit(dbPtr.get());
+  }
+
+  //----------------------------------------------------------------------------
+
   void SqliteDatabase::setLogLevel(int newLvl)
   {
     log->setLevel(newLvl);
