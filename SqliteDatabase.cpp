@@ -241,6 +241,18 @@ namespace SqliteOverlay
 
     ScalarQueryResult<int>* result;
 
+    // Here, the SQLite result code is SQLITE_ROW, because we
+    // called step() on the statememnt only once. If the statement
+    // would retrieve only one row, the next call to step() would yield
+    // SQLITE_DONE. If it would retrieve multiple rows, the next call
+    // to step() would yield SQLITE_ROW again.
+    //
+    // So we can't predict the result of the next call to step().
+    //
+    // But since all other queries always return SQLITE_DONE, we
+    // manually overwrite SQLite's last result code here
+    if (errCodeOut != nullptr) *errCodeOut = SQLITE_DONE;
+
     if (stmt->isNull(0))
     {
       result = new ScalarQueryResult<int>();
@@ -298,6 +310,18 @@ namespace SqliteOverlay
 
     ScalarQueryResult<double>* result;
 
+    // Here, the SQLite result code is SQLITE_ROW, because we
+    // called step() on the statememnt only once. If the statement
+    // would retrieve only one row, the next call to step() would yield
+    // SQLITE_DONE. If it would retrieve multiple rows, the next call
+    // to step() would yield SQLITE_ROW again.
+    //
+    // So we can't predict the result of the next call to step().
+    //
+    // But since all other queries always return SQLITE_DONE, we
+    // manually overwrite SQLite's last result code here
+    if (errCodeOut != nullptr) *errCodeOut = SQLITE_DONE;
+
     if (stmt->isNull(0))
     {
       result = new ScalarQueryResult<double>();
@@ -354,6 +378,18 @@ namespace SqliteOverlay
     }
 
     ScalarQueryResult<string>* result;
+
+    // Here, the SQLite result code is SQLITE_ROW, because we
+    // called step() on the statememnt only once. If the statement
+    // would retrieve only one row, the next call to step() would yield
+    // SQLITE_DONE. If it would retrieve multiple rows, the next call
+    // to step() would yield SQLITE_ROW again.
+    //
+    // So we can't predict the result of the next call to step().
+    //
+    // But since all other queries always return SQLITE_DONE, we
+    // manually overwrite SQLite's last result code here
+    if (errCodeOut != nullptr) *errCodeOut = SQLITE_DONE;
 
     if (stmt->isNull(0))
     {
@@ -617,6 +653,79 @@ namespace SqliteOverlay
     tabCache[tabName] = tab;
 
     return tab;
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::copyTable(const string& srcTabName, const string& dstTabName, int* errCodeOut, bool copyStructureOnly)
+  {
+    // ensure validity of parameters
+    if (srcTabName.empty()) return false;
+    if (dstTabName.empty()) return false;
+    if (!(hasTable(srcTabName))) return false;
+    if (hasTable(dstTabName)) return false;
+
+    // retrieve the CREATE TABLE statement that describes the source table's structure
+    int err;
+    auto stmt = prepStatement("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", &err);
+    if (errCodeOut != nullptr) *errCodeOut = err;
+    if (err != SQLITE_OK) return false;
+    stmt->bindString(1, srcTabName);
+    auto _sqlCreate = execScalarQueryString(stmt, &err);
+    if (errCodeOut != nullptr) *errCodeOut = err;
+    if (_sqlCreate == nullptr) return false;
+    if (err != SQLITE_DONE) return false;
+    if (_sqlCreate->isNull()) return false;
+    string sqlCreate = _sqlCreate->get();
+
+    // Modify the string to be applicable to the new database name
+    //
+    // The string starts with "CREATE TABLE srcName (id ...". We search
+    // for the opening parenthesis and replace everthing before that
+    // character with "CREATE TABLE dstName ".
+    auto posParenthesis = sqlCreate.find_first_of("(");
+    if (posParenthesis == string::npos) return false;
+    sqlCreate.replace(0, posParenthesis-1, "CREATE TABLE " + dstTabName);
+
+    // before we create the new table and copy the contents, we
+    // explicitly start a transaction to be able to restore the
+    // original database state in case of errors
+    auto tr = startTransaction(TRANSACTION_TYPE::IMMEDIATE, &err);
+    if (tr == nullptr) return false;
+    if (err != SQLITE_DONE) return false;
+
+    // actually create the new table
+    bool isSuccess = execNonQuery(sqlCreate, &err);
+    if (errCodeOut != nullptr) *errCodeOut = err;
+    if (!isSuccess)
+    {
+      tr->rollback();
+      return false;
+    }
+
+    // if we're only requested to copy the schema, skip
+    // the conent copying
+    if (!copyStructureOnly)
+    {
+      string sqlCopy = "INSERT INTO " + dstTabName + " SELECT * FROM " + srcTabName;
+      stmt = prepStatement(sqlCopy, &err);
+      if (errCodeOut != nullptr) *errCodeOut = err;
+      if (err != SQLITE_OK) return false;
+
+      isSuccess = execNonQuery(stmt, &err);
+      if (errCodeOut != nullptr) *errCodeOut = err;
+      if (!isSuccess)
+      {
+        tr->rollback();
+        return false;
+      }
+    }
+
+    // we're done. Commit all changes at once
+    tr->commit(&err);
+    if (errCodeOut != nullptr) *errCodeOut = err;
+
+    return (err == SQLITE_DONE);
   }
 
   //----------------------------------------------------------------------------

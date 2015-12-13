@@ -124,6 +124,9 @@ namespace SqliteOverlay
 
     DbTab* getTab (const string& tabName);
 
+    // table copies and database backups
+    bool copyTable(const string& srcTabName, const string& dstTabName, int* errCodeOut=nullptr, bool copyStructureOnly=false);
+
   protected:
     SqliteDatabase(string dbFileName = ":memory:", bool createNew=false);
     vector<string> foreignKeyCreationCache;
