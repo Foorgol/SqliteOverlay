@@ -26,13 +26,6 @@
 namespace SqliteOverlay
 {
 
-  enum class TRANSACTION_TYPE
-  {
-    DEFERRED,
-    IMMEDIATE,
-    EXCLUSIVE
-  };
-
   class Transaction
   {
   public:

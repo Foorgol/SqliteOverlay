@@ -64,6 +64,7 @@ set(LIB_SOURCES_TST
     tests/tstTimestamps.cpp
     tests/tstDateTime.cpp
     tests/tstKeyValueTab.cpp
+    tests/tstTransaction.cpp
 )
 
 find_package(GTest)

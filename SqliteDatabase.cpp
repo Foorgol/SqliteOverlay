@@ -4,6 +4,7 @@
 #include "Logger.h"
 #include "HelperFunc.h"
 #include "DbTab.h"
+#include "Transaction.h"
 
 using namespace std;
 
@@ -572,6 +573,13 @@ namespace SqliteOverlay
   bool SqliteDatabase::isAutoCommit() const
   {
     return sqlite3_get_autocommit(dbPtr.get());
+  }
+
+  //----------------------------------------------------------------------------
+
+  unique_ptr<Transaction> SqliteDatabase::startTransaction(TRANSACTION_TYPE tt, int* errCodeOut)
+  {
+    return Transaction::startNew(this, tt, errCodeOut);
   }
 
   //----------------------------------------------------------------------------

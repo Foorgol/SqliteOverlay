@@ -50,7 +50,7 @@ namespace SqliteOverlay
     db->execNonQuery(sql, &err);
     if (errCodeOut != nullptr) *errCodeOut = err;
 
-    return (err == SQLITE_OK);
+    return (err == SQLITE_DONE);
   }
 
   //----------------------------------------------------------------------------
@@ -62,7 +62,7 @@ namespace SqliteOverlay
     db->execNonQuery(sql, &err);
     if (errCodeOut != nullptr) *errCodeOut = err;
 
-    return (err == SQLITE_OK);
+    return (err == SQLITE_DONE);
   }
 
 //----------------------------------------------------------------------------
@@ -98,7 +98,7 @@ namespace SqliteOverlay
 
     // raise an exception on error, e. g. if the database is locked by
     // another transaction
-    if (err != SQLITE_OK)
+    if (err != SQLITE_DONE)
     {
       throw runtime_error("Couldn't initiate transaction in Transaction ctor");
     }

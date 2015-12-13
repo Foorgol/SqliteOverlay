@@ -26,7 +26,15 @@ namespace SqliteOverlay
     __NOT_SET
   };
 
+  enum class TRANSACTION_TYPE
+  {
+    DEFERRED,
+    IMMEDIATE,
+    EXCLUSIVE
+  };
+
   class DbTab;
+  class Transaction;
 
   template<class T>
   class ScalarQueryResult;
@@ -110,6 +118,7 @@ namespace SqliteOverlay
     int getLastInsertId();
     int getRowsAffected();
     bool isAutoCommit() const;
+    unique_ptr<Transaction> startTransaction(TRANSACTION_TYPE tt = TRANSACTION_TYPE::IMMEDIATE, int* errCodeOut=nullptr);
 
     void setLogLevel(int newLvl);
 
