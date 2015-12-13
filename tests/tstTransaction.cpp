@@ -10,6 +10,7 @@
 #include "SqliteDatabase.h"
 #include "DbTab.h"
 #include "TabRow.h"
+#include "TableCreator.h"
 
 using namespace SqliteOverlay;
 
@@ -79,3 +80,98 @@ TEST_F(DatabaseTestScenario, Transaction)
 
 //----------------------------------------------------------------
 
+TEST_F(DatabaseTestScenario, TransactionWithKeyConflict)
+{
+  auto db = getScenario01();
+
+  // create a child table that references to a parent, in this case t1
+  int err;
+  TableCreator tc{db.get()};
+  tc.addForeignKey("t1Ref", "t1", CONSISTENCY_ACTION::RESTRICT, CONSISTENCY_ACTION::RESTRICT);
+  auto child = tc.createTableAndResetCreator("child", &err);
+  assert(child != nullptr);
+  assert(err = SQLITE_DONE);
+
+  // try to insert a child row with invalid reference
+  ColumnValueClause cvc;
+  cvc.addIntCol("t1Ref", 42);
+  ASSERT_TRUE(child->insertRow(cvc, &err) < 0);
+  ASSERT_EQ(SQLITE_CONSTRAINT, err);
+
+  // insert a child row with a valid reference
+  cvc.clear();
+  cvc.addIntCol("t1Ref", 1);
+  ASSERT_TRUE(child->insertRow(cvc, &err) > 0);
+  ASSERT_EQ(SQLITE_DONE, err);
+
+  // insert a valid and an invalid reference
+  // as part of a larger transaction
+  //
+  // make sure the row with the valid reference
+  // survives
+  auto tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, &err);
+  ASSERT_TRUE(tr != nullptr);
+  ASSERT_EQ(SQLITE_DONE, err);
+  int oldRowCount = child->length();
+  cvc.clear();
+  cvc.addIntCol("t1Ref", 1);
+  ASSERT_TRUE(child->insertRow(cvc, &err) > 0);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(oldRowCount + 1, child->length());
+  cvc.clear();
+  cvc.addIntCol("t1Ref", 88);
+  ASSERT_TRUE(child->insertRow(cvc, &err) < 0);
+  ASSERT_EQ(SQLITE_CONSTRAINT, err);
+  ASSERT_EQ(oldRowCount + 1, child->length());
+  ASSERT_TRUE(tr->commit(&err));
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(oldRowCount + 1, child->length());
+
+  //
+  // try to delete a row from the parent table that has
+  // pending child references
+  //
+  auto t1 = db->getTab("t1");
+  oldRowCount = t1->length();
+  ASSERT_TRUE(t1 != nullptr);
+  ASSERT_EQ(-1, t1->deleteRowsByColumnValue("id", 1, &err));
+  ASSERT_EQ(SQLITE_CONSTRAINT, err);
+  ASSERT_EQ(oldRowCount, t1->length());
+
+  //
+  // try to delete a row from the parent table that has
+  // pending child references. Make the deletion a part
+  // of a larger transaction.
+  //
+  tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, &err);
+  ASSERT_TRUE(tr != nullptr);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(1, t1->deleteRowsByColumnValue("id", 2, &err));
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(oldRowCount - 1, t1->length());
+  ASSERT_EQ(-1, t1->deleteRowsByColumnValue("id", 1, &err));
+  ASSERT_EQ(SQLITE_CONSTRAINT, err);
+  ASSERT_EQ(oldRowCount - 1, t1->length());
+  tr->commit(&err);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(oldRowCount - 1, t1->length());
+
+  //
+  // same as before, but this time rollback the changes
+  //
+  --oldRowCount;
+  tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, &err);
+  ASSERT_TRUE(tr != nullptr);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(1, t1->deleteRowsByColumnValue("id", 3, &err));
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(oldRowCount - 1, t1->length());
+  ASSERT_EQ(0, t1->getMatchCountForColumnValue("id", 3));
+  ASSERT_EQ(-1, t1->deleteRowsByColumnValue("id", 1, &err));
+  ASSERT_EQ(SQLITE_CONSTRAINT, err);
+  ASSERT_EQ(oldRowCount - 1, t1->length());
+  tr->rollback(&err);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(oldRowCount, t1->length());
+  ASSERT_EQ(1, t1->getMatchCountForColumnValue("id", 3));
+}
