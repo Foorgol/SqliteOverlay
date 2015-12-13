@@ -217,6 +217,19 @@ namespace SqliteOverlay
   bool SqliteDatabase::execScalarQueryInt(const string& sqlStatement, int* out, int* errCodeOut)
   {
     auto stmt = execScalarQuery_prep<int>(sqlStatement, out, errCodeOut);
+
+    // Here, the SQLite result code can be SQLITE_ROW, because we
+    // called step() on the statememnt only once. If the statement
+    // would retrieve only one row, the next call to step() would yield
+    // SQLITE_DONE. If it would retrieve multiple rows, the next call
+    // to step() would yield SQLITE_ROW again.
+    //
+    // So we can't predict the result of the next call to step().
+    //
+    // But since all other queries always return SQLITE_DONE, we
+    // manually overwrite SQLite's last result code here
+    if ((errCodeOut != nullptr) && (*errCodeOut == SQLITE_ROW)) *errCodeOut = SQLITE_DONE;
+
     return (stmt == nullptr) ? false : stmt->getInt(0, out);
   }
 
@@ -224,7 +237,21 @@ namespace SqliteOverlay
 
   bool SqliteDatabase::execScalarQueryInt(const upSqlStatement& stmt, int* out, int* errCodeOut) const
   {
-    return execScalarQuery_prep<int>(stmt, out, errCodeOut) ? stmt->getInt(0, out) : false;
+    bool isSuccess = execScalarQuery_prep<int>(stmt, out, errCodeOut);
+
+    // Here, the SQLite result code can be SQLITE_ROW, because we
+    // called step() on the statememnt only once. If the statement
+    // would retrieve only one row, the next call to step() would yield
+    // SQLITE_DONE. If it would retrieve multiple rows, the next call
+    // to step() would yield SQLITE_ROW again.
+    //
+    // So we can't predict the result of the next call to step().
+    //
+    // But since all other queries always return SQLITE_DONE, we
+    // manually overwrite SQLite's last result code here
+    if ((errCodeOut != nullptr) && (*errCodeOut == SQLITE_ROW)) *errCodeOut = SQLITE_DONE;
+
+    return isSuccess ? stmt->getInt(0, out) : false;
   }
 
   //----------------------------------------------------------------------------
@@ -286,6 +313,19 @@ namespace SqliteOverlay
   bool SqliteDatabase::execScalarQueryDouble(const string& sqlStatement, double* out, int* errCodeOut)
   {
     auto stmt = execScalarQuery_prep<double>(sqlStatement, out, errCodeOut);
+
+    // Here, the SQLite result code can be SQLITE_ROW, because we
+    // called step() on the statememnt only once. If the statement
+    // would retrieve only one row, the next call to step() would yield
+    // SQLITE_DONE. If it would retrieve multiple rows, the next call
+    // to step() would yield SQLITE_ROW again.
+    //
+    // So we can't predict the result of the next call to step().
+    //
+    // But since all other queries always return SQLITE_DONE, we
+    // manually overwrite SQLite's last result code here
+    if ((errCodeOut != nullptr) && (*errCodeOut == SQLITE_ROW)) *errCodeOut = SQLITE_DONE;
+
     return (stmt == nullptr) ? false : stmt->getDouble(0, out);
   }
 
@@ -293,7 +333,21 @@ namespace SqliteOverlay
 
   bool SqliteDatabase::execScalarQueryDouble(const upSqlStatement& stmt, double* out, int* errCodeOut) const
   {
-    return execScalarQuery_prep<double>(stmt, out, errCodeOut) ? stmt->getDouble(0, out) : false;
+    bool isSuccess = execScalarQuery_prep<double>(stmt, out, errCodeOut);
+
+    // Here, the SQLite result code can be SQLITE_ROW, because we
+    // called step() on the statememnt only once. If the statement
+    // would retrieve only one row, the next call to step() would yield
+    // SQLITE_DONE. If it would retrieve multiple rows, the next call
+    // to step() would yield SQLITE_ROW again.
+    //
+    // So we can't predict the result of the next call to step().
+    //
+    // But since all other queries always return SQLITE_DONE, we
+    // manually overwrite SQLite's last result code here
+    if ((errCodeOut != nullptr) && (*errCodeOut == SQLITE_ROW)) *errCodeOut = SQLITE_DONE;
+
+    return isSuccess ? stmt->getDouble(0, out) : false;
   }
 
   //----------------------------------------------------------------------------
@@ -355,6 +409,19 @@ namespace SqliteOverlay
   bool SqliteDatabase::execScalarQueryString(const string& sqlStatement, string* out, int* errCodeOut)
   {
     auto stmt = execScalarQuery_prep<string>(sqlStatement, out, errCodeOut);
+
+    // Here, the SQLite result code can be SQLITE_ROW, because we
+    // called step() on the statememnt only once. If the statement
+    // would retrieve only one row, the next call to step() would yield
+    // SQLITE_DONE. If it would retrieve multiple rows, the next call
+    // to step() would yield SQLITE_ROW again.
+    //
+    // So we can't predict the result of the next call to step().
+    //
+    // But since all other queries always return SQLITE_DONE, we
+    // manually overwrite SQLite's last result code here
+    if ((errCodeOut != nullptr) && (*errCodeOut == SQLITE_ROW)) *errCodeOut = SQLITE_DONE;
+
     return (stmt == nullptr) ? false : stmt->getString(0, out);
   }
 
@@ -362,7 +429,21 @@ namespace SqliteOverlay
 
   bool SqliteDatabase::execScalarQueryString(const upSqlStatement& stmt, string* out, int* errCodeOut) const
   {
-    return execScalarQuery_prep<string>(stmt, out, errCodeOut) ? stmt->getString(0, out) : false;
+    bool isSuccess = execScalarQuery_prep<string>(stmt, out, errCodeOut);
+
+    // Here, the SQLite result code can be SQLITE_ROW, because we
+    // called step() on the statememnt only once. If the statement
+    // would retrieve only one row, the next call to step() would yield
+    // SQLITE_DONE. If it would retrieve multiple rows, the next call
+    // to step() would yield SQLITE_ROW again.
+    //
+    // So we can't predict the result of the next call to step().
+    //
+    // But since all other queries always return SQLITE_DONE, we
+    // manually overwrite SQLite's last result code here
+    if ((errCodeOut != nullptr) && (*errCodeOut == SQLITE_ROW)) *errCodeOut = SQLITE_DONE;
+
+    return isSuccess ? stmt->getString(0, out) : false;
   }
 
   //----------------------------------------------------------------------------

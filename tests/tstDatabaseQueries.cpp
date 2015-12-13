@@ -19,12 +19,12 @@ TEST_F(DatabaseTestScenario, QueryInt)
   string sql = "SELECT COUNT(*) FROM t1 WHERE id > 0";
   ASSERT_TRUE(db->execScalarQueryInt(sql, &result, &err));
   ASSERT_EQ(5, result);
-  ASSERT_EQ(SQLITE_ROW, err);
+  ASSERT_EQ(SQLITE_DONE, err);
   auto sqr = db->execScalarQueryInt(sql, &err);
   ASSERT_TRUE(sqr != nullptr);
   ASSERT_FALSE(sqr->isNull());
   ASSERT_EQ(5, sqr->get());
-  ASSERT_EQ(SQLITE_ROW, err);
+  ASSERT_EQ(SQLITE_DONE, err);
 
   // second version: SQL statement as statement
   result = 0;
@@ -32,14 +32,14 @@ TEST_F(DatabaseTestScenario, QueryInt)
   ASSERT_EQ(SQLITE_OK, err);
   ASSERT_TRUE(db->execScalarQueryInt(stmt, &result, &err));
   ASSERT_EQ(5, result);
-  ASSERT_EQ(SQLITE_ROW, err);
+  ASSERT_EQ(SQLITE_DONE, err);
   stmt = db->prepStatement(sql, &err);
   ASSERT_EQ(SQLITE_OK, err);
   sqr = db->execScalarQueryInt(stmt, &err);
   ASSERT_TRUE(sqr != nullptr);
   ASSERT_FALSE(sqr->isNull());
   ASSERT_EQ(5, sqr->get());
-  ASSERT_EQ(SQLITE_ROW, err);
+  ASSERT_EQ(SQLITE_DONE, err);
 
   // special case: query returning NULL column value
   sql = "SELECT i FROM t1 WHERE id=2";
