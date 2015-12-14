@@ -134,6 +134,7 @@ namespace SqliteOverlay
 
     // table copies and database backups
     bool copyTable(const string& srcTabName, const string& dstTabName, int* errCodeOut=nullptr, bool copyStructureOnly=false);
+    bool backupToFile(const string& dstFileName, int* errCodeOut=nullptr);
 
   protected:
     SqliteDatabase(string dbFileName = ":memory:", bool createNew=false);

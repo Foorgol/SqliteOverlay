@@ -811,6 +811,57 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  bool SqliteDatabase::backupToFile(const string &dstFileName, int* errCodeOut)
+  {
+    // check parameter validity
+    if (dstFileName.empty())
+    {
+      if (errCodeOut != nullptr) *errCodeOut = SQLITE_ERROR;
+      return false;
+    }
+
+    // open the destination database
+    sqlite3* dstDb;
+    int err = sqlite3_open(dstFileName.c_str(), &dstDb);
+    if (err != SQLITE_OK)
+    {
+      if (errCodeOut != nullptr) *errCodeOut = err;
+      return false;
+    }
+
+    // initialize backup procedure
+    auto bck = sqlite3_backup_init(dstDb, "main", dbPtr.get(), "main");
+    if (bck == nullptr)
+    {
+      if (errCodeOut != nullptr) *errCodeOut = SQLITE_ERROR;
+      sqlite3_close(dstDb);
+      return false;
+    }
+
+    // copy all data at once
+    err = sqlite3_backup_step(bck, -1);
+    if (err != SQLITE_DONE)
+    {
+      if (errCodeOut != nullptr) *errCodeOut = err;
+
+      // clean up and free ressources, but do not
+      // overwrite the error code returned by
+      // sqlite3_backup_step() above
+      sqlite3_backup_finish(bck);
+
+      sqlite3_close(dstDb);
+      return false;
+    }
+
+    // clean up and return
+    err = sqlite3_backup_finish(bck);
+    if (errCodeOut != nullptr) *errCodeOut = err;
+    sqlite3_close(dstDb);
+    return (err == SQLITE_OK);
+  }
+
+  //----------------------------------------------------------------------------
+
   upSqlStatement SqliteDatabase::prepStatement(const string& sqlText, int* errCodeOut)
   {
     return SqlStatement::get(dbPtr.get(), sqlText, errCodeOut, log.get());
