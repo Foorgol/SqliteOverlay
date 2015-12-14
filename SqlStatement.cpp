@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <ctime>
 #include <cstring>
+#include <cstdlib>
 
 #include "SqlStatement.h"
 #include "DateAndTime.h"
@@ -28,6 +29,10 @@ namespace SqliteOverlay
     {
       throw invalid_argument(sqlite3_errmsg(dbPtr));
     }
+
+    // initialize the random number generator (need to generate
+    // random savepoint names in transaction)
+    srand(time(nullptr));
   }
 
   //----------------------------------------------------------------------------

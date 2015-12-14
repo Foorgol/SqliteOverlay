@@ -33,6 +33,12 @@ namespace SqliteOverlay
     EXCLUSIVE
   };
 
+  enum class TRANSACTION_DESTRUCTOR_ACTION
+  {
+    COMMIT,
+    ROLLBACK,
+  };
+
   class DbTab;
   class Transaction;
 
@@ -118,7 +124,9 @@ namespace SqliteOverlay
     int getLastInsertId();
     int getRowsAffected();
     bool isAutoCommit() const;
-    unique_ptr<Transaction> startTransaction(TRANSACTION_TYPE tt = TRANSACTION_TYPE::IMMEDIATE, int* errCodeOut=nullptr);
+    unique_ptr<Transaction> startTransaction(TRANSACTION_TYPE tt = TRANSACTION_TYPE::IMMEDIATE,
+                                             TRANSACTION_DESTRUCTOR_ACTION dtorAct = TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK,
+                                             int* errCodeOut=nullptr);
 
     void setLogLevel(int newLvl);
 

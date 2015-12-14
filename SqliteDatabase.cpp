@@ -689,14 +689,14 @@ namespace SqliteOverlay
 
   bool SqliteDatabase::isAutoCommit() const
   {
-    return sqlite3_get_autocommit(dbPtr.get());
+    return (sqlite3_get_autocommit(dbPtr.get()) != 0);
   }
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<Transaction> SqliteDatabase::startTransaction(TRANSACTION_TYPE tt, int* errCodeOut)
+  unique_ptr<Transaction> SqliteDatabase::startTransaction(TRANSACTION_TYPE tt, TRANSACTION_DESTRUCTOR_ACTION dtorAct, int* errCodeOut)
   {
-    return Transaction::startNew(this, tt, errCodeOut);
+    return Transaction::startNew(this, tt, dtorAct, errCodeOut);
   }
 
   //----------------------------------------------------------------------------
@@ -771,7 +771,7 @@ namespace SqliteOverlay
     // before we create the new table and copy the contents, we
     // explicitly start a transaction to be able to restore the
     // original database state in case of errors
-    auto tr = startTransaction(TRANSACTION_TYPE::IMMEDIATE, &err);
+    auto tr = startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
     if (tr == nullptr) return false;
     if (err != SQLITE_DONE) return false;
 

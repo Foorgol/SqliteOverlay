@@ -29,14 +29,23 @@ namespace SqliteOverlay
   class Transaction
   {
   public:
-    static unique_ptr<Transaction> startNew(SqliteDatabase* _db, TRANSACTION_TYPE tt=TRANSACTION_TYPE::IMMEDIATE, int* errCodeOut=nullptr);
+    static unique_ptr<Transaction> startNew(SqliteDatabase* _db, TRANSACTION_TYPE tt=TRANSACTION_TYPE::IMMEDIATE,
+                                            TRANSACTION_DESTRUCTOR_ACTION _dtorAct = TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK,
+                                            int* errCodeOut=nullptr);
     bool isActive() const;
     bool commit(int* errCodeOut=nullptr);
     bool rollback(int* errCodeOut=nullptr);
+    bool isNested() const;
+    ~Transaction();
 
   private:
-    Transaction(SqliteDatabase* _db, TRANSACTION_TYPE tt=TRANSACTION_TYPE::IMMEDIATE, int* errCodeOut=nullptr);
+    Transaction(SqliteDatabase* _db, TRANSACTION_TYPE tt=TRANSACTION_TYPE::IMMEDIATE,
+                TRANSACTION_DESTRUCTOR_ACTION _dtorAct = TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK,
+                int* errCodeOut=nullptr);
     SqliteDatabase* db;
+    TRANSACTION_DESTRUCTOR_ACTION dtorAct;
+    string savepointName;
+    bool isFinished;
   };
   
 }

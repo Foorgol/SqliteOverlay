@@ -21,12 +21,12 @@
 namespace SqliteOverlay
 {
 
-  unique_ptr<Transaction> Transaction::startNew(SqliteDatabase* _db, TRANSACTION_TYPE tt, int* errCodeOut)
+  unique_ptr<Transaction> Transaction::startNew(SqliteDatabase* _db, TRANSACTION_TYPE tt, TRANSACTION_DESTRUCTOR_ACTION _dtorAct, int* errCodeOut)
   {
     Transaction* tmpPtr;
     try
     {
-      tmpPtr = new Transaction(_db, tt, errCodeOut);
+      tmpPtr = new Transaction(_db, tt, _dtorAct, errCodeOut);
     } catch (exception e) {
       return nullptr;
     }
@@ -38,7 +38,7 @@ namespace SqliteOverlay
 
   bool Transaction::isActive() const
   {
-    return (db->isAutoCommit() == 0);
+    return (!(db->isAutoCommit()) && !isFinished);
   }
 
   //----------------------------------------------------------------------------
@@ -50,7 +50,8 @@ namespace SqliteOverlay
     db->execNonQuery(sql, &err);
     if (errCodeOut != nullptr) *errCodeOut = err;
 
-    return (err == SQLITE_DONE);
+    isFinished = (err == SQLITE_DONE);
+    return isFinished;
   }
 
   //----------------------------------------------------------------------------
@@ -62,13 +63,54 @@ namespace SqliteOverlay
     db->execNonQuery(sql, &err);
     if (errCodeOut != nullptr) *errCodeOut = err;
 
-    return (err == SQLITE_DONE);
+    isFinished = (err == SQLITE_DONE);
+    return isFinished;
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool Transaction::isNested() const
+  {
+    return (!(savepointName.empty()));
+  }
+
+  //----------------------------------------------------------------------------
+
+  Transaction::~Transaction()
+  {
+    if (isFinished) return;
+
+    // the transaction has not been finalized yet.
+    // What to do?
+    string sql;
+    if (dtorAct == TRANSACTION_DESTRUCTOR_ACTION::COMMIT)
+    {
+      if (savepointName.empty())
+      {
+        sql = "COMMIT";
+      } else {
+        sql = "RELEASE SAVEPOINT " + savepointName;
+      }
+    }
+    if (dtorAct == TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK)
+    {
+      sql = "ROLLBACK";
+      if (!(savepointName.empty()))
+      {
+        sql += " TO SAVEPOINT " + savepointName;
+      }
+    }
+
+    if (!(sql.empty()) && (db != nullptr))
+    {
+      db->execNonQuery(sql);
+    }
   }
 
 //----------------------------------------------------------------------------
 
-  Transaction::Transaction(SqliteDatabase* _db, TRANSACTION_TYPE tt, int* errCodeOut)
-    :db(_db)
+  Transaction::Transaction(SqliteDatabase* _db, TRANSACTION_TYPE tt, TRANSACTION_DESTRUCTOR_ACTION _dtorAct, int* errCodeOut)
+    :db(_db), dtorAct(_dtorAct), isFinished(false)
   {
     if (db == nullptr)
     {
@@ -76,22 +118,48 @@ namespace SqliteOverlay
       throw invalid_argument("Received NULL handle for database in Transaction ctor");
     }
 
-    // try to acquire the database lock
-    string sql = "BEGIN ";
-    switch (tt)
+    string sql;
+    savepointName.clear();
+
+    // Is another transaction already in progress?
+    if (db->isAutoCommit() == false)
     {
-    case TRANSACTION_TYPE::DEFERRED:
-      sql += "DEFERRED";
-      break;
+      // No autocommit, so another transaction has
+      // already been started outside this of this
+      // constructor. Thus we create a savepoint
+      // within the outer transaction
 
-    case TRANSACTION_TYPE::EXCLUSIVE:
-      sql += "EXCLUSIVE";
-      break;
+      // create a "unique" savepoint name. We use
+      // a combination of a 5-digit random number
+      // and the current time. Should be sufficiently
+      // unique
+      savepointName = to_string(rand() % 100000);
+      savepointName += "_" + to_string(time(nullptr));
 
-    default:
-      sql += "IMMEDIATE";
+      // create the savepoint
+      sql = "SAVEPOINT " + savepointName;
+    } else {
+      // autocommit is set to yes, so no other
+      // transaction is already in progress.
+      // now let's create such a transaction
+      sql = "BEGIN ";
+      switch (tt)
+      {
+      case TRANSACTION_TYPE::DEFERRED:
+        sql += "DEFERRED";
+        break;
+
+      case TRANSACTION_TYPE::EXCLUSIVE:
+        sql += "EXCLUSIVE";
+        break;
+
+      default:
+        sql += "IMMEDIATE";
+      }
+      sql += " TRANSACTION";
     }
-    sql += " TRANSACTION";
+
+    // try to acquire the database lock
     int err;
     db->execNonQuery(sql, &err);
     if (errCodeOut != nullptr) *errCodeOut = err;
