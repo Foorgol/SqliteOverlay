@@ -135,6 +135,7 @@ namespace SqliteOverlay
     // table copies and database backups
     bool copyTable(const string& srcTabName, const string& dstTabName, int* errCodeOut=nullptr, bool copyStructureOnly=false);
     bool backupToFile(const string& dstFileName, int* errCodeOut=nullptr);
+    bool restoreFromFile(const string& srcFileName, int* errCodeOut=nullptr);
 
   protected:
     SqliteDatabase(string dbFileName = ":memory:", bool createNew=false);
@@ -165,6 +166,8 @@ namespace SqliteOverlay
 
     bool execScalarQuery_prep(const upSqlStatement& stmt, int* errCodeOut) const;
     upSqlStatement execScalarQuery_prep(const string& sqlStatement, int* errCodeOut);
+
+    static int copyDatabaseContents(sqlite3* srcHandle, sqlite3* dstHandle);
 
     /**
      * @brief dbPtr the internal database handle

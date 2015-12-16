@@ -94,6 +94,37 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  int SqliteDatabase::copyDatabaseContents(sqlite3 *srcHandle, sqlite3 *dstHandle)
+  {
+    // check parameters
+    if ((srcHandle == nullptr) || (dstHandle == nullptr)) return SQLITE_ERROR;
+
+    // initialize backup procedure
+    auto bck = sqlite3_backup_init(dstHandle, "main", srcHandle, "main");
+    if (bck == nullptr)
+    {
+      return SQLITE_ERROR;
+    }
+
+    // copy all data at once
+    int err = sqlite3_backup_step(bck, -1);
+    if (err != SQLITE_DONE)
+    {
+      // clean up and free ressources, but do not
+      // overwrite the error code returned by
+      // sqlite3_backup_step() above
+      sqlite3_backup_finish(bck);
+
+      return err;
+    }
+
+    // clean up and return
+    err = sqlite3_backup_finish(bck);
+    return err;
+  }
+
+  //----------------------------------------------------------------------------
+
 //  unique_ptr<SqliteDatabase> SqliteDatabase::get(string dbFileName, bool createNew)
 //  {
 //    SqliteDatabase* tmpPtr;
@@ -828,36 +859,73 @@ namespace SqliteOverlay
       if (errCodeOut != nullptr) *errCodeOut = err;
       return false;
     }
-
-    // initialize backup procedure
-    auto bck = sqlite3_backup_init(dstDb, "main", dbPtr.get(), "main");
-    if (bck == nullptr)
+    if (dstDb == nullptr)
     {
       if (errCodeOut != nullptr) *errCodeOut = SQLITE_ERROR;
-      sqlite3_close(dstDb);
       return false;
     }
 
-    // copy all data at once
-    err = sqlite3_backup_step(bck, -1);
+    // copy the contents
+    err = copyDatabaseContents(dbPtr.get(), dstDb);
+
+    // close the destination database and return the
+    // error code of the copy process or of the
+    // close procedure
+    int closeErr = sqlite3_close(dstDb);
     if (err != SQLITE_DONE)
     {
+      // error during copying ==> return the copy error
       if (errCodeOut != nullptr) *errCodeOut = err;
-
-      // clean up and free ressources, but do not
-      // overwrite the error code returned by
-      // sqlite3_backup_step() above
-      sqlite3_backup_finish(bck);
-
-      sqlite3_close(dstDb);
       return false;
     }
 
-    // clean up and return
-    err = sqlite3_backup_finish(bck);
-    if (errCodeOut != nullptr) *errCodeOut = err;
-    sqlite3_close(dstDb);
-    return (err == SQLITE_OK);
+    // error during closing ==> return the close error
+    if (errCodeOut != nullptr) *errCodeOut = closeErr;
+    return (closeErr == SQLITE_OK);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::restoreFromFile(const string &srcFileName, int *errCodeOut)
+  {
+    // check parameter validity
+    if (srcFileName.empty())
+    {
+      if (errCodeOut != nullptr) *errCodeOut = SQLITE_ERROR;
+      return false;
+    }
+
+    // open the source database
+    sqlite3* srcDb;
+    int err = sqlite3_open(srcFileName.c_str(), &srcDb);
+    if (err != SQLITE_OK)
+    {
+      if (errCodeOut != nullptr) *errCodeOut = err;
+      return false;
+    }
+    if (srcDb == nullptr)
+    {
+      if (errCodeOut != nullptr) *errCodeOut = SQLITE_ERROR;
+      return false;
+    }
+
+    // copy the contents
+    err = copyDatabaseContents(srcDb, dbPtr.get());
+
+    // close the source database and return the
+    // error code of the copy process or of the
+    // close procedure
+    int closeErr = sqlite3_close(srcDb);
+    if (err != SQLITE_DONE)
+    {
+      // error during copying ==> return the copy error
+      if (errCodeOut != nullptr) *errCodeOut = err;
+      return false;
+    }
+
+    // error during closing ==> return the close error
+    if (errCodeOut != nullptr) *errCodeOut = closeErr;
+    return (closeErr == SQLITE_OK);
   }
 
   //----------------------------------------------------------------------------
