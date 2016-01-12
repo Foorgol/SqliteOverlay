@@ -16,16 +16,58 @@
 
 namespace SqliteOverlay
 {
+  template <class DB_CLASS_TYPE>
   class GenericObjectManager
   {
   public:
-    GenericObjectManager (SqliteDatabase* _db, DbTab* _tab);
-    GenericObjectManager (SqliteDatabase* _db, const string& tabName);
-    SqliteDatabase* getDatabaseHandle();
-    int getObjCount() const;
-    
+    GenericObjectManager (DB_CLASS_TYPE* _db, DbTab* _tab)
+      :db(_db), tab(_tab)
+    {
+      if (db == nullptr)
+      {
+        throw invalid_argument("Received nullptr for database handle!");
+      }
+      if (tab == nullptr)
+      {
+        throw invalid_argument("Received nullptr for table handle!");
+      }
+    }
+
+    //----------------------------------------------------------------------------
+
+    GenericObjectManager (DB_CLASS_TYPE* _db, const string& tabName)
+      :db(_db)
+    {
+      if (db == nullptr)
+      {
+        throw invalid_argument("Received nullptr for database handle!");
+      }
+
+      tab = db->getTab(tabName);
+      if (db == nullptr)
+      {
+        throw invalid_argument("Received invalid table name for object manager!");
+      }
+    }
+
+    //----------------------------------------------------------------------------
+
+    DB_CLASS_TYPE* getDatabaseHandle()
+    {
+      return db;
+    }
+
+    //----------------------------------------------------------------------------
+
+    int getObjCount() const
+    {
+      return tab->length();
+    }
+
+    //----------------------------------------------------------------------------
+
   protected:
-    SqliteDatabase* db;
+    DB_CLASS_TYPE* db;
     DbTab* tab;
 
     template<class T>
