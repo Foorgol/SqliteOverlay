@@ -66,7 +66,7 @@ namespace SqliteOverlay
     void reset();
 
     // the actual table creation
-    DbTab* createTableAndResetCreator(const string& tabName, int* errCodeOut);
+    DbTab* createTableAndResetCreator(const string& tabName, int* errCodeOut=nullptr);
 
   private:
     SqliteDatabase* db;

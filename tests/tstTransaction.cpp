@@ -25,7 +25,7 @@ TEST_F(DatabaseTestScenario, Transaction)
   // Start an immediate transaction and change values
   //
   int err;
-  auto tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, &err);
+  auto tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
   ASSERT_TRUE(tr != nullptr);
   ASSERT_EQ(SQLITE_DONE, err);
 
@@ -43,7 +43,7 @@ TEST_F(DatabaseTestScenario, Transaction)
 
   // make sure that connectio 2 can't start a transaction
   // while the first one is still active
-  auto tr2 = db2->startTransaction(TRANSACTION_TYPE::IMMEDIATE, &err);
+  auto tr2 = db2->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
   ASSERT_TRUE(tr2 == nullptr);
   ASSERT_EQ(SQLITE_BUSY, err);
 
@@ -57,7 +57,7 @@ TEST_F(DatabaseTestScenario, Transaction)
   //
   // Start an immediate transaction and rollback
   //
-  tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, &err);
+  tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
   ASSERT_TRUE(tr != nullptr);
   ASSERT_EQ(SQLITE_DONE, err);
 
@@ -109,7 +109,7 @@ TEST_F(DatabaseTestScenario, TransactionWithKeyConflict)
   //
   // make sure the row with the valid reference
   // survives
-  auto tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, &err);
+  auto tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
   ASSERT_TRUE(tr != nullptr);
   ASSERT_EQ(SQLITE_DONE, err);
   int oldRowCount = child->length();
@@ -143,7 +143,7 @@ TEST_F(DatabaseTestScenario, TransactionWithKeyConflict)
   // pending child references. Make the deletion a part
   // of a larger transaction.
   //
-  tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, &err);
+  tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
   ASSERT_TRUE(tr != nullptr);
   ASSERT_EQ(SQLITE_DONE, err);
   ASSERT_EQ(1, t1->deleteRowsByColumnValue("id", 2, &err));
@@ -160,7 +160,7 @@ TEST_F(DatabaseTestScenario, TransactionWithKeyConflict)
   // same as before, but this time rollback the changes
   //
   --oldRowCount;
-  tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, &err);
+  tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
   ASSERT_TRUE(tr != nullptr);
   ASSERT_EQ(SQLITE_DONE, err);
   ASSERT_EQ(1, t1->deleteRowsByColumnValue("id", 3, &err));

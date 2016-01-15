@@ -35,9 +35,9 @@ namespace SqliteOverlay
     static unique_ptr<KeyValueTab> getTab(SqliteDatabase* _db, const string& _tabName, bool createNewIfMissing=true, int* errCodeOut=nullptr);
 
     // setting of values
-    void set(const string& key, const string& val, int* errCodeOut) const;
-    void set(const string& key, int val, int* errCodeOut) const;
-    void set(const string& key, double val, int* errCodeOut) const;
+    void set(const string& key, const string& val, int* errCodeOut=nullptr) const;
+    void set(const string& key, int val, int* errCodeOut=nullptr) const;
+    void set(const string& key, double val, int* errCodeOut=nullptr) const;
 
     // getters, type 1 (throws exception if key is not existing or empty)
     string operator[](const string& key) const;
