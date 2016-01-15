@@ -5,6 +5,7 @@
 #include <memory>
 #include <ctime>
 #include <cstring>
+#include <tuple>
 
 #include <sqlite3.h>
 
@@ -86,6 +87,7 @@ namespace SqliteOverlay
   {
   public:
     UTCTimestamp(int year, int month, int day, int hour, int min, int sec);
+    UTCTimestamp(int ymd, int hour=12, int min=0, int sec=0);
     UTCTimestamp(time_t rawTimeInUTC);
     UTCTimestamp();
     LocalTimestamp toLocalTime() const;
@@ -94,6 +96,39 @@ namespace SqliteOverlay
   typedef unique_ptr<LocalTimestamp> upLocalTimestamp;
   typedef unique_ptr<UTCTimestamp> upUTCTimestamp;
 
+  // a time period
+  class TimePeriod
+  {
+  public:
+    static constexpr int IS_BEFORE_PERIOD = -1;
+    static constexpr int IS_IN_PERIOD = 0;
+    static constexpr int IS_AFTER_PERIOD = 1;
+
+    TimePeriod(const UTCTimestamp& _start);
+    TimePeriod(const UTCTimestamp& _start, const UTCTimestamp& _end);
+    bool hasOpenEnd() const;
+    bool isInPeriod(const UTCTimestamp& ts) const;
+    int determineRelationToPeriod(const UTCTimestamp& ts) const;
+    long getLength_Sec() const;
+    double getLength_Minutes() const;
+    double getLength_Hours() const;
+    double getLength_Days() const;
+    double getLength_Weeks() const;
+    bool setEnd(const UTCTimestamp& _end);
+
+    bool applyOffsetToStart(long secs);
+    bool applyOffsetToEnd(long secs);
+
+    UTCTimestamp getStartTime() const;
+    upUTCTimestamp getEndTime() const;
+
+  protected:
+    UTCTimestamp start;
+    UTCTimestamp end;
+    bool isOpenEnd;
+  };
+
+  tuple<int, int, int> YearMonthDayFromInt(int ymd);
 }
 
 #endif /* DATEANDTIME_H */

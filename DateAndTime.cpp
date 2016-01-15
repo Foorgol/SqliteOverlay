@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <ctime>
 #include <cstring>
+#include <memory>
 
 #include "DateAndTime.h"
 
@@ -156,6 +157,13 @@ namespace SqliteOverlay
     // call timegm() once to adjust all other field in the timestamp struct
     // and to get the time_t value
     raw = timegm(&timestamp);
+  }
+
+  //----------------------------------------------------------------------------
+
+  UTCTimestamp::UTCTimestamp(int ymd, int hour, int min, int sec)
+    : UTCTimestamp(ymd / 10000, (ymd % 10000) / 100, ymd % 100, hour, min, sec)
+  {
   }
 
   //----------------------------------------------------------------------------
@@ -380,6 +388,160 @@ namespace SqliteOverlay
 
     // return the result
     return upLocalTimestamp(result);
+  }
+
+  //----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
+  TimePeriod::TimePeriod(const UTCTimestamp &_start)
+    :start(_start), isOpenEnd(true)
+  {
+
+  }
+
+  //----------------------------------------------------------------------------
+
+  TimePeriod::TimePeriod(const UTCTimestamp &_start, const UTCTimestamp &_end)
+    :start(_start), end(_end), isOpenEnd(false)
+  {
+    if (end < start)
+    {
+      throw invalid_argument("TimePeriod ctor: 'end'' may not be before start!");
+    }
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool TimePeriod::hasOpenEnd() const
+  {
+    return isOpenEnd;
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool TimePeriod::isInPeriod(const UTCTimestamp &ts) const
+  {
+    return (determineRelationToPeriod(ts) == IS_IN_PERIOD);
+  }
+
+  //----------------------------------------------------------------------------
+
+  int TimePeriod::determineRelationToPeriod(const UTCTimestamp &ts) const
+  {
+    if (ts < start) return IS_BEFORE_PERIOD;
+    if (ts > end) return IS_AFTER_PERIOD;
+    return IS_IN_PERIOD;
+  }
+
+  //----------------------------------------------------------------------------
+
+  long TimePeriod::getLength_Sec() const
+  {
+    if (isOpenEnd) return -1;
+
+    return end.getRawTime() - start.getRawTime();
+  }
+
+  //----------------------------------------------------------------------------
+
+  double TimePeriod::getLength_Minutes() const
+  {
+    long secs = getLength_Sec();
+
+    return (secs < 0 ? -1 : secs / 60.0);
+  }
+
+  //----------------------------------------------------------------------------
+
+  double TimePeriod::getLength_Hours() const
+  {
+    long secs = getLength_Sec();
+
+    return (secs < 0 ? -1 : secs / (3600.0));
+  }
+
+  //----------------------------------------------------------------------------
+
+  double TimePeriod::getLength_Days() const
+  {
+    long secs = getLength_Sec();
+
+    return (secs < 0 ? -1 : secs / (3600.0 * 24.0));
+  }
+
+  //----------------------------------------------------------------------------
+
+  double TimePeriod::getLength_Weeks() const
+  {
+    long secs = getLength_Sec();
+
+    return (secs < 0 ? -1 : secs / (3600.0 * 24.0 * 7));
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool TimePeriod::setEnd(const UTCTimestamp &_end)
+  {
+    if (_end < start) return false;
+
+    end = _end;
+    isOpenEnd = false;
+
+    return true;
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool TimePeriod::applyOffsetToStart(long secs)
+  {
+    UTCTimestamp newStart{start.getRawTime() + secs};
+
+    if (newStart > end) return false;
+
+    start = newStart;
+    return true;
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool TimePeriod::applyOffsetToEnd(long secs)
+  {
+    if (isOpenEnd) return false;
+
+    UTCTimestamp newEnd{end.getRawTime() + secs};
+
+    if (newEnd < start) return false;
+
+    end = newEnd;
+    return true;
+  }
+
+  //----------------------------------------------------------------------------
+
+  UTCTimestamp TimePeriod::getStartTime() const
+  {
+    return start;
+  }
+
+  //----------------------------------------------------------------------------
+
+  upUTCTimestamp TimePeriod::getEndTime() const
+  {
+    if (isOpenEnd) return nullptr;
+
+    return make_unique<UTCTimestamp>(end);
+  }
+
+  //----------------------------------------------------------------------------
+
+  tuple<int, int, int> YearMonthDayFromInt(int ymd)
+  {
+    int year = ymd / 10000;
+    int month = (ymd % 10000) / 100;
+    int day = ymd % 100;
+
+    return make_tuple(year, month, day);
   }
 
   //----------------------------------------------------------------------------
