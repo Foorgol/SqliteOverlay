@@ -29,6 +29,9 @@ namespace SqliteOverlay
     string getTime() const;
     string getTimestamp() const;
     int getDoW() const;
+    int getYMD() const;
+    bool setTime(int hour, int min, int sec);
+    tuple<int, int, int> getYearMonthDay() const;
 
     static bool isValidDate(int year, int month, int day);
     static bool isValidTime(int hour, int min, int sec);
@@ -114,10 +117,11 @@ namespace SqliteOverlay
     double getLength_Hours() const;
     double getLength_Days() const;
     double getLength_Weeks() const;
-    bool setEnd(const UTCTimestamp& _end);
+    virtual bool setStart(const UTCTimestamp& _start);
+    virtual bool setEnd(const UTCTimestamp& _end);
 
-    bool applyOffsetToStart(long secs);
-    bool applyOffsetToEnd(long secs);
+    virtual bool applyOffsetToStart(long secs);
+    virtual bool applyOffsetToEnd(long secs);
 
     UTCTimestamp getStartTime() const;
     upUTCTimestamp getEndTime() const;

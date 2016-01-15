@@ -69,6 +69,32 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  int CommonTimestamp::getYMD() const
+  {
+    return (timestamp.tm_year + MIN_YEAR) * 10000 + (timestamp.tm_mon+1) * 100 + timestamp.tm_mday;
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool CommonTimestamp::setTime(int hour, int min, int sec)
+  {
+    if (!(isValidTime(hour, min, sec))) return false;
+
+    timestamp.tm_hour = hour;
+    timestamp.tm_min = min;
+    timestamp.tm_sec = sec;
+    return true;
+  }
+
+  //----------------------------------------------------------------------------
+
+  tuple<int, int, int> CommonTimestamp::getYearMonthDay() const
+  {
+    return make_tuple(timestamp.tm_year + MIN_YEAR, timestamp.tm_mon + 1, timestamp.tm_mday);
+  }
+
+  //----------------------------------------------------------------------------
+
   bool CommonTimestamp::isValidDate(int year, int month, int day)
   {
     // check lower boundaries
@@ -477,6 +503,16 @@ namespace SqliteOverlay
     long secs = getLength_Sec();
 
     return (secs < 0 ? -1 : secs / (3600.0 * 24.0 * 7));
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool TimePeriod::setStart(const UTCTimestamp &_start)
+  {
+    if (_start > end) return false;
+
+    start = _start;
+    return true;
   }
 
   //----------------------------------------------------------------------------
