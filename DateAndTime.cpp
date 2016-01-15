@@ -61,6 +61,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  int CommonTimestamp::getDoW() const
+  {
+    return timestamp.tm_wday;
+  }
+
+  //----------------------------------------------------------------------------
+
   bool CommonTimestamp::isValidDate(int year, int month, int day)
   {
     // check lower boundaries

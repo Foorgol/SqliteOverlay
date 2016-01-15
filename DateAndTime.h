@@ -27,6 +27,7 @@ namespace SqliteOverlay
     string getISODate() const;
     string getTime() const;
     string getTimestamp() const;
+    int getDoW() const;
 
     static bool isValidDate(int year, int month, int day);
     static bool isValidTime(int hour, int min, int sec);
