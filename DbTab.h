@@ -61,6 +61,7 @@ namespace SqliteOverlay
     TabRow getSingleRowByColumnValue(const string& col, const string& val) const;
     TabRow getSingleRowByColumnValueNull(const string& col) const;
     TabRow getSingleRowByWhereClause(const WhereClause& w) const;
+    TabRow getSingleRowByWhereClause(const string& w) const;
     CachingRowIterator getRowsByWhereClause(const WhereClause& w) const;
     CachingRowIterator getRowsByWhereClause(const string& w, bool isWhereClauseOnly=true) const;
     CachingRowIterator getRowsByColumnValue(const string& col, int val) const;
@@ -72,6 +73,8 @@ namespace SqliteOverlay
     int deleteRowsByColumnValue(const string& col, const int val, int* errCodeOut=nullptr) const;
     int deleteRowsByColumnValue(const string& col, const double val, int* errCodeOut=nullptr) const;
     int deleteRowsByColumnValue(const string& col, const string& val, int* errCodeOut=nullptr) const;
+
+    bool hasRowId(int id) const;
 
   private:
     DbTab (SqliteDatabase* db, const string& tabName);

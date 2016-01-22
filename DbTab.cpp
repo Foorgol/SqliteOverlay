@@ -317,6 +317,33 @@ namespace SqliteOverlay
     return TabRow(db, tabName, w);
   }
 
+  //----------------------------------------------------------------------------
+
+  TabRow DbTab::getSingleRowByWhereClause(const string& w) const
+  {
+    string sql = "SELECT id FROM " + tabName + " WHERE " + w + " LIMIT 1";
+
+    auto stmt = db->prepStatement(sql, nullptr);
+
+    // in case of errors, throw an error
+    if (stmt == nullptr)
+    {
+      throw std::invalid_argument("getRowsByWhereClause: invalid query!");
+    }
+    if (!(stmt->step()))
+    {
+      throw std::invalid_argument("getSingleRowByWhereClause: no matches!");
+    }
+
+    int rowId;
+    if (!(stmt->getInt(0, &rowId)))
+    {
+      throw std::invalid_argument("Unexpected database error!");
+    }
+
+    return TabRow(db, tabName, rowId, true);
+  }
+
 //----------------------------------------------------------------------------
 
   int DbTab::deleteRowsByWhereClause(const WhereClause& where, int* errCodeOut) const
@@ -359,6 +386,26 @@ namespace SqliteOverlay
     WhereClause w;
     w.addStringCol(col, val);
     return deleteRowsByWhereClause(w, errCodeOut);
+  }
+
+//----------------------------------------------------------------------------
+
+  bool DbTab::hasRowId(int id) const
+  {
+    string sql = "SELECT id FROM " + tabName + " WHERE id = " + to_string(id);
+    auto stmt = db->prepStatement(sql, nullptr);
+
+    // this sql query should always succeed... but test the result anyway...
+    if (stmt == nullptr)
+    {
+      throw std::runtime_error("Weird... could query single row");
+    }
+    if (!(stmt->step()))
+    {
+      throw std::runtime_error("Weird... could step into a query for a single row");
+    }
+
+    return stmt->hasData();
   }
 
 //----------------------------------------------------------------------------

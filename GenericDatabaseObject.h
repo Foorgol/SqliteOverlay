@@ -15,25 +15,33 @@
 namespace SqliteOverlay
 {
 
+  template <class DB_CLASS_TYPE>
   class GenericDatabaseObject
   {
   public:
-    GenericDatabaseObject (SqliteDatabase* _db, const string& _tabName, int _id);
-    GenericDatabaseObject (SqliteDatabase* _db, const TabRow& _row);
-    int getId () const;
+    GenericDatabaseObject (DB_CLASS_TYPE* _db, const string& _tabName, int _id)
+      : db(_db), row(TabRow(_db, _tabName, _id)) {}
 
-    inline bool operator== (const GenericDatabaseObject& other) const
+    GenericDatabaseObject (DB_CLASS_TYPE* _db, const TabRow& _row)
+      :db(_db), row(_row) {}
+
+    inline int getId () const
+    {
+      return row.getId();
+    }
+
+    inline bool operator== (const GenericDatabaseObject<DB_CLASS_TYPE>& other) const
     {
       return (other.row == row);
     }
 
-    inline bool operator!= (const GenericDatabaseObject& other) const
+    inline bool operator!= (const GenericDatabaseObject<DB_CLASS_TYPE>& other) const
     {
       return (!(this->operator == (other)));
     }
     
   protected:
-    SqliteDatabase* db;
+    DB_CLASS_TYPE* db;
     TabRow row;
 
   };

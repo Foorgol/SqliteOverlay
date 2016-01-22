@@ -40,6 +40,7 @@ namespace SqliteOverlay
     bool update(const string& colName, const string newVal, int* errCodeOut=nullptr) const;
     bool update(const string& colName, const LocalTimestamp& newVal, int* errCodeOut=nullptr) const;
     bool update(const string& colName, const UTCTimestamp& newVal, int* errCodeOut=nullptr) const;
+    bool updateToNull(const string& colName, int* errCodeOut=nullptr) const;
 
     string operator[](const string& colName) const;
     int getInt(const string& colName) const;

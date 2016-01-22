@@ -89,8 +89,9 @@ namespace SqliteOverlay
     }
 
     // create and execute a "SELECT id FROM ..." from the where clause
-    // and only evaluate the first hit
+    // and limit it to the first hit
     string sql = where.getSelectStmt(tabName, false);
+    sql += " LIMIT 1";
     auto stmt = db->prepStatement(sql, nullptr);
     if (stmt == nullptr)
     {
@@ -345,6 +346,15 @@ namespace SqliteOverlay
   {
     ColumnValueClause cvc;
     cvc.addDateTimeCol(colName, &newVal);
+    return update(cvc, errCodeOut);
+  }
+
+//----------------------------------------------------------------------------
+
+  bool TabRow::updateToNull(const string& colName, int* errCodeOut) const
+  {
+    ColumnValueClause cvc;
+    cvc.addNullCol(colName);
     return update(cvc, errCodeOut);
   }
 

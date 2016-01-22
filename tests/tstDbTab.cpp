@@ -122,6 +122,18 @@ TEST_F(DatabaseTestScenario, DbTab_GetTabRow)
 
 //----------------------------------------------------------------
 
+TEST_F(DatabaseTestScenario, DbTab_HasRow)
+{
+  auto db = getScenario01();
+  auto t1 = db->getTab("t1");
+  ASSERT_TRUE(t1 != nullptr);
+
+  ASSERT_TRUE(t1->hasRowId(1));
+  ASSERT_FALSE(t1->hasRowId(100));
+}
+
+//----------------------------------------------------------------
+
 TEST_F(DatabaseTestScenario, DbTab_GetAllRows)
 {
   auto db = getScenario01();
