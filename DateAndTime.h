@@ -30,6 +30,7 @@ namespace SqliteOverlay
     string getTimestamp() const;
     int getDoW() const;
     int getYMD() const;
+    string getFormattedString(const string& fmt) const;
     bool setTime(int hour, int min, int sec);
     tuple<int, int, int> getYearMonthDay() const;
 
@@ -65,7 +66,6 @@ namespace SqliteOverlay
   protected:
     tm timestamp;
     time_t raw;
-    string getFormattedString(const string& fmt) const;
   };
 
   // an extension of struct tm to clearly indicate that local time
