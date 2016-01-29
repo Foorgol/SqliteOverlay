@@ -31,6 +31,7 @@ set(LIB_SOURCES
     KeyValueTab.cpp
     TableCreator.cpp
     Transaction.cpp
+    StringHelper.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
