@@ -126,6 +126,15 @@ namespace SqliteOverlay
     UTCTimestamp getStartTime() const;
     upUTCTimestamp getEndTime() const;
 
+    inline bool startsEarlierThan (const TimePeriod& other) const
+    {
+      return (start < other.start);
+    }
+    inline bool startsLaterThan (const TimePeriod& other) const
+    {
+      return (start > other.start);
+    }
+
   protected:
     UTCTimestamp start;
     UTCTimestamp end;

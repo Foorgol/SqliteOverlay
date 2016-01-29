@@ -456,6 +456,8 @@ namespace SqliteOverlay
   int TimePeriod::determineRelationToPeriod(const UTCTimestamp &ts) const
   {
     if (ts < start) return IS_BEFORE_PERIOD;
+    if (isOpenEnd) return IS_IN_PERIOD;
+
     if (ts > end) return IS_AFTER_PERIOD;
     return IS_IN_PERIOD;
   }
