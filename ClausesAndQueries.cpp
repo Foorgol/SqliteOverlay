@@ -1,5 +1,6 @@
 #include "ClausesAndQueries.h"
 #include "SqlStatement.h"
+#include "StringHelper.h"
 
 namespace SqliteOverlay {
 

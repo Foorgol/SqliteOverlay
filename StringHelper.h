@@ -37,5 +37,7 @@ namespace SqliteOverlay
   bool replaceString_First(string& src, const string& key, const string& value);
   int replaceString_All(string& src, const string& key, const string& value);
 
+  // convert a list of strings into a comma-separated string
+  string commaSepStringFromStringList(const StringList& lst, const string& separator=", ");
 }
 #endif

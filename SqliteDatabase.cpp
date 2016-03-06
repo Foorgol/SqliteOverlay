@@ -2,7 +2,7 @@
 
 #include "SqliteDatabase.h"
 #include "Logger.h"
-#include "HelperFunc.h"
+#include "StringHelper.h"
 #include "DbTab.h"
 #include "Transaction.h"
 
@@ -872,7 +872,7 @@ namespace SqliteOverlay
     // error code of the copy process or of the
     // close procedure
     int closeErr = sqlite3_close(dstDb);
-    if (err != SQLITE_DONE)
+    if (err != SQLITE_OK)
     {
       // error during copying ==> return the copy error
       if (errCodeOut != nullptr) *errCodeOut = err;
@@ -916,7 +916,7 @@ namespace SqliteOverlay
     // error code of the copy process or of the
     // close procedure
     int closeErr = sqlite3_close(srcDb);
-    if (err != SQLITE_DONE)
+    if (err != SQLITE_OK)
     {
       // error during copying ==> return the copy error
       if (errCodeOut != nullptr) *errCodeOut = err;

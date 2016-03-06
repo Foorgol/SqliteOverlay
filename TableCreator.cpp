@@ -18,6 +18,7 @@
 
 
 #include "TableCreator.h"
+#include "StringHelper.h"
 
 namespace SqliteOverlay
 {
