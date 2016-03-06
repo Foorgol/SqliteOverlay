@@ -48,7 +48,7 @@ namespace SqliteOverlay
     }
     inline bool operator<= (const CommonTimestamp& other) const
     {
-      return (!(other < *this));
+      return (!(other > *this));
     }
     inline bool operator>= (const CommonTimestamp& other) const
     {
