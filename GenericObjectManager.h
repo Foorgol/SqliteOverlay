@@ -261,6 +261,33 @@ namespace SqliteOverlay
       }
       return nullptr;
     }
+
+    template<class T>
+    vector<T> resolveMappingAndGetObjects(const string& mappingTabName, const string& keyColumnName, int keyColumnValue, const string& mappedIdColumnName) const
+    {
+      string sql = "SELECT " + mappedIdColumnName + " FROM " + mappingTabName + " WHERE ";
+      sql += keyColumnName + " = " + to_string(keyColumnValue);
+
+      int dbErr;
+      auto qry = db->execContentQuery(sql, &dbErr);
+      if (((dbErr != SQLITE_ROW) && (dbErr != SQLITE_DONE) && (dbErr != SQLITE_OK)) || (qry == nullptr))
+      {
+        return vector<T>();
+      }
+
+      vector<T> result;
+      while (qry->hasData())
+      {
+        int refId;
+        qry->getInt(0, &refId);
+        auto obj = T(db, refId);
+        result.push_back(obj);
+
+        qry->step();
+      }
+
+      return result;
+    }
   };
 
 }

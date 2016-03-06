@@ -22,7 +22,6 @@ namespace SqliteOverlay
 {
   typedef vector<string> StringList;
 
-  string commaSepStringFromStringList(const StringList& lst);
   //QVariantList prepWhereClause(const QVariantList& params);
 }
 #endif	/* HELPERFUNC_H */

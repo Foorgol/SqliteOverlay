@@ -15,22 +15,6 @@
 
 namespace SqliteOverlay
 {
-  string commaSepStringFromStringList(const StringList& lst)
-  {
-    string result;
-    
-    for (size_t i=0; i<lst.size(); i++)
-    {
-      string v = lst.at(i);
-      if (i > 0)
-      {
-        result += ", ";
-      }
-      result += v;
-    }
-
-    return result;
-  }
 
 //----------------------------------------------------------------------------
     
