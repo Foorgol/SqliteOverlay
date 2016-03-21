@@ -149,6 +149,14 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  bool KeyValueTab::getBool(const string& key) const
+  {
+    int v = getInt(key);
+    return (v != 0);
+  }
+
+  //----------------------------------------------------------------------------
+
   unique_ptr<ScalarQueryResult<int> > KeyValueTab::getInt2(const string& key) const
   {
     auto qry = db->prepStatement(valSelectStatement, nullptr);

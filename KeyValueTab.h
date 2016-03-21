@@ -43,6 +43,7 @@ namespace SqliteOverlay
     string operator[](const string& key) const;
     int getInt(const string& key) const;
     double getDouble(const string& key) const;
+    bool getBool(const string& key) const;
 
     // getters, type 2 (not throwing)
     unique_ptr<ScalarQueryResult<int>> getInt2(const string& key) const;
