@@ -30,6 +30,8 @@ namespace SqliteOverlay {
     void addCol(const string& colName, const string& val, bool useQuotes=false);
   };
 
+  //----------------------------------------------------------------------------
+
   class WhereClause
   {
   public:

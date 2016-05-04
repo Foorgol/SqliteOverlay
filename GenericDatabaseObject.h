@@ -39,6 +39,11 @@ namespace SqliteOverlay
     {
       return (!(this->operator == (other)));
     }
+
+    inline DB_CLASS_TYPE* getDatabaseHandle() const
+    {
+      return db;
+    }
     
   protected:
     DB_CLASS_TYPE* db;
