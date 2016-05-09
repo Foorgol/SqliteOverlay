@@ -11,6 +11,7 @@ using namespace std;
 namespace SqliteOverlay
 {
   SqliteDatabase::SqliteDatabase(string dbFileName, bool createNew)
+    :changeCounter_reset(0)
   {
     // check if the filename is valid
     if (dbFileName.empty())
@@ -926,6 +927,27 @@ namespace SqliteOverlay
     // error during closing ==> return the close error
     if (errCodeOut != nullptr) *errCodeOut = closeErr;
     return (closeErr == SQLITE_OK);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::isDirty()
+  {
+    return (sqlite3_total_changes(dbPtr.get()) != changeCounter_reset);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqliteDatabase::resetDirtyFlag()
+  {
+    changeCounter_reset = sqlite3_total_changes(dbPtr.get());
+  }
+
+  //----------------------------------------------------------------------------
+
+  int SqliteDatabase::getDirtyCounter()
+  {
+    return sqlite3_total_changes(dbPtr.get());
   }
 
   //----------------------------------------------------------------------------

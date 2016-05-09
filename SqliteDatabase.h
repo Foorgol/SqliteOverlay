@@ -137,6 +137,11 @@ namespace SqliteOverlay
     bool backupToFile(const string& dstFileName, int* errCodeOut=nullptr);
     bool restoreFromFile(const string& srcFileName, int* errCodeOut=nullptr);
 
+    // the dirty flag
+    bool isDirty();
+    void resetDirtyFlag();
+    int getDirtyCounter();
+
   protected:
     SqliteDatabase(string dbFileName = ":memory:", bool createNew=false);
     vector<string> foreignKeyCreationCache;
@@ -180,6 +185,10 @@ namespace SqliteOverlay
     unique_ptr<Logger> log;
 
     unordered_map<string, DbTab*> tabCache;
+
+    // handling of a "dirty flag" that indicates whether the database has changed
+    // after a certain point in time
+    int changeCounter_reset;
 
   };
 

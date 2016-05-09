@@ -56,11 +56,13 @@ namespace SqliteOverlay {
 
     void setOrderColumn_Asc(const string& colName);
     void setOrderColumn_Desc(const string& colName);
+    void setLimit(int _limit);
 
   private:
     string sql;
     int colCount;
     string orderBy;
+    int limit;
 
     void addCol(const string& colName, const string& val, bool useQuotes=false);
     void addCol(const string& colName, const string& op, const string& val, bool useQuotes=false);

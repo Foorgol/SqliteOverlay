@@ -126,6 +126,7 @@ namespace SqliteOverlay {
     sql.clear();
     orderBy.clear();
     colCount = 0;
+    limit = -1;
   }
 
 //----------------------------------------------------------------------------
@@ -233,6 +234,11 @@ namespace SqliteOverlay {
       result += orderBy;
     }
 
+    if (limit > 0)
+    {
+      result += " LIMIT " + to_string(limit);
+    }
+
     return result;
   }
 
@@ -280,6 +286,13 @@ namespace SqliteOverlay {
       orderBy += ", ";
     }
     orderBy += colName + " DESC";
+  }
+
+//----------------------------------------------------------------------------
+
+  void WhereClause::setLimit(int _limit)
+  {
+    if (_limit > 0) limit = _limit;
   }
 
 //----------------------------------------------------------------------------
