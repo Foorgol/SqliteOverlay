@@ -251,6 +251,17 @@ namespace SqliteOverlay
       return nullptr;
     }
     template<class T>
+    unique_ptr<T> getSingleObjectByWhereClause(const DbTab* objectTab, const string& w) const
+    {
+      try
+      {
+        TabRow r = objectTab->getSingleRowByWhereClause(w);
+        return unique_ptr<T>(new T(db, r));
+      } catch (std::exception e) {
+      }
+      return nullptr;
+    }
+    template<class T>
     unique_ptr<T> getSingleObjectByWhereClause(const string& w) const
     {
       try
