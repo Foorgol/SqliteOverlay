@@ -7,6 +7,10 @@ find_package(SQLite3 REQUIRED)
 include_directories(${SQLITE3_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${SQLITE3_LIBRARIES})
 
+find_package(Boost REQUIRED COMPONENTS filesystem system)
+include_directories("." ${GTEST_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+set(LIBS ${LIBS} ${Boost_LIBRARIES})
+
 # detect if we are on windows, because for windows
 # we have to use special code for timegm()
 #
@@ -70,16 +74,13 @@ set(LIB_SOURCES_TST
 )
 
 find_package(GTest)
-find_package(Boost COMPONENTS filesystem system)
 
 if (GTEST_FOUND AND Boost_FOUND)
-    include_directories("." ${GTEST_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
-    link_directories(".")
+    include_directories("." ${GTEST_INCLUDE_DIRS})
 
-    #add_executable(${PROJECT_NAME}_Tests EXCLUDE_FROM_ALL ${LIB_SOURCES} ${LIB_SOURCES_TST})
     add_executable(${PROJECT_NAME}_Tests ${LIB_SOURCES} ${LIB_SOURCES_TST})
     set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD 14)
     set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD_REQUIRED ON)
 
-    target_link_libraries(${PROJECT_NAME}_Tests ${PROJECT_NAME} ${GTEST_BOTH_LIBRARIES} ${Boost_LIBRARIES})
+    target_link_libraries(${PROJECT_NAME}_Tests ${GTEST_BOTH_LIBRARIES} ${LIBS})
 endif (GTEST_FOUND AND Boost_FOUND)
