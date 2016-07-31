@@ -9,6 +9,8 @@
 
 #include <sqlite3.h>
 
+#include <boost/date_time/local_time/local_time.hpp>
+
 #include "Logger.h"
 
 using namespace std;
@@ -16,7 +18,6 @@ using namespace std;
 namespace SqliteOverlay
 {  
   static constexpr int MIN_YEAR = 1900;
-  static constexpr int MAX_YEAR = 2100;  // arbitrarily chosen by me
 
   // a wrapper class for tm for storing timestamps
   class CommonTimestamp
@@ -48,7 +49,7 @@ namespace SqliteOverlay
     }
     inline bool operator<= (const CommonTimestamp& other) const
     {
-      return (!(other > *this));
+      return (!(*this > other));
     }
     inline bool operator>= (const CommonTimestamp& other) const
     {
@@ -74,14 +75,12 @@ namespace SqliteOverlay
   class LocalTimestamp : public CommonTimestamp
   {
   public:
-    static constexpr int DST_AS_RIGHT_NOW = 4242;
-    static constexpr int DST_GUESSED = 8888;
-    LocalTimestamp(int year, int month, int day, int hour, int min, int sec, int dstHours = DST_GUESSED);
+    LocalTimestamp(int year, int month, int day, int hour, int min, int sec, boost::local_time::time_zone_ptr tzp);
     LocalTimestamp(time_t rawTimeInUTC);
     LocalTimestamp();
     UTCTimestamp toUTC() const;
 
-    static unique_ptr<LocalTimestamp> fromISODate(const string& isoDate, int hour=12, int min=0, int sec=0, int dstHours = DST_GUESSED);
+    static unique_ptr<LocalTimestamp> fromISODate(const string& isoDate, boost::local_time::time_zone_ptr tzp, int hour=12, int min=0, int sec=0);
   };
 
   // an extension of struct tm to clearly indicate that UTC

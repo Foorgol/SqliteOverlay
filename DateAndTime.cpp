@@ -3,6 +3,10 @@
 #include <cstring>
 #include <memory>
 
+#include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/date_time/local_time/local_time.hpp>
+
 #include "DateAndTime.h"
 
 using namespace std;
@@ -97,33 +101,8 @@ namespace SqliteOverlay
 
   bool CommonTimestamp::isValidDate(int year, int month, int day)
   {
-    // check lower boundaries
-    if ((year < MIN_YEAR) || (month < 1) || (day < 1))
-    {
-      return false;
-    }
-
-    // check max boundaries
-    if ((year > MAX_YEAR) || (month > 12) || (day > 31))
-    {
-      return false;
-    }
-
-    // check month / days combinations
-    int maxFebDays = (isLeapYear(year)) ? 29 : 28;
-    if ((month == 2) && (day > maxFebDays))
-    {
-      return false;
-    }
-    if ((month == 4) || (month == 6) || (month == 9) || (month == 11))
-    {
-      if (day > 30)
-      {
-        return false;
-      }
-    }
-
-    return true;
+    boost::gregorian::date d{year, month, day};
+    return (!(d.is_special()));
   }
 
   //----------------------------------------------------------------------------
@@ -227,103 +206,51 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  LocalTimestamp::LocalTimestamp(int year, int month, int day, int hour, int min, int sec, int dstHours)
+  LocalTimestamp::LocalTimestamp(int year, int month, int day, int hour, int min, int sec, boost::local_time::time_zone_ptr tzp)
     : CommonTimestamp(year, month, day, hour, min, sec)
   {
-    if (!isValidDate(year, month, day))
+    using namespace boost::gregorian;
+    using namespace boost::posix_time;
+    using namespace boost::local_time;
+
+    // try to construct a date object
+    date d;
+    try
+    {
+      d = date{year, month, day};
+    }
+    catch (exception e)
     {
       throw std::invalid_argument("Invalid date values!");
     }
-    if (!isValidTime(hour, min, sec))
+
+    // try to construct a time duration
+    time_duration td{0,0,0, 0};
+    try
+    {
+      td = time_duration{hour, min, sec, 0};
+    }
+    catch (exception e)
     {
       throw std::invalid_argument("Invalid time values!");
     }
 
-    if (dstHours == DST_AS_RIGHT_NOW)
+    // make sure the time zone pointer is valid
+    if (tzp == nullptr)
     {
-      // retriee a tm of the current time
-      // and read the dstHours from it
-      time_t now = time(0);
-      struct tm* locTime = localtime(&now);
-      dstHours = locTime->tm_isdst;
+      throw std::invalid_argument("Time zone pointer is empty");
     }
 
-    if (dstHours == DST_GUESSED)
+    // construct a local_date_time object
+    local_date_time ldt{d, td, tzp, local_date_time::NOT_DATE_TIME_ON_ERROR};
+    if (ldt.is_not_a_date_time())
     {
-      // a little helper function to (re-)set the values in timestamp
-      auto resetTimestamp = [&]() {
-        timestamp.tm_year = year - 1900;
-        timestamp.tm_mon = month - 1;
-        timestamp.tm_mday = day;
-        timestamp.tm_hour = hour;
-      };
-
-      dstHours = 0;
-      timestamp.tm_isdst = 0;
-
-      // call mktime() to adjust timezone settings etc.
-      mktime(&timestamp);
-
-      // maybe mktime has modified the values of tm_hour (and in corner cases
-      // of day, month or year) because we provided wrong DST settings
-      //
-      // In this case, it's most likely sufficient to reset the values
-      // for date and time and call mktime() again, because the previous
-      // call to mktime() has applied the right DST and timezone settings
-      // to "timestamp".
-      resetTimestamp();
-      mktime(&timestamp);
-      dstHours = timestamp.tm_isdst;
-
-      // Maybe we still have a mismatch. In this case, we need to
-      // determine the correct DST value.
-      // But instead of calculating the correct DST (which is a nightmare if
-      // year, month and date also changed), we use brute force and try
-      // different DST settings until we get the intended result
-      if (timestamp.tm_hour != hour)
-      {
-        int guessedDST = 1;
-        while (guessedDST != 12)
-        {
-          dstHours = guessedDST;   // try positive DST
-          timestamp.tm_isdst = dstHours;
-          resetTimestamp();
-          mktime(&timestamp);
-          if (timestamp.tm_hour == hour)
-          {
-            break;
-          }
-
-          dstHours = -guessedDST;   // try negative DST
-          timestamp.tm_isdst = dstHours;
-          resetTimestamp();
-          mktime(&timestamp);
-          if (timestamp.tm_hour == hour)
-          {
-            break;
-          }
-
-          ++guessedDST;
-        }
-
-        if (guessedDST == 12)
-        {
-          throw std::runtime_error("Couldn't guess DST correctly!");
-        }
-      }
+      throw std::invalid_argument("Local time is invalid or ambiguous");
     }
 
-
-    // at this point, "dstHours" contains either...
-    //   * the user-provided value;
-    //   * the guessed DST value as per algorithm above; or
-    //   * the current value of the local timezone
-
-
-    // call mktime() once to adjust all other field in the timestamp struct
-    // and to get the time_t value
-    timestamp.tm_isdst = dstHours;
-    raw = mktime(&timestamp);
+    // convert to UTC and store the result
+    raw = to_time_t(ldt.utc_time());
+    timestamp = to_tm(ldt);
   }
 
   //----------------------------------------------------------------------------
@@ -361,7 +288,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<LocalTimestamp> LocalTimestamp::fromISODate(const string& isoDate, int hour, int min, int sec, int dstHours)
+  unique_ptr<LocalTimestamp> LocalTimestamp::fromISODate(const string& isoDate, boost::local_time::time_zone_ptr tzp, int hour, int min, int sec)
   {
     //
     // split the string into its components
@@ -407,7 +334,7 @@ namespace SqliteOverlay
     LocalTimestamp* result;
     try
     {
-      result = new LocalTimestamp(year, month, day, hour, min, sec, dstHours);
+      result = new LocalTimestamp(year, month, day, hour, min, sec, tzp);
     } catch (exception e) {
       return nullptr;   // invalid parameters
     }

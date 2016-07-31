@@ -1,5 +1,6 @@
 #include <memory>
 #include <climits>
+#include <cmath>
 
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
