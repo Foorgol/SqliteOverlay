@@ -45,13 +45,13 @@ namespace SqliteOverlay
     string operator[](const string& colName) const;
     int getInt(const string& colName) const;
     double getDouble(const string& colName) const;
-    LocalTimestamp getLocalTime(const string& colName) const;
+    LocalTimestamp getLocalTime(const string& colName, boost::local_time::time_zone_ptr tzp) const;
     UTCTimestamp getUTCTime(const string& colName) const;
 
     unique_ptr<ScalarQueryResult<int>> getInt2(const string& colName) const;
     unique_ptr<ScalarQueryResult<double>> getDouble2(const string& colName) const;
     unique_ptr<ScalarQueryResult<string>> getString2(const string& colName) const;
-    unique_ptr<ScalarQueryResult<LocalTimestamp>> getLocalTime2(const string& colName) const;
+    unique_ptr<ScalarQueryResult<LocalTimestamp>> getLocalTime2(const string& colName, boost::local_time::time_zone_ptr tzp) const;
     unique_ptr<ScalarQueryResult<UTCTimestamp>> getUTCTime2(const string& colName) const;
 
     inline bool operator== (const TabRow& other) const

@@ -177,12 +177,12 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqlStatement::getLocalTime(int colId, LocalTimestamp* out) const
+  bool SqlStatement::getLocalTime(int colId, LocalTimestamp* out, boost::local_time::time_zone_ptr tzp) const
   {
     if (getColumnValue_prep<LocalTimestamp>(colId, out))
     {
       time_t rawTime = sqlite3_column_int(stmt, colId);
-      *out = LocalTimestamp(rawTime);
+      *out = LocalTimestamp(rawTime, tzp);
       return true;
     }
     return false;

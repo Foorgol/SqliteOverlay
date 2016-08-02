@@ -33,7 +33,7 @@ namespace SqliteOverlay
     bool getInt(int colId, int* out) const;
     bool getDouble(int colId, double* out) const;
     bool getString(int colId, string* out) const;
-    bool getLocalTime(int colId, LocalTimestamp* out) const;
+    bool getLocalTime(int colId, LocalTimestamp* out, boost::local_time::time_zone_ptr tzp) const;
     bool getUTCTime(int colId, UTCTimestamp* out) const;
 
     int getColType(int colId) const;

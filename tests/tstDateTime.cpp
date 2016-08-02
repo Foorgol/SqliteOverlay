@@ -13,23 +13,8 @@
 using namespace std;
 using namespace SqliteOverlay;
 
-TEST(CommonTimestamp, LeapYear)
-{
-  ASSERT_TRUE(CommonTimestamp::isLeapYear(4));
-  ASSERT_TRUE(CommonTimestamp::isLeapYear(8));
-  ASSERT_TRUE(CommonTimestamp::isLeapYear(2000));
-  ASSERT_FALSE(CommonTimestamp::isLeapYear(1));
-  ASSERT_FALSE(CommonTimestamp::isLeapYear(3));
-  ASSERT_FALSE(CommonTimestamp::isLeapYear(100));
-  ASSERT_FALSE(CommonTimestamp::isLeapYear(200));
-}
-
-//----------------------------------------------------------------------------
-
 TEST(CommonTimestamp, ValidDate)
 {
-  ASSERT_FALSE(CommonTimestamp::isValidDate(1899, 10, 10));
-  ASSERT_FALSE(CommonTimestamp::isValidDate(2101, 10, 10));
   ASSERT_FALSE(CommonTimestamp::isValidDate(2000, 0, 10));
   ASSERT_FALSE(CommonTimestamp::isValidDate(2000, 10, 0));
   ASSERT_FALSE(CommonTimestamp::isValidDate(1900, 2, 29));
@@ -73,7 +58,7 @@ TEST(CommonTimestamp, Comparison)
   ASSERT_FALSE(t2 > t2);
 
   // less or equal
-  //ASSERT_TRUE(t1 <= t2);
+  ASSERT_TRUE(t1 <= t2);
   ASSERT_FALSE(t2 <= t1);
   ASSERT_TRUE(t2 <= t2a);
   ASSERT_TRUE(t2 <= t2);

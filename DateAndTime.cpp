@@ -24,23 +24,26 @@ namespace SqliteOverlay
 {
   CommonTimestamp::CommonTimestamp(int year, int month, int day, int hour, int min, int sec)
   {
-    timestamp.tm_year = year - 1900;
-    timestamp.tm_mon = month - 1;
-    timestamp.tm_mday = day;
-    timestamp.tm_hour = hour;
-    timestamp.tm_min = min;
-    timestamp.tm_sec = sec;
+    using namespace boost;
 
-    // this value has to be set by derived classes like
-    // UTCTimestamp or LocalTimestamp
-    raw = -1;
+    gregorian::date d{year, month, day};
+    posix_time::time_duration td{hour, min, sec, 0};
+
+    raw = posix_time::ptime{d, td};
+  }
+
+  //----------------------------------------------------------------------------
+
+  CommonTimestamp::CommonTimestamp(boost::posix_time::ptime rawTime)
+    :raw{rawTime}
+  {
   }
 
   //----------------------------------------------------------------------------
 
   time_t CommonTimestamp::getRawTime() const
   {
-    return raw;
+    return boost::posix_time::to_time_t(raw);
   }
 
   //----------------------------------------------------------------------------
@@ -68,25 +71,43 @@ namespace SqliteOverlay
 
   int CommonTimestamp::getDoW() const
   {
-    return timestamp.tm_wday;
+    return raw.date().day_of_week();
   }
 
   //----------------------------------------------------------------------------
 
   int CommonTimestamp::getYMD() const
   {
-    return (timestamp.tm_year + MIN_YEAR) * 10000 + (timestamp.tm_mon+1) * 100 + timestamp.tm_mday;
+    using namespace boost;
+
+    gregorian::date dat = raw.date();
+
+    int y = dat.year();
+    int m = dat.month();
+    int d = dat.day();
+
+    return (y) * 10000 + (m) * 100 + d;
   }
 
   //----------------------------------------------------------------------------
 
   bool CommonTimestamp::setTime(int hour, int min, int sec)
   {
-    if (!(isValidTime(hour, min, sec))) return false;
+    // check the time validity;
+    boost::posix_time::time_duration td;
+    try
+    {
+      td = boost::posix_time::time_duration{hour, min, sec};
+    }
+    catch (exception e)
+    {
+      return false;
+    }
 
-    timestamp.tm_hour = hour;
-    timestamp.tm_min = min;
-    timestamp.tm_sec = sec;
+    // keep the date, assign a new time
+    boost::gregorian::date d = raw.date();
+    raw = boost::posix_time::ptime{d, td};
+
     return true;
   }
 
@@ -94,15 +115,31 @@ namespace SqliteOverlay
 
   tuple<int, int, int> CommonTimestamp::getYearMonthDay() const
   {
-    return make_tuple(timestamp.tm_year + MIN_YEAR, timestamp.tm_mon + 1, timestamp.tm_mday);
+    using namespace boost;
+
+    gregorian::date dat = raw.date();
+
+    int y = dat.year();
+    int m = dat.month();
+    int d = dat.day();
+
+    return make_tuple(y, m, d);
   }
 
   //----------------------------------------------------------------------------
 
   bool CommonTimestamp::isValidDate(int year, int month, int day)
   {
-    boost::gregorian::date d{year, month, day};
-    return (!(d.is_special()));
+    try
+    {
+      boost::gregorian::date d{year, month, day};
+      return (!(d.is_special()));
+    }
+    catch (exception e)
+    {
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------------------
@@ -116,28 +153,15 @@ namespace SqliteOverlay
 
   bool CommonTimestamp::isLeapYear(int year)
   {
-    if ((year % 4) != 0)
-    {
-      return false;
-    }
-
-    if ((year % 100) != 0)
-    {
-      return true;
-    }
-
-    if ((year % 400) == 0)
-    {
-      return true;
-    }
-
-    return false;
+    return boost::gregorian::gregorian_calendar::is_leap_year(year);
   }
 
   //----------------------------------------------------------------------------
 
   string CommonTimestamp::getFormattedString(const string& fmt) const
   {
+    tm timestamp = boost::posix_time::to_tm(raw);
+
     char buf[80];
     strftime(buf, 80, fmt.c_str(), &timestamp);
     string result = string(buf);
@@ -150,18 +174,7 @@ namespace SqliteOverlay
   UTCTimestamp::UTCTimestamp(int year, int month, int day, int hour, int min, int sec)
     : CommonTimestamp(year, month, day, hour, min, sec)
   {
-    if (!isValidDate(year, month, day))
-    {
-      throw std::invalid_argument("Invalid date values!");
-    }
-    if (!isValidTime(hour, min, sec))
-    {
-      throw std::invalid_argument("Invalid time values!");
-    }
-
-    // call timegm() once to adjust all other field in the timestamp struct
-    // and to get the time_t value
-    raw = timegm(&timestamp);
+    // nothing to do here, CommonTimestamp assumes UTC as default
   }
 
   //----------------------------------------------------------------------------
@@ -174,19 +187,15 @@ namespace SqliteOverlay
   //----------------------------------------------------------------------------
 
   UTCTimestamp::UTCTimestamp(time_t rawTimeInUTC)
-    :CommonTimestamp(0,0,0,0,0,0)  // dummy values, will be overwritten anyway
+    :CommonTimestamp(boost::posix_time::from_time_t(rawTimeInUTC))
   {
-    // convert raw time to tm
-    tm* tmp = gmtime(&rawTimeInUTC);
+  }
 
-    // copy the contents over to our local struct
-    memcpy(&timestamp, tmp, sizeof(tm));
+  //----------------------------------------------------------------------------
 
-    // call timegm() once to adjust all other field in the timestamp struct
-    timegm(&timestamp);
-
-    // store the provided raw value
-    raw = rawTimeInUTC;
+  UTCTimestamp::UTCTimestamp(boost::posix_time::ptime utcTime)
+    :CommonTimestamp{utcTime}
+  {
   }
 
   //----------------------------------------------------------------------------
@@ -199,9 +208,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  LocalTimestamp UTCTimestamp::toLocalTime() const
+  LocalTimestamp UTCTimestamp::toLocalTime(boost::local_time::time_zone_ptr tzp) const
   {
-    return LocalTimestamp(raw);
+    return LocalTimestamp(boost::posix_time::to_time_t(raw), tzp);
   }
 
   //----------------------------------------------------------------------------
@@ -249,32 +258,31 @@ namespace SqliteOverlay
     }
 
     // convert to UTC and store the result
-    raw = to_time_t(ldt.utc_time());
-    timestamp = to_tm(ldt);
+    raw = ldt.local_time();
+    utc = ldt.utc_time();
   }
 
   //----------------------------------------------------------------------------
 
-  LocalTimestamp::LocalTimestamp(time_t rawTimeInUTC)
-    :CommonTimestamp(0,0,0,0,0,0)  // dummy values, will be overwritten anyway
+  LocalTimestamp::LocalTimestamp(time_t rawTimeInUTC, boost::local_time::time_zone_ptr tzp)
+    :CommonTimestamp(2000, 01, 01, 12, 0, 0)  // dummy values, will be overwritten anyway
   {
-    // convert raw time to tm
-    tm* tmp = localtime(&rawTimeInUTC);
-
-    // copy the contents over to our local struct
-    memcpy(&timestamp, tmp, sizeof(tm));
-
-    // call mktime() once to adjust all other field in the timestamp struct
-    mktime(&timestamp);
+    using namespace boost;
 
     // store the provided raw value
-    raw = rawTimeInUTC;
+    utc = posix_time::from_time_t(rawTimeInUTC);
+
+
+    // convert the UTC time to a local time and use this local time for
+    // all other functionalities (e.g., conversion to strings etc.)
+    local_time::local_date_time ldt{utc, tzp};
+    raw = ldt.local_time();
   }
 
   //----------------------------------------------------------------------------
 
-  LocalTimestamp::LocalTimestamp()
-    :LocalTimestamp(time(0))
+  LocalTimestamp::LocalTimestamp(boost::local_time::time_zone_ptr tzp)
+    :LocalTimestamp(time(0), tzp)
   {
 
   }
@@ -341,6 +349,13 @@ namespace SqliteOverlay
 
     // return the result
     return upLocalTimestamp(result);
+  }
+
+  //----------------------------------------------------------------------------
+
+  time_t LocalTimestamp::getRawTime() const
+  {
+    return boost::posix_time::to_time_t(utc);
   }
 
   //----------------------------------------------------------------------------

@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <gtest/gtest.h>
 
 #include <boost/date_time/local_time/local_time.hpp>
@@ -26,7 +28,7 @@ TEST(Timestamps, testTimeConversion)
   ASSERT_EQ(raw1, raw2);
 
   // construct a new LocalTimestamp, this time from raw
-  LocalTimestamp lt2(raw2);
+  LocalTimestamp lt2(raw2, testZone);
 
   // conversion back to raw should give identical values
   ASSERT_EQ(raw2, lt2.getRawTime());
@@ -63,7 +65,7 @@ TEST(Timestamps, testEpoch)
   ASSERT_EQ(expectedEpochVal, raw2);
 
   // create a timestamp from the epoch value
-  lt = LocalTimestamp(expectedEpochVal);
+  lt = LocalTimestamp(expectedEpochVal, tzCEST);
   ASSERT_EQ("2015-06-27 12:00:00", lt.getTimestamp());
 
   // repeat the test with a timestamp
@@ -91,7 +93,7 @@ TEST(Timestamps, testEpoch)
   ASSERT_EQ(expectedEpochVal, raw2);
 
   // create a timestamp from the epoch value
-  lt = LocalTimestamp(expectedEpochVal);
+  lt = LocalTimestamp(expectedEpochVal, tzCEST);
   ASSERT_EQ("2015-01-27 11:00:00", lt.getTimestamp());
 }
 

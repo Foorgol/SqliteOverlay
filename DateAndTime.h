@@ -10,6 +10,7 @@
 #include <sqlite3.h>
 
 #include <boost/date_time/local_time/local_time.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "Logger.h"
 
@@ -24,7 +25,8 @@ namespace SqliteOverlay
   {
   public:
     CommonTimestamp(int year, int month, int day, int hour, int min, int sec);
-    time_t getRawTime() const;
+    CommonTimestamp(boost::posix_time::ptime rawTime);
+    virtual time_t getRawTime() const;
 
     string getISODate() const;
     string getTime() const;
@@ -65,8 +67,7 @@ namespace SqliteOverlay
     }
 
   protected:
-    tm timestamp;
-    time_t raw;
+    boost::posix_time::ptime raw;
   };
 
   // an extension of struct tm to clearly indicate that local time
@@ -76,11 +77,16 @@ namespace SqliteOverlay
   {
   public:
     LocalTimestamp(int year, int month, int day, int hour, int min, int sec, boost::local_time::time_zone_ptr tzp);
-    LocalTimestamp(time_t rawTimeInUTC);
-    LocalTimestamp();
+    LocalTimestamp(time_t rawTimeInUTC, boost::local_time::time_zone_ptr tzp);
+    LocalTimestamp(boost::local_time::time_zone_ptr tzp);
     UTCTimestamp toUTC() const;
 
     static unique_ptr<LocalTimestamp> fromISODate(const string& isoDate, boost::local_time::time_zone_ptr tzp, int hour=12, int min=0, int sec=0);
+
+    time_t getRawTime() const override;
+
+  protected:
+    boost::posix_time::ptime utc;
   };
 
   // an extension of struct tm to clearly indicate that UTC
@@ -91,8 +97,9 @@ namespace SqliteOverlay
     UTCTimestamp(int year, int month, int day, int hour, int min, int sec);
     UTCTimestamp(int ymd, int hour=12, int min=0, int sec=0);
     UTCTimestamp(time_t rawTimeInUTC);
+    UTCTimestamp(boost::posix_time::ptime utcTime);
     UTCTimestamp();
-    LocalTimestamp toLocalTime() const;
+    LocalTimestamp toLocalTime(boost::local_time::time_zone_ptr tzp) const;
   };
 
   typedef unique_ptr<LocalTimestamp> upLocalTimestamp;

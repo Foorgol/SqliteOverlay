@@ -204,10 +204,10 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  LocalTimestamp TabRow::getLocalTime(const string& colName) const
+  LocalTimestamp TabRow::getLocalTime(const string& colName, boost::local_time::time_zone_ptr tzp) const
   {
     time_t rawTime = getInt(colName);
-    return LocalTimestamp(rawTime);
+    return LocalTimestamp(rawTime, tzp);
   }
 
   //----------------------------------------------------------------------------
@@ -262,7 +262,7 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<LocalTimestamp> > TabRow::getLocalTime2(const string& colName) const
+  unique_ptr<ScalarQueryResult<LocalTimestamp> > TabRow::getLocalTime2(const string& colName, boost::local_time::time_zone_ptr tzp) const
   {
     if (colName.empty())
     {
@@ -275,10 +275,10 @@ namespace SqliteOverlay
 
     if (rawTime->isNull())
     {
-      return unique_ptr<ScalarQueryResult<LocalTimestamp>>(new ScalarQueryResult<LocalTimestamp>());
+      return unique_ptr<ScalarQueryResult<LocalTimestamp>>(new ScalarQueryResult<LocalTimestamp>(tzp));
     }
 
-    LocalTimestamp result(rawTime->get());
+    LocalTimestamp result(rawTime->get(), tzp);
     return unique_ptr<ScalarQueryResult<LocalTimestamp>>(new ScalarQueryResult<LocalTimestamp>(result));
   }
 
