@@ -4,10 +4,10 @@
 
 #include <boost/date_time/local_time/local_time.hpp>
 
-#include "DateAndTime.h"
+#include "Sloppy/DateTime/DateAndTime.h"
 
-using namespace SqliteOverlay;
 using namespace boost::local_time;
+using namespace Sloppy::DateTime;
 
 TEST(Timestamps, testTimeConversion)
 {

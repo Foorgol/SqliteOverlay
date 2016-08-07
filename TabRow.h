@@ -13,10 +13,14 @@
 #ifndef SQLITE_OVERLAY_TABROW_H
 #define	SQLITE_OVERLAY_TABROW_H
 
+#include <boost/date_time/gregorian/gregorian.hpp>
+
 #include "SqliteDatabase.h"
 #include "CommonTabularClass.h"
 #include "DbTab.h"
 #include "ClausesAndQueries.h"
+
+namespace greg = boost::gregorian;
 
 namespace SqliteOverlay
 {
@@ -47,12 +51,14 @@ namespace SqliteOverlay
     double getDouble(const string& colName) const;
     LocalTimestamp getLocalTime(const string& colName, boost::local_time::time_zone_ptr tzp) const;
     UTCTimestamp getUTCTime(const string& colName) const;
+    greg::date getDate(const string& colName) const;
 
     unique_ptr<ScalarQueryResult<int>> getInt2(const string& colName) const;
     unique_ptr<ScalarQueryResult<double>> getDouble2(const string& colName) const;
     unique_ptr<ScalarQueryResult<string>> getString2(const string& colName) const;
     unique_ptr<ScalarQueryResult<LocalTimestamp>> getLocalTime2(const string& colName, boost::local_time::time_zone_ptr tzp) const;
     unique_ptr<ScalarQueryResult<UTCTimestamp>> getUTCTime2(const string& colName) const;
+    unique_ptr<ScalarQueryResult<greg::date>> getDate2(const string& colName) const;
 
     inline bool operator== (const TabRow& other) const
     {

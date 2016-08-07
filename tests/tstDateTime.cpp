@@ -8,10 +8,10 @@
 
 #include <gtest/gtest.h>
 
-#include "DateAndTime.h"
+#include "Sloppy/DateTime/DateAndTime.h"
 
 using namespace std;
-using namespace SqliteOverlay;
+using namespace Sloppy::DateTime;
 
 TEST(CommonTimestamp, ValidDate)
 {

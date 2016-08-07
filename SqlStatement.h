@@ -7,10 +7,13 @@
 
 #include <sqlite3.h>
 
+#include "Sloppy/DateTime/DateAndTime.h"
+
 #include "Logger.h"
-#include "DateAndTime.h"
 
 using namespace std;
+using namespace Sloppy::DateTime;
+
 
 namespace SqliteOverlay
 {  

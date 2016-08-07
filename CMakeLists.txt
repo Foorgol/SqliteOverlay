@@ -11,6 +11,19 @@ find_package(Boost REQUIRED COMPONENTS filesystem system)
 include_directories("." ${GTEST_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
 
+#
+# My lib of sloppyly implemented helper functions
+#
+set(Sloppy_HOME_DIR "../libSloppy")
+set(Sloppy_INCLUDE_DIR ${Sloppy_HOME_DIR})
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+  find_library(Sloppy_LIB NAME Sloppy HINTS "${Sloppy_HOME_DIR}/debug")
+else (CMAKE_BUILD_TYPE MATCHES Debug)
+  find_library(Sloppy_LIB NAME Sloppy HINTS "${Sloppy_HOME_DIR}/release")
+endif (CMAKE_BUILD_TYPE MATCHES Debug)
+set(LIBS ${LIBS} ${Sloppy_LIB})
+include_directories(${Sloppy_INCLUDE_DIR})
+
 # detect if we are on windows, because for windows
 # we have to use special code for timegm()
 #
@@ -31,7 +44,7 @@ set(LIB_SOURCES
     ClausesAndQueries.cpp
     GenericDatabaseObject.cpp
     GenericObjectManager.cpp
-    DateAndTime.cpp
+    #DateAndTime.cpp
     KeyValueTab.cpp
     TableCreator.cpp
     Transaction.cpp

@@ -48,6 +48,13 @@ namespace SqliteOverlay {
     addCol(colName, "NULL");
   }
 
+  //----------------------------------------------------------------------------
+
+  void ColumnValueClause::addDateCol(const string& colName, const boost::gregorian::date& d)
+  {
+    addIntCol(colName, boost::gregorian::to_int(d));
+  }
+
 //----------------------------------------------------------------------------
 
   string ColumnValueClause::getInsertStmt(const string& tabName) const
@@ -215,7 +222,7 @@ namespace SqliteOverlay {
     ++colCount;
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   string WhereClause::getSelectStmt(const string& tabName, bool countOnly) const
   {

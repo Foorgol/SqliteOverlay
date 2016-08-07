@@ -1,11 +1,15 @@
 #ifndef SQLITE_OVERLAY_CLAUSESANDQUERIES_H
 #define	SQLITE_OVERLAY_CLAUSESANDQUERIES_H
 
+#include <boost/date_time/gregorian/gregorian.hpp>
+
+#include "Sloppy/DateTime/DateAndTime.h"
+
 #include "SqliteDatabase.h"
 
-namespace SqliteOverlay {
+using namespace Sloppy::DateTime;
 
-  class CommonTimestamp;
+namespace SqliteOverlay {
 
   class ColumnValueClause
   {
@@ -18,6 +22,7 @@ namespace SqliteOverlay {
     void addStringCol(const string& colName, const string& val);
     void addDateTimeCol(const string& colName, const CommonTimestamp* pTimestamp);
     void addNullCol(const string& colName);
+    void addDateCol(const string& colName, const boost::gregorian::date& d);
 
     string getInsertStmt(const string& tabName) const;
     string getUpdateStmt(const string& tabName, int rowId) const;
@@ -48,6 +53,14 @@ namespace SqliteOverlay {
     void addDateTimeCol(const string& colName, const string& op,  const CommonTimestamp* pTimestamp);
     void addNullCol(const string& colName);
     void addNotNullCol(const string& colName);
+    inline void addDateCol(const string& colName, const boost::gregorian::date& d)
+    {
+      addIntCol(colName, boost::gregorian::to_int(d));
+    }
+    inline void addDateCol(const string& colName, const string& op, const boost::gregorian::date& d)
+    {
+      addIntCol(colName, op, boost::gregorian::to_int(d));
+    }
 
     string getSelectStmt(const string& tabName, bool countOnly) const;
     string getDeleteStmt(const string& tabName) const;

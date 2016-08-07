@@ -3,10 +3,12 @@
 #include <cstring>
 #include <cstdlib>
 
+#include "Sloppy/DateTime/DateAndTime.h"
+
 #include "SqlStatement.h"
-#include "DateAndTime.h"
 
 using namespace std;
+using namespace Sloppy::DateTime;
 
 namespace SqliteOverlay
 {

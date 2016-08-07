@@ -12,6 +12,8 @@
 
 #include <stdexcept>
 
+#include "libSloppy.h"
+
 #include "TabRow.h"
 #include "HelperFunc.h"
 #include "DbTab.h"
@@ -218,6 +220,14 @@ namespace SqliteOverlay
     return UTCTimestamp(rawTime);
   }
 
+  //----------------------------------------------------------------------------
+
+  boost::gregorian::date TabRow::getDate(const string& colName) const
+  {
+    int ymd = getInt(colName);
+    return greg::from_int(ymd);
+  }
+
 //----------------------------------------------------------------------------
 
   unique_ptr<ScalarQueryResult<int> > TabRow::getInt2(const string& colName) const
@@ -302,6 +312,22 @@ namespace SqliteOverlay
 
     UTCTimestamp result(rawTime->get());
     return unique_ptr<ScalarQueryResult<UTCTimestamp>>(new ScalarQueryResult<UTCTimestamp>(result));
+  }
+
+  //----------------------------------------------------------------------------
+
+  unique_ptr<ScalarQueryResult<boost::gregorian::date> > TabRow::getDate2(const string& colName) const
+  {
+    auto ymd = getInt2(colName);
+    if (ymd == nullptr) return nullptr;
+
+    if (ymd->isNull())
+    {
+      return unique_ptr<ScalarQueryResult<greg::date>>(new ScalarQueryResult<greg::date>());
+    }
+
+    greg::date d = greg::from_int(ymd->get());
+    return unique_ptr<ScalarQueryResult<greg::date>>(new ScalarQueryResult<greg::date>(d));
   }
 
 //----------------------------------------------------------------------------
