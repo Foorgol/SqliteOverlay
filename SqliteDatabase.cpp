@@ -1,7 +1,8 @@
 #include <sys/stat.h>
 
+#include "Sloppy/Logger/Logger.h"
+
 #include "SqliteDatabase.h"
-#include "Logger.h"
 #include "StringHelper.h"
 #include "DbTab.h"
 #include "Transaction.h"
@@ -36,7 +37,7 @@ namespace SqliteOverlay
     int err = sqlite3_open(dbFileName.c_str(), &tmpPtr);
     if (tmpPtr == nullptr)
     {
-      throw runtime_error("No memory for allocating sqlite instance");
+      throw std::runtime_error("No memory for allocating sqlite instance");
     }
     if (err != SQLITE_OK)
     {
@@ -54,7 +55,7 @@ namespace SqliteOverlay
 
     // prepare a logger
     log = unique_ptr<Logger>(new Logger(dbFileName));
-    log->info("Ready for use");
+    log->trace("Ready for use");
 
     // Explicitly enable support for foreign keys
     // and disable synchronous writes for better performance
@@ -733,9 +734,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::setLogLevel(int newLvl)
+  void SqliteDatabase::setLogLevel(Sloppy::Logger::SeverityLevel newMinLvl)
   {
-    log->setLevel(newLvl);
+    log->setMinLogLevel(newMinLvl);
   }
 
   //----------------------------------------------------------------------------

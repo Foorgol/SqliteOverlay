@@ -8,7 +8,8 @@
 #include <vector>
 #include <unordered_map>
 
-#include "Logger.h"
+#include "Sloppy/Logger/Logger.h"
+
 #include "SqlStatement.h"
 #include "HelperFunc.h"
 
@@ -128,7 +129,7 @@ namespace SqliteOverlay
                                              TRANSACTION_DESTRUCTOR_ACTION dtorAct = TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK,
                                              int* errCodeOut=nullptr);
 
-    void setLogLevel(int newLvl);
+    void setLogLevel(SeverityLevel newMinLvl);
 
     DbTab* getTab (const string& tabName);
 

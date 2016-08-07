@@ -168,7 +168,7 @@ namespace SqliteOverlay
     // another transaction
     if (err != SQLITE_DONE)
     {
-      throw runtime_error("Couldn't initiate transaction in Transaction ctor");
+      throw std::runtime_error("Couldn't initiate transaction in Transaction ctor");
     }
   }
     

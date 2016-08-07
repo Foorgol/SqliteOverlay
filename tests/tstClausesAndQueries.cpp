@@ -71,6 +71,26 @@ TEST_F(DatabaseTestScenario, ColumnValueClause_StringCol)
   ASSERT_EQ("", cvc.getUpdateStmt("", 42));
 }
 
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, ColumnValueClause_DateCol)
+{
+  ColumnValueClause cvc;
+  boost::gregorian::date d{2016, 8, 7};
+
+  cvc.addDateCol("col", d);
+
+  ASSERT_TRUE(cvc.hasColumns());
+
+  ASSERT_EQ("INSERT INTO tab (col) VALUES (20160807)", cvc.getInsertStmt("tab"));
+  ASSERT_EQ("UPDATE tab SET col=20160807 WHERE id=42", cvc.getUpdateStmt("tab", 42));
+
+  // invalid tab names
+  ASSERT_EQ("", cvc.getInsertStmt(""));
+  ASSERT_EQ("", cvc.getUpdateStmt("", 42));
+}
+
 //----------------------------------------------------------------
 
 TEST_F(DatabaseTestScenario, ColumnValueClause_NullCol)
@@ -208,6 +228,38 @@ TEST_F(DatabaseTestScenario, WhereClause_StringCol)
   ASSERT_EQ("SELECT id FROM tab WHERE col<\"xyz\"", w.getSelectStmt("tab", false));
   ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col<\"xyz\"", w.getSelectStmt("tab", true));
   ASSERT_EQ("DELETE FROM tab WHERE col<\"xyz\"", w.getDeleteStmt("tab"));
+
+  // invalid tab names
+  ASSERT_EQ("", w.getSelectStmt("", false));
+  ASSERT_EQ("", w.getDeleteStmt(""));
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, WhereClause_DateCol)
+{
+  WhereClause w;
+  boost::gregorian::date d{2016, 8, 7};
+
+  ASSERT_TRUE(w.isEmpty());
+
+  w.addDateCol("col", d);
+
+  ASSERT_FALSE(w.isEmpty());
+  ASSERT_EQ("SELECT id FROM tab WHERE col=20160807", w.getSelectStmt("tab", false));
+  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col=20160807", w.getSelectStmt("tab", true));
+  ASSERT_EQ("DELETE FROM tab WHERE col=20160807", w.getDeleteStmt("tab"));
+
+  w.clear();
+  ASSERT_TRUE(w.isEmpty());
+
+
+  w.addDateCol("col", ">", d);
+
+  ASSERT_FALSE(w.isEmpty());
+  ASSERT_EQ("SELECT id FROM tab WHERE col>20160807", w.getSelectStmt("tab", false));
+  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col>20160807", w.getSelectStmt("tab", true));
+  ASSERT_EQ("DELETE FROM tab WHERE col>20160807", w.getDeleteStmt("tab"));
 
   // invalid tab names
   ASSERT_EQ("", w.getSelectStmt("", false));

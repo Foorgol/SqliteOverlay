@@ -17,7 +17,7 @@ namespace SqliteOverlay
   {
     if (dbPtr == nullptr)
     {
-      throw runtime_error("Reived null-pointer for database handle");
+      throw std::runtime_error("Reived null-pointer for database handle");
     }
 
     if (sqlTxt.empty())
@@ -39,7 +39,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<SqlStatement> SqlStatement::get(sqlite3* dbPtr, const string& sqlTxt, int* errCodeOut, const Logger* log)
+  unique_ptr<SqlStatement> SqlStatement::get(sqlite3* dbPtr, const string& sqlTxt, int* errCodeOut, Logger* log)
   {
     SqlStatement* tmpPtr;
     try
@@ -73,7 +73,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqlStatement::step(int* errCodeOut, const Logger* log)
+  bool SqlStatement::step(int* errCodeOut, Logger* log)
   {
     if (_isDone)
     {
@@ -121,7 +121,7 @@ namespace SqliteOverlay
       msg += "hasData = " + to_string(_hasData);
       msg += "; isDone = " + to_string(_isDone);
       msg += "; columns returned = " + to_string(resultColCount);
-      log->info(msg);
+      log->trace(msg);
     }
 
     return ((err == SQLITE_ROW) || (err == SQLITE_DONE) || (err == SQLITE_OK));

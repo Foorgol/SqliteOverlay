@@ -7,9 +7,10 @@ find_package(SQLite3 REQUIRED)
 include_directories(${SQLITE3_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${SQLITE3_LIBRARIES})
 
-find_package(Boost REQUIRED COMPONENTS filesystem system)
+find_package(Boost REQUIRED COMPONENTS filesystem system log log_setup)
 include_directories("." ${GTEST_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
+add_definitions(-DBOOST_LOG_DYN_LINK=1)  # linking fails if this is not set
 
 #
 # My lib of sloppyly implemented helper functions
@@ -35,7 +36,6 @@ ENDIF()
 
 set(LIB_SOURCES
     SqliteDatabase.cpp
-    Logger.cpp
     SqlStatement.cpp
     HelperFunc.cpp
     CommonTabularClass.cpp
