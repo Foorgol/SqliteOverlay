@@ -377,6 +377,13 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
+  bool TabRow::update(const string& colName, const boost::gregorian::date& newVal, int* errCodeOut) const
+  {
+    return update(colName, greg::to_int(newVal), errCodeOut);
+  }
+
+//----------------------------------------------------------------------------
+
   bool TabRow::updateToNull(const string& colName, int* errCodeOut) const
   {
     ColumnValueClause cvc;
