@@ -12,7 +12,6 @@
 
 #include <stdexcept>
 
-#include "HelperFunc.h"
 #include "DatabaseTestScenario.h"
 #include "CommonTabularClass.h"
 

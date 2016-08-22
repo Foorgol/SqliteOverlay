@@ -3,7 +3,8 @@
 
 #include <boost/date_time/gregorian/gregorian.hpp>
 
-#include "Sloppy/DateTime/DateAndTime.h"
+#include <Sloppy/libSloppy.h>
+#include <Sloppy/DateTime/DateAndTime.h>
 
 #include "SqliteDatabase.h"
 
@@ -29,8 +30,8 @@ namespace SqliteOverlay {
     bool hasColumns() const;
 
   private:
-    StringList colNames;
-    StringList values;
+    Sloppy::StringList colNames;
+    Sloppy::StringList values;
 
     void addCol(const string& colName, const string& val, bool useQuotes=false);
   };

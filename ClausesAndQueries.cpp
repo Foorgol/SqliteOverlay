@@ -1,6 +1,7 @@
+#include <Sloppy/libSloppy.h>
+
 #include "ClausesAndQueries.h"
 #include "SqlStatement.h"
-#include "StringHelper.h"
 
 namespace SqliteOverlay {
 
@@ -70,8 +71,8 @@ namespace SqliteOverlay {
     }
 
     string sql = "INSERT INTO " + tabName + " (";
-    sql += commaSepStringFromStringList(colNames) + ") VALUES (";
-    sql += commaSepStringFromStringList(values) + ")";
+    sql += Sloppy::commaSepStringFromStringList(colNames) + ") VALUES (";
+    sql += Sloppy::commaSepStringFromStringList(values) + ")";
 
     return sql;
   }

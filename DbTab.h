@@ -14,7 +14,6 @@
 #define	SQLITE_OVERLAY_DBTAB_H
 
 #include "CommonTabularClass.h"
-#include "HelperFunc.h"
 #include "ClausesAndQueries.h"
 
 

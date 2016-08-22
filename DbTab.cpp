@@ -13,7 +13,6 @@
 #include <memory>
 
 #include "DbTab.h"
-#include "HelperFunc.h"
 #include "TabRow.h"
 
 namespace SqliteOverlay

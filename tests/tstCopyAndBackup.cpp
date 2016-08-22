@@ -6,7 +6,6 @@
 
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"
-#include "HelperFunc.h"
 #include "ClausesAndQueries.h"
 #include "DbTab.h"
 #include "TabRow.h"

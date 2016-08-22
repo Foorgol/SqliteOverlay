@@ -12,10 +12,9 @@
 
 #include <stdexcept>
 
-#include "libSloppy.h"
+#include "Sloppy/libSloppy.h"
 
 #include "TabRow.h"
-#include "HelperFunc.h"
 #include "DbTab.h"
 #include "CommonTabularClass.h"
 

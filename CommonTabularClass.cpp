@@ -13,7 +13,6 @@
 #include <stdexcept>
 
 #include "CommonTabularClass.h"
-#include "HelperFunc.h"
 
 namespace SqliteOverlay
 {

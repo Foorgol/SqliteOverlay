@@ -15,13 +15,7 @@ add_definitions(-DBOOST_LOG_DYN_LINK=1)  # linking fails if this is not set
 #
 # My lib of sloppyly implemented helper functions
 #
-set(Sloppy_HOME_DIR "../libSloppy")
-set(Sloppy_INCLUDE_DIR ${Sloppy_HOME_DIR})
-if (CMAKE_BUILD_TYPE MATCHES Debug)
-  find_library(Sloppy_LIB NAME Sloppy HINTS "${Sloppy_HOME_DIR}/debug")
-else (CMAKE_BUILD_TYPE MATCHES Debug)
-  find_library(Sloppy_LIB NAME Sloppy HINTS "${Sloppy_HOME_DIR}/release")
-endif (CMAKE_BUILD_TYPE MATCHES Debug)
+find_library(Sloppy_LIB NAME Sloppy)
 set(LIBS ${LIBS} ${Sloppy_LIB})
 include_directories(${Sloppy_INCLUDE_DIR})
 
@@ -37,18 +31,15 @@ ENDIF()
 set(LIB_SOURCES
     SqliteDatabase.cpp
     SqlStatement.cpp
-    HelperFunc.cpp
     CommonTabularClass.cpp
     DbTab.cpp
     TabRow.cpp
     ClausesAndQueries.cpp
     GenericDatabaseObject.cpp
     GenericObjectManager.cpp
-    #DateAndTime.cpp
     KeyValueTab.cpp
     TableCreator.cpp
     Transaction.cpp
-    StringHelper.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
@@ -58,12 +49,37 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 set(LIB_VERSION_MAJOR 0)
-set(LIB_VERSION_MINOR 1)
-set(LIB_VERSION_PATCH 1)
+set(LIB_VERSION_MINOR 3)
+set(LIB_VERSION_PATCH 0)
 set(LIB_VERSION_STRING ${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_PATCH})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${LIB_VERSION_STRING}
                                           SOVERSION ${LIB_VERSION_MAJOR})
+
+#
+# Installation data for the lib
+#
+# CMake's default destination path is /usr/local which is just fine
+#
+install(TARGETS ${PROJECT_NAME}
+        LIBRARY DESTINATION lib
+       )
+set(INSTALLATION_HEADERS
+    SqliteDatabase.h
+    SqlStatement.h
+    HelperFunc.h
+    CommonTabularClass.h
+    DbTab.h
+    TabRow.h
+    ClausesAndQueries.h
+    GenericDatabaseObject.h
+    GenericObjectManager.h
+    KeyValueTab.h
+    TableCreator.h
+    Transaction.h
+    )
+install(FILES ${INSTALLATION_HEADERS} DESTINATION include/SqliteOverlay)
+
 
 #
 # Unit tests

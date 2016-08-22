@@ -13,6 +13,7 @@
 #include "SqliteDatabase.h"
 #include "DbTab.h"
 #include "ClausesAndQueries.h"
+#include "TabRow.h"
 
 namespace SqliteOverlay
 {
@@ -299,6 +300,33 @@ namespace SqliteOverlay
 
       return result;
     }
+
+    template<class T>
+    unique_ptr<T> getSingleReferencedObject(const TabRow& r, const string& refColumnName) const
+    {
+      auto objId = r.getInt2(refColumnName);
+      if (objId->isNull()) return nullptr;
+      return unique_ptr<T>(new T(db, objId->get()));
+    }
+
+    template<class T>
+    unique_ptr<T> getSingleReferencedObject(DbTab* srcTab, const WhereClause& w, const string& refColumnName) const
+    {
+      try
+      {
+        TabRow r = srcTab->getSingleRowByWhereClause(w);
+        return getSingleReferencedObject(r, refColumnName);
+      } catch (...) {
+      }
+      return nullptr;
+    }
+
+    template<class T>
+    unique_ptr<T> getSingleReferencedObject(const WhereClause& w, const string& refColumnName) const
+    {
+      return getSingleReferencedObject<T>(tab, w, refColumnName);
+    }
+
   };
 
 }
