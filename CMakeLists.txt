@@ -15,7 +15,7 @@ add_definitions(-DBOOST_LOG_DYN_LINK=1)  # linking fails if this is not set
 #
 # My lib of sloppyly implemented helper functions
 #
-find_library(Sloppy_LIB NAME Sloppy)
+find_library(Sloppy_LIB NAME Sloppy PATHS /usr/local/lib /usr/lib /usr/local/lib64 /usr/lib64)
 set(LIBS ${LIBS} ${Sloppy_LIB})
 include_directories(${Sloppy_INCLUDE_DIR})
 
@@ -67,7 +67,6 @@ install(TARGETS ${PROJECT_NAME}
 set(INSTALLATION_HEADERS
     SqliteDatabase.h
     SqlStatement.h
-    HelperFunc.h
     CommonTabularClass.h
     DbTab.h
     TabRow.h
@@ -104,7 +103,8 @@ set(LIB_SOURCES_TST
 
 find_package(GTest)
 
-if (GTEST_FOUND AND Boost_FOUND)
+if (GTEST_FOUND AND Boost_FOUND AND BUILD_TESTS)
+    message("   !!! Tests will be build as well !!!")
     include_directories("." ${GTEST_INCLUDE_DIRS})
 
     add_executable(${PROJECT_NAME}_Tests ${LIB_SOURCES} ${LIB_SOURCES_TST})
@@ -112,4 +112,4 @@ if (GTEST_FOUND AND Boost_FOUND)
     set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD_REQUIRED ON)
 
     target_link_libraries(${PROJECT_NAME}_Tests ${GTEST_BOTH_LIBRARIES} ${LIBS})
-endif (GTEST_FOUND AND Boost_FOUND)
+endif (GTEST_FOUND AND Boost_FOUND AND BUILD_TESTS)
