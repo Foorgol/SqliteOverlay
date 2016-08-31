@@ -40,6 +40,7 @@ set(LIB_SOURCES
     KeyValueTab.cpp
     TableCreator.cpp
     Transaction.cpp
+    UserMngr.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
