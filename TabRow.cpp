@@ -309,7 +309,7 @@ namespace SqliteOverlay
       return unique_ptr<ScalarQueryResult<UTCTimestamp>>(new ScalarQueryResult<UTCTimestamp>());
     }
 
-    UTCTimestamp result(rawTime->get());
+    UTCTimestamp result(static_cast<time_t>(rawTime->get()));  // use the constructor for time_t, otherwise the int would be interpreted as YMD-notation!
     return unique_ptr<ScalarQueryResult<UTCTimestamp>>(new ScalarQueryResult<UTCTimestamp>(result));
   }
 

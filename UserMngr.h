@@ -1,13 +1,14 @@
 #ifndef SQLITE_OVERLAY_USERMNGR_H
 #define SQLITE_OVERLAY_USERMNGR_H
 
+#include <vector>
+
 #include "GenericObjectManager.h"
 #include "Sloppy/DateTime/DateAndTime.h"
 
-using namespace SqliteOverlay;
 using namespace boost::gregorian;
 
-namespace RankingApp {
+namespace SqliteOverlay {
 
   namespace UserMngr
   {
@@ -68,7 +69,7 @@ namespace RankingApp {
       Valid,
       Refreshed,
       Expired,
-      Unknown
+      Invalid
     };
 
     enum class ErrCode
@@ -147,11 +148,55 @@ namespace RankingApp {
       SessionInfo validateSession(const string& cookie, bool refreshValidity=true) const;
       ErrCode terminateSession(const string& cookie) const;
       ErrCode terminateAllUserSessions(const string& name) const;
+      bool terminateAllSessions() const;
+      bool cleanupExpiredSessions() const;
+
+      // role management
+      template<typename RoleEnum>
+      inline bool assignRole(const string& name, RoleEnum r) const
+      {
+        return assignRole(name, static_cast<int>(r));
+      }
+
+      template<typename RoleEnum>
+      inline bool removeRole(const string& name, RoleEnum r) const
+      {
+        return removeRole(name, static_cast<int>(r));
+      }
+
+      template<typename RoleEnum>
+      inline bool hasRole(const string& name, RoleEnum r) const
+      {
+        return hasRole(name, static_cast<int>(r));
+      }
+
+      template<typename RoleEnum>
+      inline vector<RoleEnum> getAllRoles(const string& name) const
+      {
+        vector<RoleEnum> result;
+
+        int uid = getIdForUser(name);
+        if (uid < 1) return result;
+
+        auto it = roleTab->getRowsByColumnValue(U2R_UserRef, uid);
+        while (!(it.isEnd()))
+        {
+          TabRow r = *it;
+          result.push_back(static_cast<RoleEnum>(r.getInt(U2R_Role)));
+          ++it;
+        }
+
+        return result;
+      }
 
     protected:
       void initTabs(const string& tp);
       int getIdForUser(const string& name) const;
       bool checkPasswort(int userId, const string& providedPw) const;
+      bool assignRole(const string& name, int roleId) const;
+      bool removeRole(const string& name, int roleId) const;
+      bool hasRole(const string& name, int roleId) const;
+      bool hasRole(int uid, int roleId) const;
 
     private:
       DbTab* roleTab;

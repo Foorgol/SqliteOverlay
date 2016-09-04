@@ -2,6 +2,8 @@ project(SqliteOverlay)
 cmake_minimum_required(VERSION 2.8)
 aux_source_directory(. SRC_LIST)
 
+#set(BUILD_TESTS 1)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmakeModules/")
 find_package(SQLite3 REQUIRED)
 include_directories(${SQLITE3_INCLUDE_DIRS})
@@ -77,6 +79,7 @@ set(INSTALLATION_HEADERS
     KeyValueTab.h
     TableCreator.h
     Transaction.h
+    UserMngr.h
     )
 install(FILES ${INSTALLATION_HEADERS} DESTINATION include/SqliteOverlay)
 
@@ -100,6 +103,7 @@ set(LIB_SOURCES_TST
     tests/tstKeyValueTab.cpp
     tests/tstTransaction.cpp
     tests/tstCopyAndBackup.cpp
+    tests/tstUserManager.cpp
 )
 
 find_package(GTest)

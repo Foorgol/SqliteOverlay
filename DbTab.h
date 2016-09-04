@@ -72,6 +72,7 @@ namespace SqliteOverlay
     int deleteRowsByColumnValue(const string& col, const int val, int* errCodeOut=nullptr) const;
     int deleteRowsByColumnValue(const string& col, const double val, int* errCodeOut=nullptr) const;
     int deleteRowsByColumnValue(const string& col, const string& val, int* errCodeOut=nullptr) const;
+    int clear(int* errCodeOut=nullptr) const;
 
     bool hasRowId(int id) const;
 
