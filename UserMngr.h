@@ -76,7 +76,7 @@ namespace SqliteOverlay {
     {
       Success,
       InvalidName,
-      InvalidPasswort,
+      InvalidPassword,
       NotAuthenticated,
       NotUnique,
       DatabaseError,

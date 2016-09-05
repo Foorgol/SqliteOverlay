@@ -22,7 +22,7 @@ namespace SqliteOverlay
       if (n.empty() || (n.size() > MaxUserNameLen)) return ErrCode::InvalidName;
 
       string p = boost::trim_copy(pw);
-      if ((p.size() < minPwLen) || (p.size() > MaxPwLen) || (minPwLen <=0)) return ErrCode::InvalidPasswort;
+      if ((p.size() < minPwLen) || (p.size() > MaxPwLen) || (minPwLen <=0)) return ErrCode::InvalidPassword;
 
       // make sure the login name is still available
       if (tab->getMatchCountForColumnValue(US_LoginName, n) > 0) return ErrCode::InvalidName;
@@ -90,10 +90,13 @@ namespace SqliteOverlay
 
       // check password constraints
       string p = boost::trim_copy(newPw);
-      if ((p.size() < minPwLen) || (p.size() > MaxPwLen) || (minPwLen <=0)) return ErrCode::InvalidPasswort;
+      if ((p.size() < minPwLen) || (p.size() > MaxPwLen) || (minPwLen <=0)) return ErrCode::InvalidPassword;
 
       // check the correctness of the old password
       if (!(checkPasswort(id, oldPw))) return ErrCode::NotAuthenticated;
+
+      // make sure that old and new PW are not identical
+      if (p == oldPw) return ErrCode::InvalidPassword;
 
       // authentication okay, hash and prepare the new PW
       auto hashResult = Sloppy::Crypto::hashPassword(p, saltLen, hashCycles);

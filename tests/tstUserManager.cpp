@@ -76,8 +76,8 @@ TEST_F(DatabaseTestScenario, UserMngr_createUser)
   ASSERT_EQ(UserMngr::ErrCode::InvalidName, um.createUser("u2", "abc123", 3, 10));  // exists
   ASSERT_EQ(UserMngr::ErrCode::InvalidName, um.createUser(" ", "abc123", 3, 10));  // empty name
   ASSERT_EQ(UserMngr::ErrCode::InvalidName, um.createUser("", "abc123", 3, 10));  // empty name
-  ASSERT_EQ(UserMngr::ErrCode::InvalidPasswort, um.createUser("xyz", "", 3, 10));  // empty PW
-  ASSERT_EQ(UserMngr::ErrCode::InvalidPasswort, um.createUser("xyz", "a", 3, 10));  // PW too short
+  ASSERT_EQ(UserMngr::ErrCode::InvalidPassword, um.createUser("xyz", "", 3, 10));  // empty PW
+  ASSERT_EQ(UserMngr::ErrCode::InvalidPassword, um.createUser("xyz", "a", 3, 10));  // PW too short
 }
 
 //----------------------------------------------------------------
@@ -175,9 +175,10 @@ TEST_F(DatabaseTestScenario, UserMngr_changePassword)
   ASSERT_TRUE(expTime->isNull());
 
   // pw update failures
-  ASSERT_EQ(UserMngr::ErrCode::InvalidPasswort, um.updatePassword("u", "xyz", ""));
-  ASSERT_EQ(UserMngr::ErrCode::InvalidPasswort, um.updatePassword("u", "xyz", "   123    ", 10));  // too short
+  ASSERT_EQ(UserMngr::ErrCode::InvalidPassword, um.updatePassword("u", "xyz", ""));
+  ASSERT_EQ(UserMngr::ErrCode::InvalidPassword, um.updatePassword("u", "xyz", "   123    ", 10));  // too short
   ASSERT_EQ(UserMngr::ErrCode::NotAuthenticated, um.updatePassword("u", "xxx", "aaaaaaaaaaaaaaaaaaaaaaa"));
+  ASSERT_EQ(UserMngr::ErrCode::InvalidPassword, um.updatePassword("u", "xyz", "xyz", 3));
 }
 
 //----------------------------------------------------------------
