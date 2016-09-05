@@ -14,15 +14,19 @@ namespace SqliteOverlay {
   {
     static constexpr const char* Tab_User_Ext = "_User";
     static constexpr const char* US_LoginName = "LoginName";
-    static constexpr const char* US_Password = "Password";
     static constexpr const char* US_Email = "Email";
     static constexpr const char* US_CreationTime = "CreationTime";
-    static constexpr const char* US_LastPwChangeTime = "LastPwTime";
-    static constexpr const char* US_PwExpirationTime = "PwExpirationTime";
     static constexpr const char* US_LastAuthSuccessTime = "LastAuthSuccessTime";
     static constexpr const char* US_LastAuthFailTime = "LastAuthFailTime";
     static constexpr const char* US_LoginFailCount = "LoginFailCount";
     static constexpr const char* US_State = "State";
+
+    static constexpr const char* Tab_User2Password_Ext = "_Password";
+    static constexpr const char* U2P_UserRef = "UserRef";
+    static constexpr const char* U2P_Password = "Password";
+    static constexpr const char* U2P_CreationTime = "CreationTime";
+    static constexpr const char* U2P_ExpirationTime = "ExpiresOn";
+    static constexpr const char* U2P_DisablingTime = "DisabledOn";
 
     static constexpr const char* Tab_User2Role_Ext = "_User2Role";
     static constexpr const char* U2R_UserRef = "UserRef";
@@ -131,7 +135,7 @@ namespace SqliteOverlay {
       ErrCode createUser(const string& name, const string& pw, int minPwLen=DefaultMinPwLen, int pwExiration__secs = -1,
                          int saltLen = DefaultSaltLen, int hashCycles = DefaultHashCycles) const;
       ErrCode setEmail(const string& name, const string& email) const;
-      ErrCode updatePassword(const string& name, const string& oldPw, const string& newPw, int minPwLen=DefaultMinPwLen, int pwExiration__secs = -1,
+      ErrCode updatePassword(const string& name, const string& oldPw, const string& newPw, int historyCheckDepth=1, int minPwLen=DefaultMinPwLen, int pwExiration__secs = -1,
                              int saltLen = DefaultSaltLen, int hashCycles = DefaultHashCycles) const;
       ErrCode deleteUser(const string& name) const;
       bool lockUser(const string& name) const;
@@ -201,7 +205,7 @@ namespace SqliteOverlay {
     private:
       DbTab* roleTab;
       DbTab* sessionTab;
-
+      DbTab* pwTab;
     };
   }
 }

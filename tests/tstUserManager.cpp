@@ -14,12 +14,15 @@ TEST_F(DatabaseTestScenario, UserMngr_createTables)
   string tUser = prefix + UserMngr::Tab_User_Ext;
   string tSession = prefix + UserMngr::Tab_User2Session_Ext;
   string tRole = prefix + UserMngr::Tab_User2Role_Ext;
+  string tPassw = prefix + UserMngr::Tab_User2Password_Ext;
 
   ASSERT_TRUE(db->getTab(tUser) == nullptr);
+  ASSERT_TRUE(db->getTab(tPassw) == nullptr);
   ASSERT_TRUE(db->getTab(tSession) == nullptr);
   ASSERT_TRUE(db->getTab(tRole) == nullptr);
   UserMngr::UserMngr um{db.get(), prefix};
   ASSERT_TRUE(db->getTab(tUser) != nullptr);
+  ASSERT_TRUE(db->getTab(tPassw) != nullptr);
   ASSERT_TRUE(db->getTab(tSession) != nullptr);
   ASSERT_TRUE(db->getTab(tRole) != nullptr);
 
@@ -39,36 +42,47 @@ TEST_F(DatabaseTestScenario, UserMngr_createUser)
   ASSERT_TRUE(um.hasUser("u"));
 
   // check database entries
-  string tUser = prefix + UserMngr::Tab_User_Ext;
-  DbTab* t = db->getTab(tUser);
-  TabRow r = t->operator [](1);
-  ASSERT_EQ("u", r[UserMngr::US_LoginName]);
-  ASSERT_TRUE(r[UserMngr::US_Password].size() > 0);
-  ASSERT_EQ("0", r[UserMngr::US_LoginFailCount]);
-  ASSERT_EQ(static_cast<int>(UserMngr::UserState::Active), r.getInt(UserMngr::US_State));
+  DbTab* tUser = db->getTab(prefix + UserMngr::Tab_User_Ext);
+  DbTab* tPassw = db->getTab(prefix + UserMngr::Tab_User2Password_Ext);
+  TabRow userRow = tUser->operator [](1);
+  TabRow pwRow = tPassw->operator [](1);
+  ASSERT_EQ("u", userRow[UserMngr::US_LoginName]);
+  ASSERT_EQ("0", userRow[UserMngr::US_LoginFailCount]);
+  ASSERT_EQ(static_cast<int>(UserMngr::UserState::Active), userRow.getInt(UserMngr::US_State));
+  ASSERT_EQ(1, pwRow.getInt(UserMngr::U2P_UserRef));
+  ASSERT_TRUE(pwRow[UserMngr::U2P_Password].size() > 0);
 
   // check timestamps for "now + 1 sec" for the unlikely case
   // that one second elapsed since the user creation
   time_t now = time(0);
-  for (const string& s : {UserMngr::US_CreationTime, UserMngr::US_LastPwChangeTime, UserMngr::US_LastAuthSuccessTime})
+  for (const string& s : {UserMngr::US_CreationTime, UserMngr::US_LastAuthSuccessTime})
   {
-    time_t timestamp = r.getInt(s);
+    time_t timestamp = userRow.getInt(s);
     ASSERT_TRUE(timestamp >= now);
     ASSERT_TRUE(timestamp <= (now + 1));
   }
+  time_t timestamp = pwRow.getInt(UserMngr::U2P_CreationTime);
+  ASSERT_TRUE(timestamp >= now);
+  ASSERT_TRUE(timestamp <= (now + 1));
 
   // check NULL columns
-  for (const string& s : {UserMngr::US_Email, UserMngr::US_PwExpirationTime, UserMngr::US_LastAuthFailTime})
+  for (const string& s : {UserMngr::US_Email, UserMngr::US_LastAuthFailTime})
   {
-    auto x = r.getString2(s);
+    auto x = userRow.getString2(s);
+    ASSERT_TRUE(x->isNull());
+  }
+  for (const string& s : {UserMngr::U2P_ExpirationTime, UserMngr::U2P_DisablingTime})
+  {
+    auto x = pwRow.getString2(s);
     ASSERT_TRUE(x->isNull());
   }
 
   // create user with expiring password
   e = um.createUser("u2", "abc123", 3, 10);
   ASSERT_EQ(UserMngr::ErrCode::Success, e);
-  r = t->operator [](2);
-  time_t timestamp = r.getInt(UserMngr::US_PwExpirationTime);
+  userRow = tUser->operator [](2);
+  pwRow = tPassw->operator [](2);
+  timestamp = pwRow.getInt(UserMngr::U2P_ExpirationTime);
   ASSERT_TRUE(timestamp >= (now + 10));
   ASSERT_TRUE(timestamp <= (now + 11));
 
@@ -90,17 +104,16 @@ TEST_F(DatabaseTestScenario, UserMngr_authUser)
   ASSERT_EQ(UserMngr::ErrCode::Success, um.createUser("u", "abc123", 3, 10));
 
   // reset the value for the last successful authentication
-  string tUser = prefix + UserMngr::Tab_User_Ext;
-  DbTab* t = db->getTab(tUser);
-  TabRow r = t->operator [](1);
-  r.update(UserMngr::US_LastAuthSuccessTime, 0);
+  DbTab* tUser = db->getTab(prefix + UserMngr::Tab_User_Ext);
+  TabRow userRow = tUser->operator [](1);
+  userRow.update(UserMngr::US_LastAuthSuccessTime, 0);
 
   UserMngr::AuthInfo ai = um.authenticateUser("u", "abc123");
   ASSERT_EQ(UserMngr::AuthResult::Authenticated, ai.result);
 
   // check that the value for the last successful login time
   // has been updated
-  ASSERT_EQ(time(0), r.getInt(UserMngr::US_LastAuthSuccessTime));
+  ASSERT_EQ(time(0), userRow.getInt(UserMngr::US_LastAuthSuccessTime));
 
   // check entries of the user data field
   ASSERT_EQ(UTCTimestamp{}, ai.user->lastAuthSuccess);
@@ -117,20 +130,22 @@ TEST_F(DatabaseTestScenario, UserMngr_authUser)
 
   // check that the value for the last failed login time
   // has been updated
-  ASSERT_EQ(time(0), r.getInt(UserMngr::US_LastAuthFailTime));
-  ASSERT_EQ(1, r.getInt(UserMngr::US_LoginFailCount));
+  ASSERT_EQ(time(0), userRow.getInt(UserMngr::US_LastAuthFailTime));
+  ASSERT_EQ(1, userRow.getInt(UserMngr::US_LoginFailCount));
 
   // check entries of the user data field
   ASSERT_EQ(UTCTimestamp{}, *(ai.user->lastAuthFail));
   ASSERT_EQ(1, ai.user->failCount);
 
   // test password expiration
-  r.update(UserMngr::US_PwExpirationTime, static_cast<int>(time(0) - 1));
+  DbTab* tPassw = db->getTab(prefix + UserMngr::Tab_User2Password_Ext);
+  TabRow pwRow = tPassw->operator [](1);
+  pwRow.update(UserMngr::U2P_ExpirationTime, static_cast<int>(time(0) - 1));
   ai = um.authenticateUser("u", "abc123");
   ASSERT_EQ(UserMngr::AuthResult::PasswordExpired, ai.result);
 
   // test locked users
-  r.update(UserMngr::US_PwExpirationTime, static_cast<int>(time(0) + 100));
+  pwRow.update(UserMngr::U2P_ExpirationTime, static_cast<int>(time(0) + 100));
   ASSERT_TRUE(um.lockUser("u"));
   ai = um.authenticateUser("u", "abc123");
   ASSERT_EQ(UserMngr::AuthResult::Locked, ai.result);
@@ -146,39 +161,43 @@ TEST_F(DatabaseTestScenario, UserMngr_changePassword)
   auto db = getScenario01();
   string prefix = "um";
   UserMngr::UserMngr um{db.get(), prefix};
-  ASSERT_EQ(UserMngr::ErrCode::Success, um.createUser("u", "abc123", 3, 10));
+  ASSERT_EQ(UserMngr::ErrCode::Success, um.createUser("u", "abc123", 1, 3, 10));
 
   // store the raw value of the old password
-  string tUser = prefix + UserMngr::Tab_User_Ext;
-  DbTab* t = db->getTab(tUser);
-  TabRow r = t->operator [](1);
-  string oldPw_raw = r[UserMngr::US_Password];
+  DbTab* tUser = db->getTab(prefix + UserMngr::Tab_User_Ext);
+  DbTab* tPassw = db->getTab(prefix + UserMngr::Tab_User2Password_Ext);
+  TabRow userRow = tUser->operator [](1);
+  TabRow pwRowOld = tPassw->operator [](1);
+  string oldPw_raw = pwRowOld[UserMngr::U2P_Password];
 
   // update PW
-  ASSERT_EQ(UserMngr::ErrCode::Success, um.updatePassword("u", "abc123", "xyz", 3));
-  ASSERT_TRUE(r[UserMngr::US_Password] != oldPw_raw);
+  ASSERT_EQ(UserMngr::ErrCode::Success, um.updatePassword("u", "abc123", "xyz", 1, 3));
+  TabRow pwRowNew = tPassw->operator [](2);
+  ASSERT_TRUE(pwRowNew[UserMngr::U2P_Password] != oldPw_raw);
   UserMngr::AuthInfo ai = um.authenticateUser("u", "xyz");
   ASSERT_EQ(UserMngr::AuthResult::Authenticated, ai.result);
   ai = um.authenticateUser("u", "abc123");
   ASSERT_EQ(UserMngr::AuthResult::WrongPassword, ai.result);
 
   // pw update with change of expiration date
-  auto expTime = r.getUTCTime2(UserMngr::US_PwExpirationTime);
+  auto expTime = pwRowNew.getUTCTime2(UserMngr::U2P_ExpirationTime);
   ASSERT_TRUE(expTime->isNull());
-  ASSERT_EQ(UserMngr::ErrCode::Success, um.updatePassword("u", "xyz", "abc", 3, 10));
-  expTime = r.getUTCTime2(UserMngr::US_PwExpirationTime);
+  ASSERT_EQ(UserMngr::ErrCode::Success, um.updatePassword("u", "xyz", "abc", 1, 3, 10));
+  pwRowNew = tPassw->operator [](3);
+  expTime = pwRowNew.getUTCTime2(UserMngr::U2P_ExpirationTime);
   ASSERT_FALSE(expTime->isNull());
-  ASSERT_EQ(time(0) + 10, r.getInt(UserMngr::US_PwExpirationTime));
+  ASSERT_EQ(time(0) + 10, expTime->get().getRawTime());
 
-  ASSERT_EQ(UserMngr::ErrCode::Success, um.updatePassword("u", "abc", "xyz", 3));
-  expTime = r.getUTCTime2(UserMngr::US_PwExpirationTime);
+  ASSERT_EQ(UserMngr::ErrCode::Success, um.updatePassword("u", "abc", "xyz", 1, 3));
+  pwRowNew = tPassw->operator [](4);
+  expTime = pwRowNew.getUTCTime2(UserMngr::U2P_ExpirationTime);
   ASSERT_TRUE(expTime->isNull());
 
   // pw update failures
-  ASSERT_EQ(UserMngr::ErrCode::InvalidPassword, um.updatePassword("u", "xyz", ""));
-  ASSERT_EQ(UserMngr::ErrCode::InvalidPassword, um.updatePassword("u", "xyz", "   123    ", 10));  // too short
-  ASSERT_EQ(UserMngr::ErrCode::NotAuthenticated, um.updatePassword("u", "xxx", "aaaaaaaaaaaaaaaaaaaaaaa"));
-  ASSERT_EQ(UserMngr::ErrCode::InvalidPassword, um.updatePassword("u", "xyz", "xyz", 3));
+  ASSERT_EQ(UserMngr::ErrCode::InvalidPassword, um.updatePassword("u", "xyz", "", 1));
+  ASSERT_EQ(UserMngr::ErrCode::InvalidPassword, um.updatePassword("u", "xyz", "   123    ", 1, 10));  // too short
+  ASSERT_EQ(UserMngr::ErrCode::NotAuthenticated, um.updatePassword("u", "xxx", "aaaaaaaaaaaaaaaaaaaaaaa", 1));
+  ASSERT_EQ(UserMngr::ErrCode::InvalidPassword, um.updatePassword("u", "xyz", "xyz", 1, 3));  // old and new pw identical
 }
 
 //----------------------------------------------------------------
@@ -501,4 +520,36 @@ TEST_F(DatabaseTestScenario, UserMngr_delUser)
   ASSERT_EQ(1, tUser->length());  // one user
   ASSERT_EQ(1, tSession->length());  // one active sessions
   ASSERT_EQ(2, tRole->length());  // two role assignments
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, UserMngr_passwordHistory)
+{
+  auto db = getScenario01();
+  string prefix = "um";
+  UserMngr::UserMngr um{db.get(), prefix};
+
+  const int pwHistoryDepth = 5;
+  const Sloppy::StringList pwSequence{"abc", "def", "geh", "ijk", "lmn", "opq", "abc"};
+  ASSERT_EQ(pwHistoryDepth + 2, pwSequence.size());
+  ASSERT_EQ(UserMngr::ErrCode::Success, um.createUser("u", pwSequence[0], 3));
+
+  for (int nextPwIdx = 1; nextPwIdx < (pwSequence.size() - 1); ++nextPwIdx)
+  {
+    const string nextPw = pwSequence[nextPwIdx];
+    const string currentPw = pwSequence[nextPwIdx - 1];
+
+    // test old PWs
+    for (int oldPwIdx = 0; oldPwIdx < nextPwIdx; ++oldPwIdx)
+    {
+      ASSERT_EQ(UserMngr::ErrCode::InvalidPassword, um.updatePassword("u", currentPw, pwSequence[oldPwIdx], pwHistoryDepth, 3));
+    }
+
+    // set the new PW
+    ASSERT_EQ(UserMngr::ErrCode::Success, um.updatePassword("u", currentPw, nextPw, pwHistoryDepth, 3));
+  }
+
+  // test that we can re-use the first PW again
+  ASSERT_EQ(UserMngr::ErrCode::Success, um.updatePassword("u", pwSequence[pwHistoryDepth], pwSequence[0], pwHistoryDepth, 3));
 }

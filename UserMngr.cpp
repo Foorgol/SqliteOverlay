@@ -36,28 +36,46 @@ namespace SqliteOverlay
       // combine hash cycles, salt and hash using '_' as the delimiter
       const string saltAndHash = to_string(hashCycles) + "_" + salt + "_" + hashedPw;
 
-      // create a new database entry
-      Sloppy::DateTime::UTCTimestamp now{};
+      // create a new database entry for the user and the password
+      auto tr = db->startTransaction();
+      if (tr == nullptr) return ErrCode::DatabaseError;
+
+      // the entry in the user table
       ColumnValueClause cvc;
       cvc.addStringCol(US_LoginName, n);
-      cvc.addStringCol(US_Password, saltAndHash);
+      Sloppy::DateTime::UTCTimestamp now{};
       cvc.addDateTimeCol(US_CreationTime, &now);
-      cvc.addDateTimeCol(US_LastPwChangeTime, &now);
-      if (pwExiration__secs > 0)
-      {
-        time_t t = now.getRawTime();
-        UTCTimestamp expireTime{t + pwExiration__secs};
-        cvc.addDateTimeCol(US_PwExpirationTime, &expireTime);
-      }
       cvc.addIntCol(US_LoginFailCount, 0);
       cvc.addDateTimeCol(US_LastAuthSuccessTime, &now);
       cvc.addIntCol(US_State, static_cast<int>(UserState::Active));
 
       int dbErr;
       int newId = tab->insertRow(cvc, &dbErr);
-      if ((newId < 1) || (dbErr != SQLITE_DONE)) return ErrCode::DatabaseError;
+      if ((newId < 1) || (dbErr != SQLITE_DONE))
+      {
+        tr->rollback();
+        return ErrCode::DatabaseError;
+      }
 
-      return ErrCode::Success;
+      // the entry in the password table
+      cvc.clear();
+      cvc.addIntCol(U2P_UserRef, newId);
+      cvc.addStringCol(U2P_Password, saltAndHash);
+      cvc.addDateTimeCol(U2P_CreationTime, &now);
+      if (pwExiration__secs > 0)
+      {
+        UTCTimestamp expireTime{now};
+        expireTime.applyOffset(pwExiration__secs);
+        cvc.addDateTimeCol(U2P_ExpirationTime, &expireTime);
+      }
+      newId = pwTab->insertRow(cvc, &dbErr);
+      if ((newId < 1) || (dbErr != SQLITE_DONE))
+      {
+        tr->rollback();
+        return ErrCode::DatabaseError;
+      }
+
+      return tr->commit() ? ErrCode::Success : ErrCode::DatabaseError;
     }
 
     //----------------------------------------------------------------------------
@@ -82,51 +100,133 @@ namespace SqliteOverlay
 
     //----------------------------------------------------------------------------
 
-    ErrCode UserMngr::updatePassword(const string& name, const string& oldPw, const string& newPw, int minPwLen, int pwExiration__secs, int saltLen, int hashCycles) const
+    ErrCode UserMngr::updatePassword(const string& name, const string& oldPw, const string& newPw, int historyCheckDepth, int minPwLen,
+                                     int pwExiration__secs, int saltLen, int hashCycles) const
     {
       // make sure the user name is valid
-      int id = getIdForUser(name);
-      if (id < 1) return ErrCode::InvalidName;
+      int uid = getIdForUser(name);
+      if (uid < 1) return ErrCode::InvalidName;
 
       // check password constraints
       string p = boost::trim_copy(newPw);
       if ((p.size() < minPwLen) || (p.size() > MaxPwLen) || (minPwLen <=0)) return ErrCode::InvalidPassword;
 
       // check the correctness of the old password
-      if (!(checkPasswort(id, oldPw))) return ErrCode::NotAuthenticated;
+      if (!(checkPasswort(uid, oldPw))) return ErrCode::NotAuthenticated;
 
-      // make sure that old and new PW are not identical
+      // we need these later...
+      int lastCycleCount = -1;
+      string lastSalt;
+      string lastHashedNewPassword;
+
+      // go back in history and make sure that old PWs are not reused
       if (p == oldPw) return ErrCode::InvalidPassword;
+      if (historyCheckDepth > 1)
+      {
+        WhereClause w;
+        w.addIntCol(U2P_UserRef, uid);
+        w.setOrderColumn_Desc(U2P_CreationTime);   // get the newest entries first
+        w.setOrderColumn_Desc("id");   // get the newest entries first
+        auto it = pwTab->getRowsByWhereClause(w);
 
-      // authentication okay, hash and prepare the new PW
-      auto hashResult = Sloppy::Crypto::hashPassword(p, saltLen, hashCycles);
-      const string salt = hashResult.first;
-      const string hashedPw = hashResult.second;
-      if ((salt.empty()) || (hashedPw.empty())) return ErrCode::UnspecifiedError;
-      const string saltAndHash = to_string(hashCycles) + "_" + salt + "_" + hashedPw;
+        // skip the first entry (has already been checked)
+        if (!(it.isEnd())) ++it;
+
+        // walk through old hashes and check for "collisions"
+        int cnt = 1;
+        while ((!(it.isEnd())) && (cnt < historyCheckDepth))
+        {
+          TabRow r = *it;
+
+          Sloppy::StringList sl;
+          Sloppy::stringSplitter(sl, r[U2P_Password], "_");
+          if (sl.size() < 3) return ErrCode::UnspecifiedError;  // shouldn't happen
+
+          int nCycles = stoi(sl[0]);
+          const string salt = sl[1];
+          const string oldHash = sl[2];
+
+          if ((nCycles != lastCycleCount) || (salt != lastSalt))
+          {
+            // hash the new password with the hashing parameters of the old one
+            lastHashedNewPassword = Sloppy::Crypto::hashPassword(p, salt, nCycles);
+            lastCycleCount = nCycles;
+            lastSalt = salt;
+          }
+
+          // compare new and old hash
+          if (lastHashedNewPassword == oldHash) return ErrCode::InvalidPassword;
+
+          ++cnt;
+          ++it;
+        }
+      }
+
+      // authentication and pw history are okay, hash and prepare the new PW
+      //
+      // re-use old hashing parameters, if possible, in order to reduce
+      // multiple hashing operations when checking the PW history later on
+      if ((hashCycles != lastCycleCount) || (lastSalt.length() != saltLen))
+      {
+        auto hashResult = Sloppy::Crypto::hashPassword(p, saltLen, hashCycles);
+        lastSalt = hashResult.first;
+        lastHashedNewPassword = hashResult.second;
+        if ((lastSalt.empty()) || (lastHashedNewPassword.empty())) return ErrCode::UnspecifiedError;
+      }
+      const string saltAndHash = to_string(hashCycles) + "_" + lastSalt + "_" + lastHashedNewPassword;
 
       // okay, perform the update
-      Sloppy::DateTime::UTCTimestamp now{};
+      //
+      // we need two modifications in the PW table: disabling the old entry and adding a new entry.
+      // additionally, we need to update a few entries in the user table
+      auto tr = db->startTransaction();
+      if (tr == nullptr) return ErrCode::DatabaseError;
+
+      // disable the old entry
+      WhereClause w;
+      w.addIntCol(U2P_UserRef, uid);
+      w.addNullCol(U2P_DisablingTime);
+      TabRow oldPwRow = pwTab->getSingleRowByWhereClause(w);  // this row MUST exist
+      UTCTimestamp now;
+      int dbErr;
+      oldPwRow.update(U2P_DisablingTime, now, &dbErr);
+      if (dbErr != SQLITE_DONE)
+      {
+        tr->rollback();
+        return ErrCode::DatabaseError;
+      }
+
+      // create the new entry
       ColumnValueClause cvc;
-      cvc.addStringCol(US_Password, saltAndHash);
+      cvc.addIntCol(U2P_UserRef, uid);
+      cvc.addStringCol(U2P_Password, saltAndHash);
+      cvc.addDateTimeCol(U2P_CreationTime, &now);
       if (pwExiration__secs > 0)
       {
-        time_t t = now.getRawTime();
-        UTCTimestamp expireTime{t + pwExiration__secs};
-        cvc.addDateTimeCol(US_PwExpirationTime, &expireTime);
-      } else {
-        cvc.addNullCol(US_PwExpirationTime);   // remove any old expiration time
+        UTCTimestamp expireTime{now};
+        expireTime.applyOffset(pwExiration__secs);
+        cvc.addDateTimeCol(U2P_ExpirationTime, &expireTime);
       }
+      int newId = pwTab->insertRow(cvc, &dbErr);
+      if ((newId < 1) || (dbErr != SQLITE_DONE))
+      {
+        tr->rollback();
+        return ErrCode::DatabaseError;
+      }
+
+      // update the user table
+      TabRow userRow = tab->operator [](uid);
+      cvc.clear();
       cvc.addIntCol(US_LoginFailCount, 0);  // reset the failure counter
-      cvc.addDateTimeCol(US_LastPwChangeTime, &now);
       cvc.addDateTimeCol(US_LastAuthSuccessTime, &now);
-      TabRow r = tab->operator [](id);
-      int dbErr;
-      r.update(cvc, &dbErr);
+      userRow.update(cvc, &dbErr);
+      if (dbErr != SQLITE_DONE)
+      {
+        tr->rollback();
+        return ErrCode::DatabaseError;
+      }
 
-      if (dbErr != SQLITE_DONE) return ErrCode::DatabaseError;
-
-      return ErrCode::Success;
+      return tr->commit() ? ErrCode::Success : ErrCode::DatabaseError;
     }
 
     //----------------------------------------------------------------------------
@@ -137,26 +237,20 @@ namespace SqliteOverlay
       int id = getIdForUser(name);
       if (id < 1) return ErrCode::InvalidName;
 
-      // delete all role assignments, sessions and the user itself
+      // delete all passwords, role assignments, sessions and the user itself
       int dbErr;
       auto t = db->startTransaction();
-      roleTab->deleteRowsByColumnValue(U2R_UserRef, id, &dbErr);
-      if (dbErr != SQLITE_DONE)
+      vector<pair<DbTab*, string>> tabsAndCols = {{pwTab, U2P_UserRef}, {roleTab, U2R_UserRef},
+                                                  {sessionTab, U2S_UserRef}, {tab, "id"}};
+      for (const auto& tc : tabsAndCols)
       {
-        t->rollback();
-        return ErrCode::DatabaseError;
-      }
-      sessionTab->deleteRowsByColumnValue(U2S_UserRef, id, &dbErr);
-      if (dbErr != SQLITE_DONE)
-      {
-        t->rollback();
-        return ErrCode::DatabaseError;
-      }
-      tab->deleteRowsByColumnValue("id", id, &dbErr);
-      if (dbErr != SQLITE_DONE)
-      {
-        t->rollback();
-        return ErrCode::DatabaseError;
+        int dbErr;
+        (tc.first)->deleteRowsByColumnValue(tc.second, id, &dbErr);
+        if (dbErr != SQLITE_DONE)
+        {
+          t->rollback();
+          return ErrCode::DatabaseError;
+        }
       }
 
       return t->commit() ? ErrCode::Success : ErrCode::DatabaseError;
@@ -205,21 +299,26 @@ namespace SqliteOverlay
     {
       try
       {
-        TabRow r = tab->operator [](id);
+        TabRow userRow = tab->operator [](id);
+
+        WhereClause w;
+        w.addIntCol(U2P_UserRef, id);
+        w.addNullCol(U2P_DisablingTime);
+        TabRow pwRow = pwTab->getSingleRowByWhereClause(w);
 
         unique_ptr<UserData> result = make_unique<UserData>();
-        result->loginName = r[US_LoginName];
-        auto email = r.getString2(US_Email);
+        result->loginName = userRow[US_LoginName];
+        auto email = userRow.getString2(US_Email);
         result->email = (email->isNull()) ? "" : email->get();
-        result->userCreationTime = r.getUTCTime(US_CreationTime);
-        auto expTime = r.getUTCTime2(US_PwExpirationTime);
+        result->userCreationTime = userRow.getUTCTime(US_CreationTime);
+        auto expTime = pwRow.getUTCTime2(U2P_ExpirationTime);
         result->pwExpirationTime = (expTime->isNull()) ? nullptr : make_unique<Sloppy::DateTime::UTCTimestamp>(expTime->get());
-        result->lastPwChange = r.getUTCTime(US_LastPwChangeTime);
-        result->lastAuthSuccess = r.getUTCTime(US_LastAuthSuccessTime);
-        auto failTime = r.getUTCTime2(US_LastAuthFailTime);
+        result->lastPwChange = pwRow.getUTCTime(U2P_CreationTime);
+        result->lastAuthSuccess = userRow.getUTCTime(US_LastAuthSuccessTime);
+        auto failTime = userRow.getUTCTime2(US_LastAuthFailTime);
         result->lastAuthFail = (failTime->isNull()) ? nullptr : make_unique<Sloppy::DateTime::UTCTimestamp>(failTime->get());
-        result->failCount = r.getInt(US_LoginFailCount);
-        result->state = static_cast<UserState>(r.getInt(US_State));
+        result->failCount = userRow.getInt(US_LoginFailCount);
+        result->state = static_cast<UserState>(userRow.getInt(US_State));
 
         return result;
       }
@@ -535,17 +634,22 @@ namespace SqliteOverlay
     {
       TableCreator tc{db};
       tc.addVarchar(US_LoginName, MaxUserNameLen, true, CONFLICT_CLAUSE::FAIL, true, CONFLICT_CLAUSE::FAIL);
-      tc.addVarchar(US_Password, 10 + 64, false, CONFLICT_CLAUSE::__NOT_SET, true, CONFLICT_CLAUSE::FAIL);
       tc.addVarchar(US_Email, MaxEmailLen);
       tc.addInt(US_CreationTime, false, CONFLICT_CLAUSE::__NOT_SET, true, CONFLICT_CLAUSE::FAIL);
-      tc.addInt(US_LastPwChangeTime, false, CONFLICT_CLAUSE::__NOT_SET, true, CONFLICT_CLAUSE::FAIL);
-      tc.addInt(US_PwExpirationTime, false, CONFLICT_CLAUSE::__NOT_SET);
       tc.addInt(US_LastAuthSuccessTime, false, CONFLICT_CLAUSE::__NOT_SET, true, CONFLICT_CLAUSE::FAIL);
       tc.addInt(US_LastAuthFailTime, false, CONFLICT_CLAUSE::__NOT_SET);
       tc.addInt(US_LoginFailCount, false, CONFLICT_CLAUSE::__NOT_SET, true, CONFLICT_CLAUSE::FAIL);
       tc.addInt(US_State, false, CONFLICT_CLAUSE::__NOT_SET, true, CONFLICT_CLAUSE::FAIL);
       tc.createTableAndResetCreator(tp + Tab_User_Ext);
       tab = db->getTab(tp + Tab_User_Ext);
+
+      tc.addForeignKey(U2P_UserRef, tp + Tab_User_Ext, CONSISTENCY_ACTION::CASCADE);
+      tc.addVarchar(U2P_Password, 10 + 2 + MaxSaltLen + 64, false, CONFLICT_CLAUSE::__NOT_SET, true, CONFLICT_CLAUSE::FAIL);
+      tc.addInt(U2P_CreationTime, false, CONFLICT_CLAUSE::__NOT_SET, true, CONFLICT_CLAUSE::FAIL);
+      tc.addInt(U2P_ExpirationTime, false, CONFLICT_CLAUSE::__NOT_SET);
+      tc.addInt(U2P_DisablingTime, false, CONFLICT_CLAUSE::__NOT_SET);
+      tc.createTableAndResetCreator(tp + Tab_User2Password_Ext);
+      pwTab = db->getTab(tp + Tab_User2Password_Ext);
 
       tc.addForeignKey(U2R_UserRef, tp + Tab_User_Ext, CONSISTENCY_ACTION::CASCADE);
       tc.addInt(U2R_Role, false, CONFLICT_CLAUSE::__NOT_SET, true, CONFLICT_CLAUSE::FAIL);
@@ -586,8 +690,12 @@ namespace SqliteOverlay
       string saltAndHash;
       try
       {
-        TabRow r = tab->getSingleRowByColumnValue("id", userId);
-        saltAndHash = r[US_Password];
+        WhereClause w;
+        w.addIntCol(U2P_UserRef, userId);
+        w.addNullCol(U2P_DisablingTime);
+        TabRow pwRow = pwTab->getSingleRowByWhereClause(w);
+
+        saltAndHash = pwRow[U2P_Password];
       }
       catch (...)
       {
