@@ -122,9 +122,14 @@ namespace SqliteOverlay {
     public:
       UserMngr(SqliteDatabase* _db, const string& tablePrefix)
         :GenericObjectManager{_db, tablePrefix + string{Tab_User_Ext}},
-          roleTab{db->getTab(tablePrefix + string{Tab_User2Role_Ext})},
-          sessionTab{db->getTab(tablePrefix + string{Tab_User2Session_Ext})}
+          roleTab{_db->getTab(tablePrefix + string{Tab_User2Role_Ext})},
+          sessionTab{_db->getTab(tablePrefix + string{Tab_User2Session_Ext})},
+          pwTab{_db->getTab(tablePrefix + string{Tab_User2Password_Ext})}
       {
+        if (db == nullptr)
+        {
+          throw invalid_argument("UserMngr: got nullptr for database handle!");
+        }
         if (tab == nullptr)   // if tab could not be initialized, our own tables do not yet exist
         {
           initTabs(tablePrefix);
