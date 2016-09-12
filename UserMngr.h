@@ -137,7 +137,7 @@ namespace SqliteOverlay {
       }
 
       // user management
-      ErrCode createUser(const string& name, const string& pw, int minPwLen=DefaultMinPwLen, int pwExiration__secs = -1,
+      ErrCode createUser(const string& name, const string& pw, int minPwLen=DefaultMinPwLen, int pwExiration__secs = -1, bool createAsLocked=false,
                          int saltLen = DefaultSaltLen, int hashCycles = DefaultHashCycles) const;
       ErrCode setEmail(const string& name, const string& email) const;
       ErrCode updatePassword(const string& name, const string& oldPw, const string& newPw, int historyCheckDepth=1, int minPwLen=DefaultMinPwLen, int pwExiration__secs = -1,

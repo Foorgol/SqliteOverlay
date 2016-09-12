@@ -15,7 +15,7 @@ namespace SqliteOverlay
   namespace UserMngr
   {
 
-    ErrCode UserMngr::createUser(const string& name, const string& pw, int minPwLen, int pwExiration__secs, int saltLen, int hashCycles) const
+    ErrCode UserMngr::createUser(const string& name, const string& pw, int minPwLen, int pwExiration__secs, bool createAsLocked, int saltLen, int hashCycles) const
     {
       // check user and password for formal validity
       string n = boost::trim_copy(name);
@@ -47,7 +47,12 @@ namespace SqliteOverlay
       cvc.addDateTimeCol(US_CreationTime, &now);
       cvc.addIntCol(US_LoginFailCount, 0);
       cvc.addDateTimeCol(US_LastAuthSuccessTime, &now);
-      cvc.addIntCol(US_State, static_cast<int>(UserState::Active));
+      if (createAsLocked)
+      {
+        cvc.addIntCol(US_State, static_cast<int>(UserState::Locked));
+      } else {
+        cvc.addIntCol(US_State, static_cast<int>(UserState::Active));
+      }
 
       int dbErr;
       int newId = tab->insertRow(cvc, &dbErr);
