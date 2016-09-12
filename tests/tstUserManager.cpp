@@ -161,7 +161,7 @@ TEST_F(DatabaseTestScenario, UserMngr_changePassword)
   auto db = getScenario01();
   string prefix = "um";
   UserMngr::UserMngr um{db.get(), prefix};
-  ASSERT_EQ(UserMngr::ErrCode::Success, um.createUser("u", "abc123", 1, 3, 10));
+  ASSERT_EQ(UserMngr::ErrCode::Success, um.createUser("u", "abc123", 3, 10));
 
   // store the raw value of the old password
   DbTab* tUser = db->getTab(prefix + UserMngr::Tab_User_Ext);
