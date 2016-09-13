@@ -13,6 +13,7 @@
 #include <stdexcept>
 
 #include "CommonTabularClass.h"
+#include "ClausesAndQueries.h"
 
 namespace SqliteOverlay
 {
@@ -176,9 +177,10 @@ namespace SqliteOverlay
 
   int CommonTabularClass::getMatchCountForWhereClause(const WhereClause& w) const
   {
-    string sql = w.getSelectStmt(tabName, true);
+    auto stmt = w.getSelectStmt(db, tabName, true);
+    if (stmt == nullptr) return -1;
     int cnt;
-    bool isOk = db->execScalarQueryInt(sql, &cnt, nullptr);
+    bool isOk = db->execScalarQueryInt(stmt, &cnt, nullptr);
 
     return isOk ? cnt : -1;
   }

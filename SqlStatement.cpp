@@ -242,7 +242,14 @@ namespace SqliteOverlay
 
   void SqlStatement::bindString(int argPos, const string& val)
   {
-    sqlite3_bind_text(stmt, argPos, val.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, argPos, val.c_str(), val.length(), SQLITE_TRANSIENT);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqlStatement::bindNull(int argPos)
+  {
+    sqlite3_bind_null(stmt, argPos);
   }
 
   //----------------------------------------------------------------------------

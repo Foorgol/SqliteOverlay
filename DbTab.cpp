@@ -34,8 +34,9 @@ namespace SqliteOverlay
 
   int DbTab::insertRow(const ColumnValueClause& ic, int* errCodeOut)
   {
-    string sql = ic.getInsertStmt(tabName);
-    bool isOk = db->execNonQuery(sql, errCodeOut);
+    auto stmt = ic.getInsertStmt(db, tabName);
+    if (stmt == nullptr) return -1;
+    bool isOk = db->execNonQuery(stmt, errCodeOut);
     if (!isOk)
     {
       // insert failed
@@ -223,9 +224,19 @@ namespace SqliteOverlay
 
   DbTab::CachingRowIterator DbTab::getRowsByWhereClause(const WhereClause& w) const
   {
-    string sql = w.getSelectStmt(tabName, false);
+    auto stmt = w.getSelectStmt(db, tabName, false);
 
-    return getRowsByWhereClause(sql, false);
+    // in case of errors, return an empty CachingRowIterator
+    if (stmt == nullptr)
+    {
+      throw std::invalid_argument("getRowsByWhereClause: invalid query!");
+    }
+    if (!(stmt->step()))
+    {
+      return CachingRowIterator();
+    }
+
+    return DbTab::CachingRowIterator(db, tabName, std::move(stmt));
   }
 
   //----------------------------------------------------------------------------
@@ -347,9 +358,10 @@ namespace SqliteOverlay
 
   int DbTab::deleteRowsByWhereClause(const WhereClause& where, int* errCodeOut) const
   {
-    string sql = where.getDeleteStmt(tabName);
+    auto stmt = where.getDeleteStmt(db, tabName);
+    if (stmt == nullptr) return -1;
 
-    bool isOk = db->execNonQuery(sql, errCodeOut);
+    bool isOk = db->execNonQuery(stmt, errCodeOut);
     if (!isOk)
     {
       // delete failed

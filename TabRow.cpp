@@ -17,6 +17,7 @@
 #include "TabRow.h"
 #include "DbTab.h"
 #include "CommonTabularClass.h"
+#include "ClausesAndQueries.h"
 
 namespace SqliteOverlay
 {
@@ -71,7 +72,7 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::doInit(const WhereClause& where)
+  bool TabRow::doInit(WhereClause where)
   {
     // make sure the database handle is correct
     if (db == NULL)
@@ -91,9 +92,8 @@ namespace SqliteOverlay
 
     // create and execute a "SELECT id FROM ..." from the where clause
     // and limit it to the first hit
-    string sql = where.getSelectStmt(tabName, false);
-    sql += " LIMIT 1";
-    auto stmt = db->prepStatement(sql, nullptr);
+    where.setLimit(1);
+    auto stmt = where.getSelectStmt(db, tabName, false);
     if (stmt == nullptr)
     {
       throw std::invalid_argument("Invalid where clause or no matches for where clause");
@@ -135,9 +135,10 @@ namespace SqliteOverlay
     }
     
     // create and execute the SQL statement
-    string sql = cvc.getUpdateStmt(tabName, rowId);
+    auto stmt = cvc.getUpdateStmt(db, tabName, rowId);
+    if (stmt == nullptr) return false;
 
-    return db->execNonQuery(sql, errCodeOut);
+    return db->execNonQuery(stmt, errCodeOut);
   }
 
 //----------------------------------------------------------------------------

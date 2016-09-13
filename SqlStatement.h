@@ -26,6 +26,7 @@ namespace SqliteOverlay
     void bindInt(int argPos, int val);
     void bindDouble(int argPos, double val);
     void bindString(int argPos, const string& val);
+    void bindNull(int argPos);
 
     bool step(int* errCodeOut=nullptr, Logger* log=nullptr);
 

@@ -5,7 +5,7 @@
 #include "ClausesAndQueries.h"
 
 using namespace SqliteOverlay;
-
+/*
 TEST_F(DatabaseTestScenario, ColumnValueClause_Empty)
 {
   ColumnValueClause cvc;
@@ -343,3 +343,4 @@ TEST_F(DatabaseTestScenario, ScalarQueryResult_Value)
   ASSERT_FALSE(sqr.isNull());
   ASSERT_EQ(42, sqr.get());
 }
+*/

@@ -91,7 +91,7 @@ namespace SqliteOverlay
 
     string cachedWhereStatementForRow;
     
-    bool doInit(const WhereClause& where);
+    bool doInit(WhereClause where);
 
   private:
 
