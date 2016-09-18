@@ -98,9 +98,9 @@ namespace SqliteOverlay
       if (id < 1) return ErrCode::InvalidName;
 
       TabRow r = tab->operator [](id);
-      r.update(US_Email, e);
+      ;
 
-      return ErrCode::Success;
+      return r.update(US_Email, e) ? ErrCode::Success : ErrCode::DatabaseError;
     }
 
     //----------------------------------------------------------------------------
