@@ -147,6 +147,7 @@ namespace SqliteOverlay {
       bool unlockUser(const string& name) const;
       unique_ptr<UserData> getUserData(const string& userName) const;
       unique_ptr<UserData> getUserData(int id) const;
+      int getIdForUser(const string& name) const;
 
       // authentication
       bool hasUser(const string& name);
@@ -200,7 +201,6 @@ namespace SqliteOverlay {
 
     protected:
       void initTabs(const string& tp);
-      int getIdForUser(const string& name) const;
       bool checkPasswort(int userId, const string& providedPw) const;
       bool assignRole(const string& name, int roleId) const;
       bool removeRole(const string& name, int roleId) const;

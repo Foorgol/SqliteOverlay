@@ -160,12 +160,12 @@ namespace SqliteOverlay {
 
     virtual ~ScalarQueryResult(){}
 
-    bool isNull()
+    bool isNull() const
     {
       return _isNull;
     }
 
-    T get()
+    T get() const
     {
       if (_isNull)
       {
