@@ -98,6 +98,14 @@ namespace SqliteOverlay {
       unique_ptr<Sloppy::DateTime::UTCTimestamp> lastAuthFail;
       int failCount;
       UserState state;
+      int uid;
+
+      // default constructor
+      UserData(){}
+
+      // copy constructor and copy assignment
+      UserData(const UserData& src);
+      UserData& operator=(const UserData& src);
     };
 
     struct AuthInfo
@@ -148,6 +156,7 @@ namespace SqliteOverlay {
       unique_ptr<UserData> getUserData(const string& userName) const;
       unique_ptr<UserData> getUserData(int id) const;
       int getIdForUser(const string& name) const;
+      vector<UserData> getAllUsers() const;
 
       // authentication
       bool hasUser(const string& name);

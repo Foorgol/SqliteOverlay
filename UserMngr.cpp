@@ -272,6 +272,9 @@ namespace SqliteOverlay
       TabRow r = tab->operator [](id);
       r.update(US_State, static_cast<int>(UserState::Locked));
 
+      // terminate all open sessions for this user
+      terminateAllUserSessions(name);
+
       return true;
     }
 
@@ -312,6 +315,7 @@ namespace SqliteOverlay
         TabRow pwRow = pwTab->getSingleRowByWhereClause(w);
 
         unique_ptr<UserData> result = make_unique<UserData>();
+        result->uid = id;
         result->loginName = userRow[US_LoginName];
         auto email = userRow.getString2(US_Email);
         result->email = (email->isNull()) ? "" : email->get();
@@ -688,6 +692,23 @@ namespace SqliteOverlay
 
     //----------------------------------------------------------------------------
 
+    vector<UserData> UserMngr::getAllUsers() const
+    {
+      vector<UserData> result;
+      auto it = tab->getAllRows();
+      while (!(it.isEnd()))
+      {
+        TabRow r = *it;
+        auto ud = getUserData(r.getId());
+        if (ud != nullptr) result.push_back(*ud);
+        ++it;
+      }
+
+      return result;
+    }
+
+    //----------------------------------------------------------------------------
+
     bool UserMngr::checkPasswort(int userId, const string& providedPw) const
     {
       if (userId < 1) return false;
@@ -769,6 +790,70 @@ namespace SqliteOverlay
       w.addIntCol(U2R_UserRef, uid);
       w.addIntCol(U2R_Role, roleId);
       return (roleTab->getMatchCountForWhereClause(w) > 0);
+    }
+
+    //----------------------------------------------------------------------------
+
+    UserData::UserData(const UserData& src)
+    {
+      // copy the plain data fields
+      loginName = src.loginName;
+      email = src.email;
+      userCreationTime = src.userCreationTime;
+      lastPwChange = src.lastPwChange;
+      lastAuthSuccess = src.lastAuthSuccess;
+      failCount = src.failCount;
+      state = src.state;
+      uid = src.uid;
+
+      // handle the unique_ptr fields
+      if (src.pwExpirationTime != nullptr)
+      {
+        time_t raw = src.pwExpirationTime->getRawTime();
+        pwExpirationTime = make_unique<UTCTimestamp>(raw);
+      } else {
+        pwExpirationTime = nullptr;
+      }
+      if (src.lastAuthFail != nullptr)
+      {
+        time_t raw = src.lastAuthFail->getRawTime();
+        lastAuthFail = make_unique<UTCTimestamp>(raw);
+      } else {
+        lastAuthFail = nullptr;
+      }
+    }
+
+    //----------------------------------------------------------------------------
+
+    UserData& UserData::operator=(const UserData& src)
+    {
+      // copy the plain data fields
+      loginName = src.loginName;
+      email = src.email;
+      userCreationTime = src.userCreationTime;
+      lastPwChange = src.lastPwChange;
+      lastAuthSuccess = src.lastAuthSuccess;
+      failCount = src.failCount;
+      state = src.state;
+      uid = src.uid;
+
+      // handle the unique_ptr fields
+      if (src.pwExpirationTime != nullptr)
+      {
+        time_t raw = src.pwExpirationTime->getRawTime();
+        pwExpirationTime = make_unique<UTCTimestamp>(raw);
+      } else {
+        pwExpirationTime = nullptr;
+      }
+      if (src.lastAuthFail != nullptr)
+      {
+        time_t raw = src.lastAuthFail->getRawTime();
+        lastAuthFail = make_unique<UTCTimestamp>(raw);
+      } else {
+        lastAuthFail = nullptr;
+      }
+
+      return *this;
     }
 
     //----------------------------------------------------------------------------
