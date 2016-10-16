@@ -119,11 +119,29 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  unique_ptr<TabRow> DbTab::getSingleRowByColumnValue2(const string& col, int val) const
+  {
+    WhereClause w;
+    w.addIntCol(col, val);
+    return get2(w);
+  }
+
+  //----------------------------------------------------------------------------
+
   TabRow DbTab::getSingleRowByColumnValue(const string& col, double val) const
   {
     WhereClause w;
     w.addDoubleCol(col, val);
     return TabRow(db, tabName, w);
+  }
+
+  //----------------------------------------------------------------------------
+
+  unique_ptr<TabRow> DbTab::getSingleRowByColumnValue2(const string& col, double val) const
+  {
+    WhereClause w;
+    w.addDoubleCol(col, val);
+    return get2(w);
   }
 
   //----------------------------------------------------------------------------
@@ -137,11 +155,29 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  unique_ptr<TabRow> DbTab::getSingleRowByColumnValue2(const string& col, const string& val) const
+  {
+    WhereClause w;
+    w.addStringCol(col, val);
+    return get2(w);
+  }
+
+  //----------------------------------------------------------------------------
+
   TabRow DbTab::getSingleRowByColumnValueNull(const string& col) const
   {
     WhereClause w;
     w.addNullCol(col);
     return TabRow(db, tabName, w);
+  }
+
+  //----------------------------------------------------------------------------
+
+  unique_ptr<TabRow> DbTab::getSingleRowByColumnValueNull2(const string& col) const
+  {
+    WhereClause w;
+    w.addNullCol(col);
+    return get2(w);
   }
 
   //----------------------------------------------------------------------------

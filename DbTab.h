@@ -58,9 +58,13 @@ namespace SqliteOverlay
     unique_ptr<TabRow> get2(int id) const;
     unique_ptr<TabRow> get2(const WhereClause& w) const;
     TabRow getSingleRowByColumnValue(const string& col, int val) const;
+    unique_ptr<TabRow> getSingleRowByColumnValue2(const string& col, int val) const;
     TabRow getSingleRowByColumnValue(const string& col, double val) const;
+    unique_ptr<TabRow> getSingleRowByColumnValue2(const string& col, double val) const;
     TabRow getSingleRowByColumnValue(const string& col, const string& val) const;
+    unique_ptr<TabRow> getSingleRowByColumnValue2(const string& col, const string& val) const;
     TabRow getSingleRowByColumnValueNull(const string& col) const;
+    unique_ptr<TabRow> getSingleRowByColumnValueNull2(const string& col) const;
     TabRow getSingleRowByWhereClause(const WhereClause& w) const;
     TabRow getSingleRowByWhereClause(const string& w) const;
     CachingRowIterator getRowsByWhereClause(const WhereClause& w) const;
