@@ -8,9 +8,10 @@
 #include <vector>
 #include <unordered_map>
 
-#include "Logger.h"
+#include <Sloppy/libSloppy.h>
+#include <Sloppy/Logger/Logger.h>
+
 #include "SqlStatement.h"
-#include "HelperFunc.h"
 
 using namespace std;
 
@@ -108,12 +109,12 @@ namespace SqliteOverlay
 
     void tableCreationHelper(const string& tabName, const vector<string>& colDefs, int* errCodeOut=nullptr);
     void viewCreationHelper(const string& viewName, const string& selectStmt, int* errCodeOut=nullptr);
-    void indexCreationHelper(const string& tabName, const string& idxName, const StringList& colNames, bool isUnique=false, int* errCodeOut=nullptr);
+    void indexCreationHelper(const string& tabName, const string& idxName, const Sloppy::StringList& colNames, bool isUnique=false, int* errCodeOut=nullptr);
     void indexCreationHelper(const string& tabName, const string& idxName, const string& colName, bool isUnique=false, int* errCodeOut=nullptr);
     void indexCreationHelper(const string& tabName, const string& colName, bool isUnique=false, int* errCodeOut=nullptr);
 
-    StringList allTableNames(bool getViews=false);
-    StringList allViewNames();
+    Sloppy::StringList allTableNames(bool getViews=false);
+    Sloppy::StringList allViewNames();
 
     bool hasTable(const string& name, bool isView=false);
     bool hasView(const string& name);
@@ -128,7 +129,7 @@ namespace SqliteOverlay
                                              TRANSACTION_DESTRUCTOR_ACTION dtorAct = TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK,
                                              int* errCodeOut=nullptr);
 
-    void setLogLevel(int newLvl);
+    void setLogLevel(SeverityLevel newMinLvl);
 
     DbTab* getTab (const string& tabName);
 

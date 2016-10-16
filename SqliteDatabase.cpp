@@ -1,8 +1,9 @@
 #include <sys/stat.h>
 
+#include <Sloppy/libSloppy.h>
+#include <Sloppy/Logger/Logger.h>
+
 #include "SqliteDatabase.h"
-#include "Logger.h"
-#include "StringHelper.h"
 #include "DbTab.h"
 #include "Transaction.h"
 
@@ -36,7 +37,7 @@ namespace SqliteOverlay
     int err = sqlite3_open(dbFileName.c_str(), &tmpPtr);
     if (tmpPtr == nullptr)
     {
-      throw runtime_error("No memory for allocating sqlite instance");
+      throw std::runtime_error("No memory for allocating sqlite instance");
     }
     if (err != SQLITE_OK)
     {
@@ -54,7 +55,7 @@ namespace SqliteOverlay
 
     // prepare a logger
     log = unique_ptr<Logger>(new Logger(dbFileName));
-    log->info("Ready for use");
+    log->trace("Ready for use");
 
     // Explicitly enable support for foreign keys
     // and disable synchronous writes for better performance
@@ -560,10 +561,10 @@ namespace SqliteOverlay
 
     sql += "AUTOINCREMENT";
 
-    sql += ", " + commaSepStringFromStringList(colDefs);
+    sql += ", " + Sloppy::commaSepStringFromStringList(colDefs);
 
     if (foreignKeyCreationCache.size() != 0) {
-      sql += ", " + commaSepStringFromStringList(foreignKeyCreationCache);
+      sql += ", " + Sloppy::commaSepStringFromStringList(foreignKeyCreationCache);
       foreignKeyCreationCache.clear();
     }
 
@@ -584,7 +585,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const StringList &colNames, bool isUnique, int* errCodeOut)
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const Sloppy::StringList &colNames, bool isUnique, int* errCodeOut)
   {
     if (idxName.empty()) return;
     if (!(hasTable(tabName))) return;
@@ -593,7 +594,7 @@ namespace SqliteOverlay
     if (isUnique) sql += "UNIQUE ";
     sql += "INDEX IF NOT EXISTS ";
     sql += idxName + " ON " + tabName + " (";
-    sql += commaSepStringFromStringList(colNames) + ")";
+    sql += Sloppy::commaSepStringFromStringList(colNames) + ")";
     execNonQuery(sql, errCodeOut);
   }
 
@@ -601,7 +602,7 @@ namespace SqliteOverlay
 
   void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const string &colName, bool isUnique, int* errCodeOut)
   {
-    StringList colList;
+    Sloppy::StringList colList;
     colList.push_back(colName);
     indexCreationHelper(tabName, idxName, colList, isUnique, errCodeOut);
   }
@@ -621,9 +622,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  StringList SqliteDatabase::allTableNames(bool getViews)
+  Sloppy::StringList SqliteDatabase::allTableNames(bool getViews)
   {
-    StringList result;
+    Sloppy::StringList result;
 
     string sql = "SELECT name FROM sqlite_master WHERE type='";
     sql += getViews ? "view" : "table";
@@ -648,7 +649,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  StringList SqliteDatabase::allViewNames()
+  Sloppy::StringList SqliteDatabase::allViewNames()
   {
     return allTableNames(true);
   }
@@ -657,7 +658,7 @@ namespace SqliteOverlay
 
   bool SqliteDatabase::hasTable(const string& name, bool isView)
   {
-    StringList allTabs = allTableNames(isView);
+    Sloppy::StringList allTabs = allTableNames(isView);
     for(string n : allTabs)
     {
       if (n == name) return true;
@@ -733,9 +734,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::setLogLevel(int newLvl)
+  void SqliteDatabase::setLogLevel(Sloppy::Logger::SeverityLevel newMinLvl)
   {
-    log->setLevel(newLvl);
+    log->setMinLogLevel(newMinLvl);
   }
 
   //----------------------------------------------------------------------------

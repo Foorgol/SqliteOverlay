@@ -1,11 +1,11 @@
 /*
  * Copyright © 2014 Volker Knollmann
- * 
+ *
  * This work is free. You can redistribute it and/or modify it under the
  * terms of the Do What The Fuck You Want To Public License, Version 2,
  * as published by Sam Hocevar. See the COPYING file or visit
  * http://www.wtfpl.net/ for more details.
- * 
+ *
  * This program comes without any warranty. Use it at your own risk or
  * don't use it at all.
  */
@@ -13,7 +13,6 @@
 #include <memory>
 
 #include "DbTab.h"
-#include "HelperFunc.h"
 #include "TabRow.h"
 
 namespace SqliteOverlay
@@ -23,20 +22,21 @@ namespace SqliteOverlay
   {
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   DbTab::DbTab(SqliteDatabase* _db, const string& _tabName)
-  : CommonTabularClass (_db, _tabName, false)
+    : CommonTabularClass (_db, _tabName, false)
   {
 
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   int DbTab::insertRow(const ColumnValueClause& ic, int* errCodeOut)
   {
-    string sql = ic.getInsertStmt(tabName);
-    bool isOk = db->execNonQuery(sql, errCodeOut);
+    auto stmt = ic.getInsertStmt(db, tabName);
+    if (stmt == nullptr) return -1;
+    bool isOk = db->execNonQuery(stmt, errCodeOut);
     if (!isOk)
     {
       // insert failed
@@ -47,7 +47,7 @@ namespace SqliteOverlay
     return db->getLastInsertId();
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   int DbTab::insertRow(int* errCodeOut)
   {
@@ -56,21 +56,59 @@ namespace SqliteOverlay
     return insertRow(empty, errCodeOut);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   TabRow DbTab::operator [](const int id) const
   {
     return TabRow(db, tabName, id);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   TabRow DbTab::operator [](const WhereClause& w) const
   {
     return TabRow(db, tabName, w);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
+  unique_ptr<TabRow> DbTab::get2(int id) const
+  {
+    try
+    {
+      TabRow r{db, tabName, id};
+
+      // if we survived this, the row exists
+      return make_unique<TabRow>(db, tabName, id, true);
+    }
+    catch(...)
+    {
+      return nullptr;
+    }
+
+    return nullptr;   // we should never reach this
+  }
+
+  //----------------------------------------------------------------------------
+
+  unique_ptr<TabRow> DbTab::get2(const WhereClause& w) const
+  {
+    try
+    {
+      TabRow r{db, tabName, w};
+
+      // if we survived this, the row exists
+      return make_unique<TabRow>(db, tabName, r.getId(), true);
+    }
+    catch(...)
+    {
+      return nullptr;
+    }
+
+    return nullptr;   // we should never reach this
+  }
+
+  //----------------------------------------------------------------------------
 
   TabRow DbTab::getSingleRowByColumnValue(const string& col, int val) const
   {
@@ -79,7 +117,16 @@ namespace SqliteOverlay
     return TabRow(db, tabName, w);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
+  unique_ptr<TabRow> DbTab::getSingleRowByColumnValue2(const string& col, int val) const
+  {
+    WhereClause w;
+    w.addIntCol(col, val);
+    return get2(w);
+  }
+
+  //----------------------------------------------------------------------------
 
   TabRow DbTab::getSingleRowByColumnValue(const string& col, double val) const
   {
@@ -88,7 +135,16 @@ namespace SqliteOverlay
     return TabRow(db, tabName, w);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
+  unique_ptr<TabRow> DbTab::getSingleRowByColumnValue2(const string& col, double val) const
+  {
+    WhereClause w;
+    w.addDoubleCol(col, val);
+    return get2(w);
+  }
+
+  //----------------------------------------------------------------------------
 
   TabRow DbTab::getSingleRowByColumnValue(const string& col, const string& val) const
   {
@@ -97,7 +153,16 @@ namespace SqliteOverlay
     return TabRow(db, tabName, w);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
+  unique_ptr<TabRow> DbTab::getSingleRowByColumnValue2(const string& col, const string& val) const
+  {
+    WhereClause w;
+    w.addStringCol(col, val);
+    return get2(w);
+  }
+
+  //----------------------------------------------------------------------------
 
   TabRow DbTab::getSingleRowByColumnValueNull(const string& col) const
   {
@@ -106,10 +171,19 @@ namespace SqliteOverlay
     return TabRow(db, tabName, w);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
+  unique_ptr<TabRow> DbTab::getSingleRowByColumnValueNull2(const string& col) const
+  {
+    WhereClause w;
+    w.addNullCol(col);
+    return get2(w);
+  }
+
+  //----------------------------------------------------------------------------
 
   DbTab::CachingRowIterator::CachingRowIterator(SqliteDatabase* _db, const string& _tabName, upSqlStatement stmt)
-  : db(_db), tabName(_tabName)
+    : db(_db), tabName(_tabName)
   {
     // no checks for the validity of _db and _tabName here, because
     // we assume that the constructor is only called internally with
@@ -144,7 +218,7 @@ namespace SqliteOverlay
     cachedLength = idList.size();
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   DbTab::CachingRowIterator::CachingRowIterator()
     : db(nullptr), tabName("")
@@ -153,7 +227,7 @@ namespace SqliteOverlay
     cachedLength = 0;
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   bool DbTab::CachingRowIterator::isEnd() const
   {
@@ -167,14 +241,14 @@ namespace SqliteOverlay
     return (curIdx < cachedLength);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   bool DbTab::CachingRowIterator::isEmpty() const
   {
     return (cachedLength == 0);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   void DbTab::CachingRowIterator::operator ++()
   {
@@ -186,7 +260,7 @@ namespace SqliteOverlay
     }
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   TabRow DbTab::CachingRowIterator::operator *() const
   {
@@ -198,14 +272,14 @@ namespace SqliteOverlay
     return TabRow(db, tabName, id, true);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   int DbTab::CachingRowIterator::length() const
   {
     return cachedLength;
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   double DbTab::CachingRowIterator::getPercentage() const
   {
@@ -220,16 +294,26 @@ namespace SqliteOverlay
     return curIdx / (cachedLength -1.0);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   DbTab::CachingRowIterator DbTab::getRowsByWhereClause(const WhereClause& w) const
   {
-    string sql = w.getSelectStmt(tabName, false);
+    auto stmt = w.getSelectStmt(db, tabName, false);
 
-    return getRowsByWhereClause(sql, false);
+    // in case of errors, return an empty CachingRowIterator
+    if (stmt == nullptr)
+    {
+      throw std::invalid_argument("getRowsByWhereClause: invalid query!");
+    }
+    if (!(stmt->step()))
+    {
+      return CachingRowIterator();
+    }
+
+    return DbTab::CachingRowIterator(db, tabName, std::move(stmt));
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   DbTab::CachingRowIterator DbTab::getRowsByWhereClause(const string& w, bool isWhereClauseOnly) const
   {
@@ -254,7 +338,7 @@ namespace SqliteOverlay
     return DbTab::CachingRowIterator(db, tabName, std::move(stmt));
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   DbTab::CachingRowIterator DbTab::getRowsByColumnValue(const string& col, int val) const
   {
@@ -263,7 +347,7 @@ namespace SqliteOverlay
     return getRowsByWhereClause(w);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   DbTab::CachingRowIterator DbTab::getRowsByColumnValue(const string& col, double val) const
   {
@@ -272,7 +356,7 @@ namespace SqliteOverlay
     return getRowsByWhereClause(w);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   DbTab::CachingRowIterator DbTab::getRowsByColumnValue(const string& col, const string& val) const
   {
@@ -281,7 +365,7 @@ namespace SqliteOverlay
     return getRowsByWhereClause(w);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   DbTab::CachingRowIterator DbTab::getRowsByColumnValueNull(const string& col) const
   {
@@ -290,7 +374,7 @@ namespace SqliteOverlay
     return getRowsByWhereClause(w);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   DbTab::CachingRowIterator DbTab::getAllRows() const
   {
@@ -310,7 +394,7 @@ namespace SqliteOverlay
     return DbTab::CachingRowIterator(db, tabName, std::move(stmt));
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   TabRow DbTab::getSingleRowByWhereClause(const WhereClause& w) const
   {
@@ -344,11 +428,56 @@ namespace SqliteOverlay
     return TabRow(db, tabName, rowId, true);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   int DbTab::deleteRowsByWhereClause(const WhereClause& where, int* errCodeOut) const
   {
-    string sql = where.getDeleteStmt(tabName);
+    auto stmt = where.getDeleteStmt(db, tabName);
+    if (stmt == nullptr) return -1;
+
+    bool isOk = db->execNonQuery(stmt, errCodeOut);
+    if (!isOk)
+    {
+      // delete failed
+      return -1;
+    }
+
+    // delete succeeded
+    return db->getRowsAffected();
+  }
+
+  //----------------------------------------------------------------------------
+
+  int DbTab::deleteRowsByColumnValue(const string& col, const int val, int* errCodeOut) const
+  {
+    WhereClause w;
+    w.addIntCol(col, val);
+    return deleteRowsByWhereClause(w, errCodeOut);
+  }
+
+  //----------------------------------------------------------------------------
+
+  int DbTab::deleteRowsByColumnValue(const string& col, const double val, int* errCodeOut) const
+  {
+    WhereClause w;
+    w.addDoubleCol(col, val);
+    return deleteRowsByWhereClause(w, errCodeOut);
+  }
+
+  //----------------------------------------------------------------------------
+
+  int DbTab::deleteRowsByColumnValue(const string& col, const string& val, int* errCodeOut) const
+  {
+    WhereClause w;
+    w.addStringCol(col, val);
+    return deleteRowsByWhereClause(w, errCodeOut);
+  }
+
+  //----------------------------------------------------------------------------
+
+  int DbTab::clear(int* errCodeOut) const
+  {
+    string sql = "DELETE FROM " + tabName;
 
     bool isOk = db->execNonQuery(sql, errCodeOut);
     if (!isOk)
@@ -361,34 +490,7 @@ namespace SqliteOverlay
     return db->getRowsAffected();
   }
 
-//----------------------------------------------------------------------------
-
-  int DbTab::deleteRowsByColumnValue(const string& col, const int val, int* errCodeOut) const
-  {
-    WhereClause w;
-    w.addIntCol(col, val);
-    return deleteRowsByWhereClause(w, errCodeOut);
-  }
-
-//----------------------------------------------------------------------------
-
-  int DbTab::deleteRowsByColumnValue(const string& col, const double val, int* errCodeOut) const
-  {
-    WhereClause w;
-    w.addDoubleCol(col, val);
-    return deleteRowsByWhereClause(w, errCodeOut);
-  }
-
-//----------------------------------------------------------------------------
-
-  int DbTab::deleteRowsByColumnValue(const string& col, const string& val, int* errCodeOut) const
-  {
-    WhereClause w;
-    w.addStringCol(col, val);
-    return deleteRowsByWhereClause(w, errCodeOut);
-  }
-
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   bool DbTab::hasRowId(int id) const
   {
@@ -408,12 +510,12 @@ namespace SqliteOverlay
     return stmt->hasData();
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
 }

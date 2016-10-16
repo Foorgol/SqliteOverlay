@@ -70,8 +70,8 @@ namespace SqliteOverlay
 
   private:
     SqliteDatabase* db;
-    StringList foreignKeyCreationCache;
-    StringList colDefs;
+    Sloppy::StringList foreignKeyCreationCache;
+    Sloppy::StringList colDefs;
     string conflictClause2String(CONFLICT_CLAUSE cc);
   };
   

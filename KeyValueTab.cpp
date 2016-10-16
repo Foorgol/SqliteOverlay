@@ -20,7 +20,6 @@
 #include <cmath>
 
 #include "KeyValueTab.h"
-#include "HelperFunc.h"
 #include "TableCreator.h"
 
 namespace SqliteOverlay

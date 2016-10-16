@@ -3,10 +3,12 @@
 #include <cstring>
 #include <cstdlib>
 
+#include "Sloppy/DateTime/DateAndTime.h"
+
 #include "SqlStatement.h"
-#include "DateAndTime.h"
 
 using namespace std;
+using namespace Sloppy::DateTime;
 
 namespace SqliteOverlay
 {
@@ -15,7 +17,7 @@ namespace SqliteOverlay
   {
     if (dbPtr == nullptr)
     {
-      throw runtime_error("Reived null-pointer for database handle");
+      throw std::runtime_error("Reived null-pointer for database handle");
     }
 
     if (sqlTxt.empty())
@@ -37,7 +39,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<SqlStatement> SqlStatement::get(sqlite3* dbPtr, const string& sqlTxt, int* errCodeOut, const Logger* log)
+  unique_ptr<SqlStatement> SqlStatement::get(sqlite3* dbPtr, const string& sqlTxt, int* errCodeOut, Logger* log)
   {
     SqlStatement* tmpPtr;
     try
@@ -71,7 +73,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqlStatement::step(int* errCodeOut, const Logger* log)
+  bool SqlStatement::step(int* errCodeOut, Logger* log)
   {
     if (_isDone)
     {
@@ -119,7 +121,7 @@ namespace SqliteOverlay
       msg += "hasData = " + to_string(_hasData);
       msg += "; isDone = " + to_string(_isDone);
       msg += "; columns returned = " + to_string(resultColCount);
-      log->info(msg);
+      log->trace(msg);
     }
 
     return ((err == SQLITE_ROW) || (err == SQLITE_DONE) || (err == SQLITE_OK));
@@ -177,12 +179,12 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqlStatement::getLocalTime(int colId, LocalTimestamp* out) const
+  bool SqlStatement::getLocalTime(int colId, LocalTimestamp* out, boost::local_time::time_zone_ptr tzp) const
   {
     if (getColumnValue_prep<LocalTimestamp>(colId, out))
     {
       time_t rawTime = sqlite3_column_int(stmt, colId);
-      *out = LocalTimestamp(rawTime);
+      *out = LocalTimestamp(rawTime, tzp);
       return true;
     }
     return false;
@@ -240,7 +242,14 @@ namespace SqliteOverlay
 
   void SqlStatement::bindString(int argPos, const string& val)
   {
-    sqlite3_bind_text(stmt, argPos, val.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, argPos, val.c_str(), val.length(), SQLITE_TRANSIENT);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqlStatement::bindNull(int argPos)
+  {
+    sqlite3_bind_null(stmt, argPos);
   }
 
   //----------------------------------------------------------------------------

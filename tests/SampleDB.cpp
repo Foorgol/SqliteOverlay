@@ -10,12 +10,13 @@
  * don't use it at all.
  */
 
+#include <Sloppy/libSloppy.h>
+
 #include "SampleDB.h"
-#include "HelperFunc.h"
 
 void SampleDB::populateTables()
 {
-  StringList col;
+  Sloppy::StringList col;
   col.push_back("i INTEGER");
   col.push_back("f DOUBLE");
   col.push_back("s VARCHAR(40)");

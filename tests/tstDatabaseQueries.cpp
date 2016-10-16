@@ -1,9 +1,10 @@
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
 
+#include <Sloppy/libSloppy.h>
+
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"
-#include "HelperFunc.h"
 #include "ClausesAndQueries.h"
 
 using namespace SqliteOverlay;
@@ -170,7 +171,7 @@ TEST_F(DatabaseTestScenario, QueryAllTableAndViewNames)
 {
   auto db = getScenario01();
 
-  StringList names = db->allTableNames();
+  Sloppy::StringList names = db->allTableNames();
   ASSERT_EQ(2, names.size());
   ASSERT_FALSE(names.at(0) == names.at(1));
   ASSERT_TRUE((names.at(0) == "t1") || (names.at(0) == "t2"));

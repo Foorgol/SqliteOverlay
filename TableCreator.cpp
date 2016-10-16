@@ -16,9 +16,9 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <Sloppy/libSloppy.h>
 
 #include "TableCreator.h"
-#include "StringHelper.h"
 
 namespace SqliteOverlay
 {
@@ -153,10 +153,10 @@ namespace SqliteOverlay
 
     sql += "AUTOINCREMENT";
 
-    sql += ", " + commaSepStringFromStringList(colDefs);
+    sql += ", " + Sloppy::commaSepStringFromStringList(colDefs);
 
     if (foreignKeyCreationCache.size() != 0) {
-      sql += ", " + commaSepStringFromStringList(foreignKeyCreationCache);
+      sql += ", " + Sloppy::commaSepStringFromStringList(foreignKeyCreationCache);
       foreignKeyCreationCache.clear();
     }
 

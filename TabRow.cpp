@@ -12,10 +12,12 @@
 
 #include <stdexcept>
 
+#include "Sloppy/libSloppy.h"
+
 #include "TabRow.h"
-#include "HelperFunc.h"
 #include "DbTab.h"
 #include "CommonTabularClass.h"
+#include "ClausesAndQueries.h"
 
 namespace SqliteOverlay
 {
@@ -70,7 +72,7 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::doInit(const WhereClause& where)
+  bool TabRow::doInit(WhereClause where)
   {
     // make sure the database handle is correct
     if (db == NULL)
@@ -90,9 +92,8 @@ namespace SqliteOverlay
 
     // create and execute a "SELECT id FROM ..." from the where clause
     // and limit it to the first hit
-    string sql = where.getSelectStmt(tabName, false);
-    sql += " LIMIT 1";
-    auto stmt = db->prepStatement(sql, nullptr);
+    where.setLimit(1);
+    auto stmt = where.getSelectStmt(db, tabName, false);
     if (stmt == nullptr)
     {
       throw std::invalid_argument("Invalid where clause or no matches for where clause");
@@ -134,9 +135,10 @@ namespace SqliteOverlay
     }
     
     // create and execute the SQL statement
-    string sql = cvc.getUpdateStmt(tabName, rowId);
+    auto stmt = cvc.getUpdateStmt(db, tabName, rowId);
+    if (stmt == nullptr) return false;
 
-    return db->execNonQuery(sql, errCodeOut);
+    return db->execNonQuery(stmt, errCodeOut);
   }
 
 //----------------------------------------------------------------------------
@@ -204,10 +206,10 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  LocalTimestamp TabRow::getLocalTime(const string& colName) const
+  LocalTimestamp TabRow::getLocalTime(const string& colName, boost::local_time::time_zone_ptr tzp) const
   {
     time_t rawTime = getInt(colName);
-    return LocalTimestamp(rawTime);
+    return LocalTimestamp(rawTime, tzp);
   }
 
   //----------------------------------------------------------------------------
@@ -216,6 +218,14 @@ namespace SqliteOverlay
   {
     time_t rawTime = getInt(colName);
     return UTCTimestamp(rawTime);
+  }
+
+  //----------------------------------------------------------------------------
+
+  boost::gregorian::date TabRow::getDate(const string& colName) const
+  {
+    int ymd = getInt(colName);
+    return greg::from_int(ymd);
   }
 
 //----------------------------------------------------------------------------
@@ -262,7 +272,7 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<LocalTimestamp> > TabRow::getLocalTime2(const string& colName) const
+  unique_ptr<ScalarQueryResult<LocalTimestamp> > TabRow::getLocalTime2(const string& colName, boost::local_time::time_zone_ptr tzp) const
   {
     if (colName.empty())
     {
@@ -275,10 +285,10 @@ namespace SqliteOverlay
 
     if (rawTime->isNull())
     {
-      return unique_ptr<ScalarQueryResult<LocalTimestamp>>(new ScalarQueryResult<LocalTimestamp>());
+      return unique_ptr<ScalarQueryResult<LocalTimestamp>>(new ScalarQueryResult<LocalTimestamp>(tzp));
     }
 
-    LocalTimestamp result(rawTime->get());
+    LocalTimestamp result(rawTime->get(), tzp);
     return unique_ptr<ScalarQueryResult<LocalTimestamp>>(new ScalarQueryResult<LocalTimestamp>(result));
   }
 
@@ -300,8 +310,24 @@ namespace SqliteOverlay
       return unique_ptr<ScalarQueryResult<UTCTimestamp>>(new ScalarQueryResult<UTCTimestamp>());
     }
 
-    UTCTimestamp result(rawTime->get());
+    UTCTimestamp result(static_cast<time_t>(rawTime->get()));  // use the constructor for time_t, otherwise the int would be interpreted as YMD-notation!
     return unique_ptr<ScalarQueryResult<UTCTimestamp>>(new ScalarQueryResult<UTCTimestamp>(result));
+  }
+
+  //----------------------------------------------------------------------------
+
+  unique_ptr<ScalarQueryResult<boost::gregorian::date> > TabRow::getDate2(const string& colName) const
+  {
+    auto ymd = getInt2(colName);
+    if (ymd == nullptr) return nullptr;
+
+    if (ymd->isNull())
+    {
+      return unique_ptr<ScalarQueryResult<greg::date>>(new ScalarQueryResult<greg::date>());
+    }
+
+    greg::date d = greg::from_int(ymd->get());
+    return unique_ptr<ScalarQueryResult<greg::date>>(new ScalarQueryResult<greg::date>(d));
   }
 
 //----------------------------------------------------------------------------
@@ -347,6 +373,13 @@ namespace SqliteOverlay
     ColumnValueClause cvc;
     cvc.addDateTimeCol(colName, &newVal);
     return update(cvc, errCodeOut);
+  }
+
+//----------------------------------------------------------------------------
+
+  bool TabRow::update(const string& colName, const boost::gregorian::date& newVal, int* errCodeOut) const
+  {
+    return update(colName, greg::to_int(newVal), errCodeOut);
   }
 
 //----------------------------------------------------------------------------

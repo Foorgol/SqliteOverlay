@@ -3,7 +3,6 @@
 
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"
-#include "HelperFunc.h"
 #include "ClausesAndQueries.h"
 #include "DbTab.h"
 #include "TabRow.h"
@@ -77,6 +76,16 @@ TEST_F(DatabaseTestScenario, TabRow_getters)
   ASSERT_EQ(nullptr, r.getInt2("skjfh"));
   ASSERT_EQ(nullptr, r.getString2("skjfh"));
   ASSERT_EQ(nullptr, r.getDouble2("skjfh"));
+
+  // test date functions
+  //
+  // before the test, modify the int value in row 1 to get a suitable date value
+  r.update("i", 20160807);
+  boost::gregorian::date dExpected{2016, 8, 7};
+  ASSERT_EQ(dExpected, r.getDate("i"));
+  auto dt = r.getDate2("i");
+  ASSERT_TRUE(dt != nullptr);
+  ASSERT_EQ(dExpected, dt->get());
 }
 
 //----------------------------------------------------------------

@@ -14,7 +14,6 @@
 #define	SQLITE_OVERLAY_DBTAB_H
 
 #include "CommonTabularClass.h"
-#include "HelperFunc.h"
 #include "ClausesAndQueries.h"
 
 
@@ -56,10 +55,16 @@ namespace SqliteOverlay
     int insertRow(int* errCodeOut=nullptr);
     TabRow operator[](const int id) const;
     TabRow operator[](const WhereClause& w ) const;
+    unique_ptr<TabRow> get2(int id) const;
+    unique_ptr<TabRow> get2(const WhereClause& w) const;
     TabRow getSingleRowByColumnValue(const string& col, int val) const;
+    unique_ptr<TabRow> getSingleRowByColumnValue2(const string& col, int val) const;
     TabRow getSingleRowByColumnValue(const string& col, double val) const;
+    unique_ptr<TabRow> getSingleRowByColumnValue2(const string& col, double val) const;
     TabRow getSingleRowByColumnValue(const string& col, const string& val) const;
+    unique_ptr<TabRow> getSingleRowByColumnValue2(const string& col, const string& val) const;
     TabRow getSingleRowByColumnValueNull(const string& col) const;
+    unique_ptr<TabRow> getSingleRowByColumnValueNull2(const string& col) const;
     TabRow getSingleRowByWhereClause(const WhereClause& w) const;
     TabRow getSingleRowByWhereClause(const string& w) const;
     CachingRowIterator getRowsByWhereClause(const WhereClause& w) const;
@@ -73,6 +78,7 @@ namespace SqliteOverlay
     int deleteRowsByColumnValue(const string& col, const int val, int* errCodeOut=nullptr) const;
     int deleteRowsByColumnValue(const string& col, const double val, int* errCodeOut=nullptr) const;
     int deleteRowsByColumnValue(const string& col, const string& val, int* errCodeOut=nullptr) const;
+    int clear(int* errCodeOut=nullptr) const;
 
     bool hasRowId(int id) const;
 

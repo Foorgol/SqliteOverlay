@@ -1,15 +1,16 @@
 #include <boost/filesystem.hpp>
 
 #include "BasicTestClass.h"
-#include "Logger.h"
+#include "Sloppy/Logger/Logger.h"
 
 namespace boostfs = boost::filesystem;
+using namespace Sloppy::Logger;
 
 void BasicTestFixture::SetUp()
 {
   //qDebug() << "\n\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n";
 
-  log = unique_ptr<SqliteOverlay::Logger>(new SqliteOverlay::Logger("UnitTest"));
+  log = unique_ptr<Logger>(new Logger("UnitTest"));
 
   // create a dir for temporary files created during testing
   tstDirPath = boostfs::temp_directory_path();
@@ -18,7 +19,7 @@ void BasicTestFixture::SetUp()
     throw std::runtime_error("Could not create temporary directory for test files!");
   }
 
-  log->info("Using directory " + tstDirPath.native() + " for temporary files");
+  log->trace("Using directory " + tstDirPath.native() + " for temporary files");
 }
 
 void BasicTestFixture::TearDown()

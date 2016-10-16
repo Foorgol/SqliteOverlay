@@ -6,10 +6,11 @@
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
 
-#include "Logger.h"
+#include "Sloppy/Logger/Logger.h"
 
 using namespace std;
 namespace boostfs = boost::filesystem;
+using namespace Sloppy::Logger;
 
 class EmptyFixture
 {
@@ -27,7 +28,7 @@ protected:
   string getTestDir () const;
   string genTestFilePath(string fName) const;
   boostfs::path tstDirPath;
-  unique_ptr<SqliteOverlay::Logger> log;
+  unique_ptr<Logger> log;
   void printStartMsg(string _tcName);
   void printEndMsg();
 

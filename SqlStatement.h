@@ -7,10 +7,12 @@
 
 #include <sqlite3.h>
 
-#include "Logger.h"
-#include "DateAndTime.h"
+#include "Sloppy/DateTime/DateAndTime.h"
+#include "Sloppy/Logger/Logger.h"
 
 using namespace std;
+using namespace Sloppy::DateTime;
+using namespace Sloppy::Logger;
 
 namespace SqliteOverlay
 {  
@@ -18,14 +20,15 @@ namespace SqliteOverlay
   class SqlStatement
   {
   public:
-    static unique_ptr<SqlStatement> get(sqlite3* dbPtr, const string& sqlTxt, int* errCodeOut=nullptr, const Logger* log=nullptr);
+    static unique_ptr<SqlStatement> get(sqlite3* dbPtr, const string& sqlTxt, int* errCodeOut=nullptr, Logger* log=nullptr);
     ~SqlStatement();
 
     void bindInt(int argPos, int val);
     void bindDouble(int argPos, double val);
     void bindString(int argPos, const string& val);
+    void bindNull(int argPos);
 
-    bool step(int* errCodeOut=nullptr, const Logger* log=nullptr);
+    bool step(int* errCodeOut=nullptr, Logger* log=nullptr);
 
     bool hasData() const;
     bool isDone() const;
@@ -33,7 +36,7 @@ namespace SqliteOverlay
     bool getInt(int colId, int* out) const;
     bool getDouble(int colId, double* out) const;
     bool getString(int colId, string* out) const;
-    bool getLocalTime(int colId, LocalTimestamp* out) const;
+    bool getLocalTime(int colId, LocalTimestamp* out, boost::local_time::time_zone_ptr tzp) const;
     bool getUTCTime(int colId, UTCTimestamp* out) const;
 
     int getColType(int colId) const;
