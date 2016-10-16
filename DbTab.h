@@ -55,6 +55,8 @@ namespace SqliteOverlay
     int insertRow(int* errCodeOut=nullptr);
     TabRow operator[](const int id) const;
     TabRow operator[](const WhereClause& w ) const;
+    unique_ptr<TabRow> get2(int id) const;
+    unique_ptr<TabRow> get2(const WhereClause& w) const;
     TabRow getSingleRowByColumnValue(const string& col, int val) const;
     TabRow getSingleRowByColumnValue(const string& col, double val) const;
     TabRow getSingleRowByColumnValue(const string& col, const string& val) const;

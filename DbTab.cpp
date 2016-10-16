@@ -72,6 +72,44 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  unique_ptr<TabRow> DbTab::get2(int id) const
+  {
+    try
+    {
+      TabRow r{db, tabName, id};
+
+      // if we survived this, the row exists
+      return make_unique<TabRow>(db, tabName, id, true);
+    }
+    catch(...)
+    {
+      return nullptr;
+    }
+
+    return nullptr;   // we should never reach this
+  }
+
+  //----------------------------------------------------------------------------
+
+  unique_ptr<TabRow> DbTab::get2(const WhereClause& w) const
+  {
+    try
+    {
+      TabRow r{db, tabName, w};
+
+      // if we survived this, the row exists
+      return make_unique<TabRow>(db, tabName, r.getId(), true);
+    }
+    catch(...)
+    {
+      return nullptr;
+    }
+
+    return nullptr;   // we should never reach this
+  }
+
+  //----------------------------------------------------------------------------
+
   TabRow DbTab::getSingleRowByColumnValue(const string& col, int val) const
   {
     WhereClause w;
