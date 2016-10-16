@@ -32,16 +32,13 @@ ENDIF()
 
 set(LIB_SOURCES
     SqliteDatabase.cpp
-    Logger.cpp
     SqlStatement.cpp
-    HelperFunc.cpp
     CommonTabularClass.cpp
     DbTab.cpp
     TabRow.cpp
     ClausesAndQueries.cpp
     GenericDatabaseObject.cpp
     GenericObjectManager.cpp
-    DateAndTime.cpp
     KeyValueTab.cpp
     TableCreator.cpp
     Transaction.cpp
@@ -110,13 +107,11 @@ set(LIB_SOURCES_TST
 )
 
 find_package(GTest)
-find_package(Boost COMPONENTS filesystem system)
 
 if (GTEST_FOUND AND Boost_FOUND AND BUILD_TESTS)
     message("   !!! Tests will be build as well !!!")
     include_directories("." ${GTEST_INCLUDE_DIRS})
 
-    #add_executable(${PROJECT_NAME}_Tests EXCLUDE_FROM_ALL ${LIB_SOURCES} ${LIB_SOURCES_TST})
     add_executable(${PROJECT_NAME}_Tests ${LIB_SOURCES} ${LIB_SOURCES_TST})
     set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD 14)
     set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD_REQUIRED ON)
