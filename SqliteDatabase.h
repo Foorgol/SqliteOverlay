@@ -27,6 +27,30 @@ namespace SqliteOverlay
     __NOT_SET
   };
 
+  enum class CONFLICT_CLAUSE
+  {
+    ROLLBACK,
+    ABORT,
+    FAIL,
+    IGNORE,
+    REPLACE,
+    __NOT_SET
+  };
+
+
+  //----------------------------------------------------------------------------
+
+  // some free functions, mostly for creating SQL strings
+
+  string conflictClause2String(CONFLICT_CLAUSE cc);
+  string buildColumnConstraint(bool isUnique, CONFLICT_CLAUSE uniqueConflictClause,
+                               bool notNull, CONFLICT_CLAUSE notNullConflictClause,
+                               bool hasDefault, const string& defVal="");
+  string buildForeignKeyClause(const string& referedTable, CONSISTENCY_ACTION onDelete,
+                               CONSISTENCY_ACTION onUpdate, string referedColumn="id");
+
+  //----------------------------------------------------------------------------
+
   enum class TRANSACTION_TYPE
   {
     DEFERRED,
@@ -40,11 +64,19 @@ namespace SqliteOverlay
     ROLLBACK,
   };
 
+  //----------------------------------------------------------------------------
+
+  //
+  // forward definitions
+  //
+
   class DbTab;
   class Transaction;
 
   template<class T>
   class ScalarQueryResult;
+
+  //----------------------------------------------------------------------------
 
   struct SqliteDeleter
   {
@@ -52,6 +84,8 @@ namespace SqliteOverlay
   };
 
   typedef unique_ptr<sqlite3, SqliteDeleter> upSqlite3Db;
+
+  //----------------------------------------------------------------------------
 
   class SqliteDatabase
   {

@@ -199,3 +199,26 @@ TEST_F(DatabaseTestScenario, DbTab_GetRowsByWhereClause)
 
 //----------------------------------------------------------------
 
+TEST_F(DatabaseTestScenario, DbTab_AddColumn)
+{
+  auto db = getScenario01();
+  auto t1 = db->getTab("t1");
+  ASSERT_TRUE(t1 != nullptr);
+
+  // try to create an existing column
+  ASSERT_FALSE(t1->addColumn_int("i", false, CONFLICT_CLAUSE::__NOT_SET, false, 0, true));
+
+  // create a new column without constraints
+  ASSERT_TRUE(t1->addColumn_int("i2", false, CONFLICT_CLAUSE::__NOT_SET, false, 0, true));
+
+  // create a new column with invalid constraints ("not null" but without default)
+  ASSERT_FALSE(t1->addColumn_int("i3", true, CONFLICT_CLAUSE::__NOT_SET, false, 0, true));
+
+  // create a new column with valid constraints
+  ASSERT_TRUE(t1->addColumn_int("i3", true, CONFLICT_CLAUSE::__NOT_SET, true, 42, true));
+  TabRow r = (*t1)[1];
+  ASSERT_EQ(42, r.getInt("i3"));
+
+  // create a new column with a foreign key
+  ASSERT_TRUE(t1->addColumn_foreignKey("k1", "t2", CONSISTENCY_ACTION::CASCADE, CONSISTENCY_ACTION::__NOT_SET));
+}

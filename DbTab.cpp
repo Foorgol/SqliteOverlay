@@ -12,6 +12,8 @@
 
 #include <memory>
 
+#include <boost/algorithm/string.hpp>
+
 #include "DbTab.h"
 #include "TabRow.h"
 
@@ -488,6 +490,91 @@ namespace SqliteOverlay
 
     // delete succeeded
     return db->getRowsAffected();
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool DbTab::addColumn(const string& colName, const string& typeStr, const string& constraints)
+  {
+    string cn{colName};
+    boost::trim(cn);
+    if (cn.empty()) return false;
+
+    string ts{typeStr};
+    boost::trim(ts);
+    if (ts.empty()) return false;
+
+    //
+    // we skip any consistency checks here; this function is private and it's assumed
+    // that any checks have been performed before by the associated public functions
+    //
+
+    // construct an "alter table" sql query for inserting the column
+    string sql = "ALTER TABLE " + tabName + " ADD COLUMN " + cn + " " + ts;
+
+    // add any constraints
+    if (!(constraints.empty())) sql += " " + constraints;
+
+    // actually add the column
+    int dbErr;
+    bool isOk = db->execNonQuery(sql, &dbErr);
+    return (isOk && (dbErr == SQLITE_DONE));
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool DbTab::addColumn(const string& colName, const string& typeStr, bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool hasDefault, const string& defaultValue, bool returnErrorIfExists)
+  {
+    // check if the column exists
+    if (hasColumn(colName))
+    {
+      return !returnErrorIfExists;
+    }
+
+    // if "not null" is requested, a default value is mandatory
+    if (notNull && !hasDefault) return false;
+
+    string constraints = buildColumnConstraint(false, CONFLICT_CLAUSE::__NOT_SET, notNull, notNullConflictClause,
+                                               hasDefault, defaultValue);
+    return addColumn(colName, typeStr, constraints);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool DbTab::addColumn_Varchar(const string& colName, int len, bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool hasDefault, const string& defaultValue, bool returnErrorIfExists)
+  {
+    string tName = "VARCHAR(" + to_string(len) + ")";
+    return addColumn(colName, tName, notNull, notNullConflictClause, hasDefault, defaultValue, returnErrorIfExists);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool DbTab::addColumn_int(const string& colName, bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool hasDefault, int defaultValue, bool returnErrorIfExists)
+  {
+    return addColumn(colName, "INTEGER", notNull, notNullConflictClause, hasDefault, to_string(defaultValue), returnErrorIfExists);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool DbTab::addColumn_text(const string& colName, bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool hasDefault, const string& defaultValue, bool returnErrorIfExists)
+  {
+    return addColumn(colName, "TEXT", notNull, notNullConflictClause, hasDefault, defaultValue, returnErrorIfExists);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool DbTab::addColumn_foreignKey(const string& colName, const string& referedTabName, CONSISTENCY_ACTION onDelete, CONSISTENCY_ACTION onUpdate, bool returnErrorIfExists)
+  {
+    // check if the column exists
+    if (hasColumn(colName))
+    {
+      return !returnErrorIfExists;
+    }
+
+    // build a foreign key constraint
+    string constraints = buildForeignKeyClause(referedTabName, onDelete, onUpdate);
+
+    return addColumn(colName, "INTEGER", constraints);
   }
 
   //----------------------------------------------------------------------------

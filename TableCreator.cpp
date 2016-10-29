@@ -65,75 +65,30 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void TableCreator::addCol(const string& colName, const string& colTypeName, bool isUnique, CONFLICT_CLAUSE uniqueConflictClause, bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool hasDefault, const string& defaultValue)
+  void TableCreator::addCol(const string& colName, const string& colTypeName, bool isUnique, CONFLICT_CLAUSE uniqueConflictClause,
+                            bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool hasDefault, const string& defaultValue)
   {
     if (colName.empty()) return;
     if (colTypeName.empty()) return;
 
     string colDef = colName + " " + colTypeName;
 
-    if (isUnique)
-    {
-      colDef += " UNIQUE";
-      if (uniqueConflictClause != CONFLICT_CLAUSE::__NOT_SET)
-      {
-        colDef += " ON CONFLICT " + conflictClause2String(uniqueConflictClause);
-      }
-    }
-
-    if (notNull)
-    {
-      colDef += " NOT NULL";
-      if (notNullConflictClause != CONFLICT_CLAUSE::__NOT_SET)
-      {
-        colDef += " ON CONFLICT " + conflictClause2String(notNullConflictClause);
-      }
-    }
-
-    if (hasDefault)
-    {
-      colDef += " DEFAULT " + defaultValue;
-    }
+    colDef += buildColumnConstraint(isUnique, uniqueConflictClause, notNull, notNullConflictClause,
+                                    hasDefault, defaultValue);
 
     addCol(colDef);
   }
 
   //----------------------------------------------------------------------------
 
-  void TableCreator::addForeignKey(const string& keyName, const string& referedTable, CONSISTENCY_ACTION onDelete, CONSISTENCY_ACTION onUpdate)
+  void TableCreator::addForeignKey(const string& keyName, const string& referedTable, CONSISTENCY_ACTION onDelete, CONSISTENCY_ACTION onUpdate,
+                                   bool notNull, CONFLICT_CLAUSE notNullConflictClause)
   {
-    // a little helper to translate a CONSISTENCY_ACTION value into a string
-    auto ca2string = [](CONSISTENCY_ACTION ca) -> string {
-      switch (ca)
-      {
-        case CONSISTENCY_ACTION::NO_ACTION:
-          return "NO ACTION";
-        case CONSISTENCY_ACTION::SET_NULL:
-          return "SET NULL";
-        case CONSISTENCY_ACTION::SET_DEFAULT:
-          return "SET DEFAULT";
-        case CONSISTENCY_ACTION::CASCADE:
-          return "CASCADE";
-        case CONSISTENCY_ACTION::RESTRICT:
-          return "RESTRICT";
-      }
-      return "";
-    };
-
-    string ref = "FOREIGN KEY (" + keyName + ") REFERENCES " + referedTable + "(id)";
-
-    if (onDelete != CONSISTENCY_ACTION::__NOT_SET)
-    {
-      ref += " ON DELETE " + ca2string(onDelete);
-    }
-
-    if (onUpdate != CONSISTENCY_ACTION::__NOT_SET)
-    {
-      ref += " ON UPDATE " + ca2string(onUpdate);
-    }
+    string ref = "FOREIGN KEY (" + keyName + ") ";
+    ref += buildForeignKeyClause(referedTable, onDelete, onUpdate);
 
     foreignKeyCreationCache.push_back(ref);
-    addInt(keyName);
+    addInt(keyName, false, CONFLICT_CLAUSE::__NOT_SET, notNull, notNullConflictClause);
   }
 
   //----------------------------------------------------------------------------
@@ -148,6 +103,8 @@ namespace SqliteOverlay
 
   DbTab* TableCreator::createTableAndResetCreator(const string& tabName, int* errCodeOut)
   {
+    // assemble a "create table" statement from the column definitions and the
+    // stored foreign key clauses
     string sql = "CREATE TABLE IF NOT EXISTS " + tabName + " (";
     sql += "id INTEGER NOT NULL PRIMARY KEY ";
 
@@ -160,38 +117,18 @@ namespace SqliteOverlay
       foreignKeyCreationCache.clear();
     }
 
-    sql += ");";
+    sql += ")";
 
-    db->execNonQuery(sql, errCodeOut);
+    // execute the statement
+    bool isOk = db->execNonQuery(sql, errCodeOut);
+    if (!isOk) return nullptr;
+
     reset();
 
     return db->getTab(tabName);
   }
 
   //----------------------------------------------------------------------------
-
-  string TableCreator::conflictClause2String(CONFLICT_CLAUSE cc)
-  {
-    switch (cc)
-    {
-    case CONFLICT_CLAUSE::ABORT:
-      return "ABORT";
-
-    case CONFLICT_CLAUSE::FAIL:
-      return "FAIL";
-
-    case CONFLICT_CLAUSE::IGNORE:
-      return "IGNORE";
-
-    case CONFLICT_CLAUSE::REPLACE:
-      return "REPLACE";
-
-    case CONFLICT_CLAUSE::ROLLBACK:
-      return "ROLLBACK";
-    }
-
-    return "";  // includes __NOT_SET
-  }
 
     
 //----------------------------------------------------------------------------

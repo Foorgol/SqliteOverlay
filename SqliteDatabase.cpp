@@ -968,4 +968,106 @@ namespace SqliteOverlay
     }
   }
 
+  //----------------------------------------------------------------------------
+
+  string conflictClause2String(CONFLICT_CLAUSE cc)
+  {
+    switch (cc)
+    {
+    case CONFLICT_CLAUSE::ABORT:
+      return "ABORT";
+
+    case CONFLICT_CLAUSE::FAIL:
+      return "FAIL";
+
+    case CONFLICT_CLAUSE::IGNORE:
+      return "IGNORE";
+
+    case CONFLICT_CLAUSE::REPLACE:
+      return "REPLACE";
+
+    case CONFLICT_CLAUSE::ROLLBACK:
+      return "ROLLBACK";
+    }
+
+    return "";  // includes __NOT_SET
+  }
+
+  //----------------------------------------------------------------------------
+
+  string buildColumnConstraint(bool isUnique, CONFLICT_CLAUSE uniqueConflictClause, bool notNull, CONFLICT_CLAUSE notNullConflictClause,
+                               bool hasDefault, const string& defVal)
+  {
+    string result;
+
+    if (isUnique)
+    {
+      result += "UNIQUE";
+      if (uniqueConflictClause != CONFLICT_CLAUSE::__NOT_SET)
+      {
+        result += " ON CONFLICT " + conflictClause2String(uniqueConflictClause);
+      }
+    }
+
+    if (notNull)
+    {
+      if (!(result.empty())) result += " ";
+
+      result += "NOT NULL";
+      if (notNullConflictClause != CONFLICT_CLAUSE::__NOT_SET)
+      {
+        result += " ON CONFLICT " + conflictClause2String(notNullConflictClause);
+      }
+    }
+
+    if (hasDefault)
+    {
+      if (!(result.empty())) result += " ";
+
+      result += "DEFAULT '";
+      if (!(defVal.empty())) result += defVal;
+      result += "'";
+    }
+
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  string buildForeignKeyClause(const string& referedTable, CONSISTENCY_ACTION onDelete, CONSISTENCY_ACTION onUpdate, string referedColumn)
+  {
+    // a little helper to translate a CONSISTENCY_ACTION value into a string
+    auto ca2string = [](CONSISTENCY_ACTION ca) -> string {
+      switch (ca)
+      {
+        case CONSISTENCY_ACTION::NO_ACTION:
+          return "NO ACTION";
+        case CONSISTENCY_ACTION::SET_NULL:
+          return "SET NULL";
+        case CONSISTENCY_ACTION::SET_DEFAULT:
+          return "SET DEFAULT";
+        case CONSISTENCY_ACTION::CASCADE:
+          return "CASCADE";
+        case CONSISTENCY_ACTION::RESTRICT:
+          return "RESTRICT";
+      }
+      return "";
+    };
+
+    string result = "REFERENCES " + referedTable + "(" + referedColumn + ")";
+
+    if (onDelete != CONSISTENCY_ACTION::__NOT_SET)
+    {
+      result += " ON DELETE " + ca2string(onDelete);
+    }
+
+    if (onUpdate != CONSISTENCY_ACTION::__NOT_SET)
+    {
+      if (!(result.empty())) result += " ";
+      result += " ON UPDATE " + ca2string(onUpdate);
+    }
+
+    return result;
+  }
+
 }

@@ -27,16 +27,6 @@
 
 namespace SqliteOverlay
 {
-  enum class CONFLICT_CLAUSE
-  {
-    ROLLBACK,
-    ABORT,
-    FAIL,
-    IGNORE,
-    REPLACE,
-    __NOT_SET
-  };
-
   class TableCreator
   {
   public:
@@ -61,7 +51,8 @@ namespace SqliteOverlay
     // add foreign keys
     void addForeignKey(const string& keyName, const string& referedTable,
                                CONSISTENCY_ACTION onDelete=CONSISTENCY_ACTION::__NOT_SET,
-                               CONSISTENCY_ACTION onUpdate=CONSISTENCY_ACTION::__NOT_SET);
+                               CONSISTENCY_ACTION onUpdate=CONSISTENCY_ACTION::__NOT_SET,
+                       bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET);
     // reset all internal data
     void reset();
 
@@ -72,7 +63,7 @@ namespace SqliteOverlay
     SqliteDatabase* db;
     Sloppy::StringList foreignKeyCreationCache;
     Sloppy::StringList colDefs;
-    string conflictClause2String(CONFLICT_CLAUSE cc);
+    Sloppy::StringList defaultValues;
   };
   
 }

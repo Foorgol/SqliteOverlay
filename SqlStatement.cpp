@@ -22,7 +22,7 @@ namespace SqliteOverlay
 
     if (sqlTxt.empty())
     {
-      throw invalid_argument("Receied empty SQL statement");
+      throw invalid_argument("Received empty SQL statement");
     }
 
     int err = sqlite3_prepare_v2(dbPtr, sqlTxt.c_str(), -1, &stmt, nullptr);
@@ -45,13 +45,26 @@ namespace SqliteOverlay
     try
     {
       tmpPtr = new SqlStatement(dbPtr, sqlTxt, errCodeOut);
-    } catch (exception e) {
+    }
+    catch (invalid_argument e)
+    {
       if (log != nullptr)
       {
         string msg = "Creating SQL statement '";
         msg += sqlTxt;
         msg += "' raised: ";
         msg += e.what();
+        log->warn(msg);
+      }
+      return nullptr;
+    }
+
+    catch (...) {
+      if (log != nullptr)
+      {
+        string msg = "Creating SQL statement '";
+        msg += sqlTxt;
+        msg += "' caused an internal error!";
         log->warn(msg);
       }
       return nullptr;

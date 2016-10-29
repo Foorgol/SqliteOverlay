@@ -80,10 +80,24 @@ namespace SqliteOverlay
     int deleteRowsByColumnValue(const string& col, const string& val, int* errCodeOut=nullptr) const;
     int clear(int* errCodeOut=nullptr) const;
 
+    bool addColumn(const string& colName, const string& typeStr, bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
+                   bool hasDefault=false, const string& defaultValue="", bool returnErrorIfExists=false);
+    bool addColumn_Varchar(const string& colName, int len, bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
+                   bool hasDefault=false, const string& defaultValue="", bool returnErrorIfExists=false);
+    bool addColumn_int(const string& colName, bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
+                   bool hasDefault=false, int defaultValue=0, bool returnErrorIfExists=false);
+    bool addColumn_text(const string& colName, bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
+                   bool hasDefault=false, const string& defaultValue="", bool returnErrorIfExists=false);
+    bool addColumn_foreignKey(const string& colName, const string& referedTabName,
+                              CONSISTENCY_ACTION onDelete=CONSISTENCY_ACTION::__NOT_SET,
+                              CONSISTENCY_ACTION onUpdate=CONSISTENCY_ACTION::__NOT_SET,
+                              bool returnErrorIfExists=false);
+
     bool hasRowId(int id) const;
 
   private:
     DbTab (SqliteDatabase* db, const string& tabName);
+    bool addColumn(const string& colName, const string& typeStr, const string& constraints);
   };
 
 }
