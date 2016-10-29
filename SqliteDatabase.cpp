@@ -554,26 +554,6 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::tableCreationHelper(const string& tabName, const vector<string>& colDefs, int* errCodeOut)
-  {
-    string sql = "CREATE TABLE IF NOT EXISTS " + tabName + " (";
-    sql += "id INTEGER NOT NULL PRIMARY KEY ";
-
-    sql += "AUTOINCREMENT";
-
-    sql += ", " + Sloppy::commaSepStringFromStringList(colDefs);
-
-    if (foreignKeyCreationCache.size() != 0) {
-      sql += ", " + Sloppy::commaSepStringFromStringList(foreignKeyCreationCache);
-      foreignKeyCreationCache.clear();
-    }
-
-    sql += ");";
-    execNonQuery(sql, errCodeOut);
-  }
-
-  //----------------------------------------------------------------------------
-
   void SqliteDatabase::viewCreationHelper(const string& viewName, const string& selectStmt, int* errCodeOut)
   {
     string sql = "CREATE VIEW IF NOT EXISTS";

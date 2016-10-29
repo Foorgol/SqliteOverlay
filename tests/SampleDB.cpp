@@ -13,16 +13,22 @@
 #include <Sloppy/libSloppy.h>
 
 #include "SampleDB.h"
+#include "TableCreator.h"
 
 void SampleDB::populateTables()
 {
-  Sloppy::StringList col;
-  col.push_back("i INTEGER");
-  col.push_back("f DOUBLE");
-  col.push_back("s VARCHAR(40)");
-  col.push_back("d DATETIME");
-  tableCreationHelper("t1", col, nullptr);
-  tableCreationHelper("t2", col, nullptr);
+  TableCreator tc{this};
+  tc.addInt("i");
+  tc.addVarchar("s", 40);
+  tc.addCol("f", "DOUBLE");
+  tc.addCol("d", "DATETIME");
+  tc.createTableAndResetCreator("t1");
+
+  tc.addInt("i");
+  tc.addVarchar("s", 40);
+  tc.addCol("f", "DOUBLE");
+  tc.addCol("d", "DATETIME");
+  tc.createTableAndResetCreator("t2");
 }
 
 void SampleDB::populateViews()

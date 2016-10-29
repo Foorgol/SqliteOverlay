@@ -141,7 +141,6 @@ namespace SqliteOverlay
     virtual void populateTables() {}
     virtual void populateViews() {}
 
-    void tableCreationHelper(const string& tabName, const vector<string>& colDefs, int* errCodeOut=nullptr);
     void viewCreationHelper(const string& viewName, const string& selectStmt, int* errCodeOut=nullptr);
     void indexCreationHelper(const string& tabName, const string& idxName, const Sloppy::StringList& colNames, bool isUnique=false, int* errCodeOut=nullptr);
     void indexCreationHelper(const string& tabName, const string& idxName, const string& colName, bool isUnique=false, int* errCodeOut=nullptr);
