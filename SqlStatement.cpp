@@ -34,7 +34,7 @@ namespace SqliteOverlay
 
     // initialize the random number generator (need to generate
     // random savepoint names in transaction)
-    srand(time(nullptr));
+    //srand(time(nullptr));
   }
 
   //----------------------------------------------------------------------------

@@ -43,6 +43,7 @@ set(LIB_SOURCES
     TableCreator.cpp
     Transaction.cpp
     UserMngr.cpp
+    ActionMngr.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
@@ -80,6 +81,7 @@ set(INSTALLATION_HEADERS
     TableCreator.h
     Transaction.h
     UserMngr.h
+    ActionMngr.h
     )
 install(FILES ${INSTALLATION_HEADERS} DESTINATION include/SqliteOverlay)
 
@@ -104,6 +106,7 @@ set(LIB_SOURCES_TST
     tests/tstTransaction.cpp
     tests/tstCopyAndBackup.cpp
     tests/tstUserManager.cpp
+    tests/tstActionManager.cpp
 )
 
 find_package(GTest)
