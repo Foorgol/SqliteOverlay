@@ -15,12 +15,15 @@ enum class DemoActions
   A3
 };
 
+using TestAction = ActionMngr::Action<SqliteDatabase, DemoActions>;
+using TestActionMngr = ActionMngr::ActionMngr<SqliteDatabase, TestAction, DemoActions>;
+
 TEST_F(DatabaseTestScenario, ActionMngr_createTables)
 {
   auto db = getScenario01();
 
   ASSERT_TRUE(db->getTab(ActionTabName) == nullptr);
-  ActionMngr::ActionMngr am{db.get(), ActionTabName};
+  TestActionMngr am{db.get(), ActionTabName};
   ASSERT_TRUE(db->getTab(ActionTabName) != nullptr);
 }
 
@@ -29,10 +32,10 @@ TEST_F(DatabaseTestScenario, ActionMngr_createTables)
 TEST_F(DatabaseTestScenario, ActionMngr_createAction)
 {
   auto db = getScenario01();
-  ActionMngr::ActionMngr am{db.get(), ActionTabName};
+  TestActionMngr am{db.get(), ActionTabName};
 
   // create an action with infinite validity
-  unique_ptr<ActionMngr::Action> a = am.createNewAction<DemoActions>(DemoActions::A2, -1);
+  unique_ptr<TestAction> a = am.createNewAction(DemoActions::A2, -1);
   ASSERT_TRUE(a != nullptr);
 
   // make sure the table entries are correct
@@ -48,7 +51,7 @@ TEST_F(DatabaseTestScenario, ActionMngr_createAction)
   ASSERT_TRUE(e->isNull());
 
   // create an action with 10 secs validity
-  a = am.createNewAction<DemoActions>(DemoActions::A1, 10);
+  a = am.createNewAction(DemoActions::A1, 10);
   ASSERT_TRUE(a != nullptr);
 
   // make sure the table entries are correct
@@ -71,13 +74,13 @@ TEST_F(DatabaseTestScenario, ActionMngr_createAction)
 TEST_F(DatabaseTestScenario, ActionMngr_delAction)
 {
   auto db = getScenario01();
-  ActionMngr::ActionMngr am{db.get(), ActionTabName};
+  TestActionMngr am{db.get(), ActionTabName};
   DbTab* aTab = db->getTab(ActionTabName);
 
   // create five actions with 10 secs validity
   for (int i=0; i<5 ; ++i)
   {
-    auto a = am.createNewAction<DemoActions>(DemoActions::A3, 10);
+    auto a = am.createNewAction(DemoActions::A3, 10);
     ASSERT_TRUE(a != nullptr);
   }
   ASSERT_EQ(5, aTab->length());
@@ -116,13 +119,13 @@ TEST_F(DatabaseTestScenario, ActionMngr_delAction)
 TEST_F(DatabaseTestScenario, ActionMngr_hasNonce)
 {
   auto db = getScenario01();
-  ActionMngr::ActionMngr am{db.get(), ActionTabName};
+  TestActionMngr am{db.get(), ActionTabName};
   DbTab* aTab = db->getTab(ActionTabName);
 
   // create five actions with 10 secs validity
   for (int i=0; i<5 ; ++i)
   {
-    auto a = am.createNewAction<DemoActions>(DemoActions::A3, 10);
+    auto a = am.createNewAction(DemoActions::A3, 10);
     ASSERT_TRUE(a != nullptr);
   }
   ASSERT_EQ(5, aTab->length());
@@ -148,17 +151,17 @@ TEST_F(DatabaseTestScenario, ActionMngr_hasNonce)
 TEST_F(DatabaseTestScenario, ActionMngr_ActionGetters)
 {
   auto db = getScenario01();
-  ActionMngr::ActionMngr am{db.get(), ActionTabName};
+  TestActionMngr am{db.get(), ActionTabName};
   DbTab* aTab = db->getTab(ActionTabName);
 
   // create an action with 10 secs validity
-  auto a = am.createNewAction<DemoActions>(DemoActions::A3, 10);
+  auto a = am.createNewAction(DemoActions::A3, 10);
   ASSERT_TRUE(a != nullptr);
   TabRow r = (*aTab)[1];
 
   // test the getters
   ASSERT_EQ(r[ActionMngr::PA_Nonce], a->getNonce());
-  ASSERT_EQ(DemoActions::A3, a->getType<DemoActions>());
+  ASSERT_EQ(DemoActions::A3, a->getType());
   UTCTimestamp now;
   ASSERT_EQ(now, a->getCreationDate());
   now.applyOffset(10);
@@ -176,11 +179,11 @@ TEST_F(DatabaseTestScenario, ActionMngr_ActionGetters)
 TEST_F(DatabaseTestScenario, ActionMngr_ActionOtherData)
 {
   auto db = getScenario01();
-  ActionMngr::ActionMngr am{db.get(), ActionTabName};
+  TestActionMngr am{db.get(), ActionTabName};
   DbTab* aTab = db->getTab(ActionTabName);
 
   // create an action with 10 secs validity
-  auto a = am.createNewAction<DemoActions>(DemoActions::A3, 10);
+  auto a = am.createNewAction(DemoActions::A3, 10);
   ASSERT_TRUE(a != nullptr);
   TabRow r = (*aTab)[1];
 
