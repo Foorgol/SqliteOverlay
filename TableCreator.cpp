@@ -71,7 +71,7 @@ namespace SqliteOverlay
     if (colName.empty()) return;
     if (colTypeName.empty()) return;
 
-    string colDef = colName + " " + colTypeName;
+    string colDef = colName + " " + colTypeName + " ";
 
     colDef += buildColumnConstraint(isUnique, uniqueConflictClause, notNull, notNullConflictClause,
                                     hasDefault, defaultValue);
