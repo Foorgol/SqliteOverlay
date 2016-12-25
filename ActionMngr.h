@@ -9,7 +9,7 @@
 #include <Sloppy/Crypto/Crypto.h>
 
 #include "GenericObjectManager.h"
-#include "SqliteOverlay/GenericDatabaseObject.h"
+#include "GenericDatabaseObject.h"
 #include "TableCreator.h"
 
 namespace SqliteOverlay {
