@@ -23,19 +23,19 @@ namespace SqliteOverlay {
     inline void addIntCol(const string& colName, int val)
     {
       intVals.push_back(val);
-      colVals.push_back(ColValInfo{colName, ColValType::Int, intVals.size() - 1, ""});
+      colVals.push_back(ColValInfo{colName, ColValType::Int, static_cast<int>(intVals.size()) - 1, ""});
     }
 
     inline void addDoubleCol(const string& colName, double val)
     {
       doubleVals.push_back(val);
-      colVals.push_back(ColValInfo{colName, ColValType::Double, doubleVals.size() - 1, ""});
+      colVals.push_back(ColValInfo{colName, ColValType::Double, static_cast<int>(doubleVals.size()) - 1, ""});
     }
 
     inline void addStringCol(const string& colName, const string& val)
     {
       stringVals.push_back(val);
-      colVals.push_back(ColValInfo{colName, ColValType::String, stringVals.size() - 1, ""});
+      colVals.push_back(ColValInfo{colName, ColValType::String, static_cast<int>(stringVals.size()) - 1, ""});
     }
 
     inline void addNullCol(const string& colName)
