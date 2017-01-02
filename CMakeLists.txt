@@ -14,12 +14,19 @@ include_directories("." ${GTEST_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
 add_definitions(-DBOOST_LOG_DYN_LINK=1)  # linking fails if this is not set
 
+# A path prefix for mapping MSYS2-directories to "raw" directories
+set(WIN_LOCAL_PREFIX "D:/PortablePrograms/msys64/usr/local")
+
 #
 # My lib of sloppyly implemented helper functions
 #
 find_library(Sloppy_LIB NAME Sloppy PATHS /usr/local/lib /usr/lib /usr/local/lib64 /usr/lib64)
 set(LIBS ${LIBS} ${Sloppy_LIB})
-include_directories(${Sloppy_INCLUDE_DIR})
+message("Using Sloppy lib at " ${Sloppy_LIB})
+
+if (WIN32)
+  include_directories(${WIN_LOCAL_PREFIX}/include)
+ENDIF()
 
 # detect if we are on windows, because for windows
 # we have to use special code for timegm()
@@ -66,14 +73,14 @@ set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${LIB_VERSION_STRING}
 # CMake's default destination path is /usr/local which is just fine
 #
 IF (WIN32)
- set(CMAKE_INSTALL_PREFIX D:/PortablePrograms/msys64/usr/local )
- install(TARGETS ${PROJECT_NAME}
-         RUNTIME DESTINATION lib
-        )
+  set(CMAKE_INSTALL_PREFIX ${WIN_LOCAL_PREFIX} )
+  install(TARGETS ${PROJECT_NAME}
+          RUNTIME DESTINATION lib
+         )
 ELSE()
- install(TARGETS ${PROJECT_NAME}
-         LIBRARY DESTINATION lib
-        )
+  install(TARGETS ${PROJECT_NAME}
+          LIBRARY DESTINATION lib
+         )
 ENDIF()
 
 set(INSTALLATION_HEADERS
