@@ -10,6 +10,8 @@
  * don't use it at all.
  */
 
+#include <boost/date_time/local_time/local_time.hpp>
+
 #include <Sloppy/libSloppy.h>
 
 #include "SampleDB.h"

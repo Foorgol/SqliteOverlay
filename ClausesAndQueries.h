@@ -3,8 +3,6 @@
 
 #include <vector>
 
-#include <boost/date_time/gregorian/gregorian.hpp>
-
 #include <Sloppy/libSloppy.h>
 #include <Sloppy/DateTime/DateAndTime.h>
 

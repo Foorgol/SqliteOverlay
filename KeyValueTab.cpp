@@ -19,6 +19,8 @@
 #include <climits>
 #include <cmath>
 
+#include <boost/date_time/local_time/local_time.hpp>
+
 #include "KeyValueTab.h"
 #include "TableCreator.h"
 

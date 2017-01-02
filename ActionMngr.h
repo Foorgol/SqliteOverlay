@@ -4,8 +4,6 @@
 #include <memory>
 #include <vector>
 
-#include <boost/date_time/gregorian/gregorian.hpp>
-
 #include <Sloppy/Crypto/Crypto.h>
 
 #include "GenericObjectManager.h"

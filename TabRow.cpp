@@ -12,6 +12,8 @@
 
 #include <stdexcept>
 
+#include <boost/date_time/local_time/local_time.hpp>
+
 #include "Sloppy/libSloppy.h"
 
 #include "TabRow.h"

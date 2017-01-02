@@ -13,7 +13,7 @@
 #ifndef SQLITE_OVERLAY_TABROW_H
 #define	SQLITE_OVERLAY_TABROW_H
 
-#include <boost/date_time/gregorian/gregorian.hpp>
+//#include <boost/date_time/gregorian/gregorian.hpp>
 
 #include "SqliteDatabase.h"
 #include "CommonTabularClass.h"

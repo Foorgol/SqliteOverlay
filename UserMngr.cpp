@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/date_time/local_time/local_time.hpp>
 
 #include <Sloppy/DateTime/DateAndTime.h>
 #include <Sloppy/Crypto/Crypto.h>

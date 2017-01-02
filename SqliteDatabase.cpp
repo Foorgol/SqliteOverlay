@@ -1,5 +1,7 @@
 #include <sys/stat.h>
 
+#include <boost/date_time/local_time/local_time.hpp>
+
 #include <Sloppy/libSloppy.h>
 #include <Sloppy/Logger/Logger.h>
 

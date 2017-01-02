@@ -13,6 +13,7 @@
 #include <memory>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/date_time/local_time/local_time.hpp>
 
 #include "DbTab.h"
 #include "TabRow.h"
