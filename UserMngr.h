@@ -101,7 +101,8 @@ namespace SqliteOverlay {
       int uid;
 
       // default constructor
-      UserData(){}
+      UserData()
+        :failCount{0}, state{UserState::Locked}, uid{-1} {}
 
       // copy constructor and copy assignment
       UserData(const UserData& src);
@@ -149,7 +150,7 @@ namespace SqliteOverlay {
                          int saltLen = DefaultSaltLen, int hashCycles = DefaultHashCycles) const;
       ErrCode setEmail(const string& name, const string& email) const;
       ErrCode updatePassword(const string& name, const string& oldPw, const string& newPw, int historyCheckDepth=1, int minPwLen=DefaultMinPwLen, int pwExiration__secs = -1,
-                             int saltLen = DefaultSaltLen, int hashCycles = DefaultHashCycles) const;
+                             size_t saltLen = DefaultSaltLen, int hashCycles = DefaultHashCycles) const;
       ErrCode deleteUser(const string& name) const;
       bool lockUser(const string& name) const;
       bool unlockUser(const string& name) const;

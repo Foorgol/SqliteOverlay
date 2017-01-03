@@ -14,7 +14,7 @@ using namespace std;
 namespace SqliteOverlay
 {
   SqliteDatabase::SqliteDatabase(string dbFileName, bool createNew)
-    :changeCounter_reset(0)
+    :dbPtr{nullptr}, log{nullptr}, changeCounter_reset(0)
   {
     // check if the filename is valid
     if (dbFileName.empty())
@@ -674,6 +674,8 @@ namespace SqliteOverlay
           return "CASCADE";
         case CONSISTENCY_ACTION::RESTRICT:
           return "RESTRICT";
+        default:
+          return "";
       }
       return "";
     };
@@ -970,6 +972,9 @@ namespace SqliteOverlay
 
     case CONFLICT_CLAUSE::ROLLBACK:
       return "ROLLBACK";
+
+    default:
+      return "";
     }
 
     return "";  // includes __NOT_SET
@@ -1032,6 +1037,8 @@ namespace SqliteOverlay
           return "CASCADE";
         case CONSISTENCY_ACTION::RESTRICT:
           return "RESTRICT";
+        default:
+          return "";
       }
       return "";
     };

@@ -172,7 +172,7 @@ namespace SqliteOverlay
   {
     ColInfoList cil = allColDefs();
     
-    return ((cid >= 0) && (cid < cil.size()));
+    return ((cid >= 0) && (static_cast<size_t>(cid) < cil.size()));
   }
 
 //----------------------------------------------------------------------------

@@ -186,15 +186,13 @@ namespace SqliteOverlay
   //----------------------------------------------------------------------------
 
   DbTab::CachingRowIterator::CachingRowIterator(SqliteDatabase* _db, const string& _tabName, upSqlStatement stmt)
-    : db(_db), tabName(_tabName)
+    : db(_db), tabName(_tabName), curIdx{0}, cachedLength{0}
   {
     // no checks for the validity of _db and _tabName here, because
     // we assume that the constructor is only called internally with
     // pre-checked values
 
     idList.clear();
-    curIdx = 0;
-    cachedLength = 0;
 
     // make sure that the query is valid
     //

@@ -237,7 +237,7 @@ namespace SqliteOverlay {
 
     // bind the actual column values to the placeholders
     int curPlaceholderIdx = 1;   // leftmost placeholder is at position 1
-    for (int i=0; i < colVals.size(); ++i)
+    for (size_t i=0; i < colVals.size(); ++i)
     {
       const ColValInfo& curCol = colVals[i];
 

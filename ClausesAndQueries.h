@@ -101,8 +101,7 @@ namespace SqliteOverlay {
   {
   public:
     WhereClause()
-      :CommonClause(){}
-
+      :CommonClause(), limit{0} {}
 
     using CommonClause::addIntCol;
     using CommonClause::addDoubleCol;

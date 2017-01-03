@@ -23,7 +23,7 @@ namespace SqliteOverlay
       if (n.empty() || (n.size() > MaxUserNameLen)) return ErrCode::InvalidName;
 
       string p = boost::trim_copy(pw);
-      if ((p.size() < minPwLen) || (p.size() > MaxPwLen) || (minPwLen <=0)) return ErrCode::InvalidPassword;
+      if ((static_cast<int>(p.size()) < minPwLen) || (p.size() > MaxPwLen) || (minPwLen <=0)) return ErrCode::InvalidPassword;
 
       // make sure the login name is still available
       if (tab->getMatchCountForColumnValue(US_LoginName, n) > 0) return ErrCode::InvalidName;
@@ -107,7 +107,7 @@ namespace SqliteOverlay
     //----------------------------------------------------------------------------
 
     ErrCode UserMngr::updatePassword(const string& name, const string& oldPw, const string& newPw, int historyCheckDepth, int minPwLen,
-                                     int pwExiration__secs, int saltLen, int hashCycles) const
+                                     int pwExiration__secs, size_t saltLen, int hashCycles) const
     {
       // make sure the user name is valid
       int uid = getIdForUser(name);
@@ -115,7 +115,7 @@ namespace SqliteOverlay
 
       // check password constraints
       string p = boost::trim_copy(newPw);
-      if ((p.size() < minPwLen) || (p.size() > MaxPwLen) || (minPwLen <=0)) return ErrCode::InvalidPassword;
+      if ((static_cast<int>(p.size()) < minPwLen) || (p.size() > MaxPwLen) || (minPwLen <=0)) return ErrCode::InvalidPassword;
 
       // check the correctness of the old password
       if (!(checkPasswort(uid, oldPw))) return ErrCode::NotAuthenticated;
@@ -244,7 +244,6 @@ namespace SqliteOverlay
       if (id < 1) return ErrCode::InvalidName;
 
       // delete all passwords, role assignments, sessions and the user itself
-      int dbErr;
       auto t = db->startTransaction();
       vector<pair<DbTab*, string>> tabsAndCols = {{pwTab, U2P_UserRef}, {roleTab, U2R_UserRef},
                                                   {sessionTab, U2S_UserRef}, {tab, "id"}};
