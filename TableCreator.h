@@ -20,6 +20,7 @@
 #define	SQLITE_OVERLAY_TABLECREATOR_H
 
 #include <memory>
+#include <initializer_list>
 
 #include "SqliteDatabase.h"
 #include "DbTab.h"
@@ -53,15 +54,25 @@ namespace SqliteOverlay
                                CONSISTENCY_ACTION onDelete=CONSISTENCY_ACTION::__NOT_SET,
                                CONSISTENCY_ACTION onUpdate=CONSISTENCY_ACTION::__NOT_SET,
                        bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET);
+
+    // add a unique combination of two or more
+    // column values
+    bool addUniqueColumnCombination(initializer_list<string> colNames, CONFLICT_CLAUSE notUniqueConflictClause);
+
     // reset all internal data
     void reset();
+
+    // creation of the final SQL-statement without
+    // actually executing any database commands or
+    // changing / resetting the internal state
+    string getSqlStatement(const string& tabName) const;
 
     // the actual table creation
     DbTab* createTableAndResetCreator(const string& tabName, int* errCodeOut=nullptr);
 
   private:
     SqliteDatabase* db;
-    Sloppy::StringList foreignKeyCreationCache;
+    Sloppy::StringList constraintCache;
     Sloppy::StringList colDefs;
     Sloppy::StringList defaultValues;
   };

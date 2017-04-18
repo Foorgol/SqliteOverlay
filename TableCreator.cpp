@@ -89,8 +89,22 @@ namespace SqliteOverlay
     string ref = "FOREIGN KEY (" + keyName + ") ";
     ref += buildForeignKeyClause(referedTable, onDelete, onUpdate);
 
-    foreignKeyCreationCache.push_back(ref);
+    constraintCache.push_back(ref);
     addInt(keyName, false, CONFLICT_CLAUSE::__NOT_SET, notNull, notNullConflictClause);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool TableCreator::addUniqueColumnCombination(initializer_list<string> colNames, CONFLICT_CLAUSE notUniqueConflictClause)
+  {
+    if (colNames.size() < 2) return false;
+
+    string constraint = "UNIQUE(%1) ON CONFLICT %2";
+    Sloppy::strArg(constraint, Sloppy::commaSepStringFromStringList(colNames));
+    Sloppy::strArg(constraint, conflictClause2String(notUniqueConflictClause));
+    constraintCache.push_back(constraint);
+
+    return true;
   }
 
   //----------------------------------------------------------------------------
@@ -98,12 +112,13 @@ namespace SqliteOverlay
   void TableCreator::reset()
   {
     colDefs.clear();
-    foreignKeyCreationCache.clear();
+    constraintCache.clear();
+    defaultValues.clear();
   }
 
   //----------------------------------------------------------------------------
 
-  DbTab* TableCreator::createTableAndResetCreator(const string& tabName, int* errCodeOut)
+  string TableCreator::getSqlStatement(const string& tabName) const
   {
     // assemble a "create table" statement from the column definitions and the
     // stored foreign key clauses
@@ -114,12 +129,21 @@ namespace SqliteOverlay
 
     sql += ", " + Sloppy::commaSepStringFromStringList(colDefs);
 
-    if (foreignKeyCreationCache.size() != 0) {
-      sql += ", " + Sloppy::commaSepStringFromStringList(foreignKeyCreationCache);
-      foreignKeyCreationCache.clear();
+    if (constraintCache.size() != 0) {
+      sql += ", " + Sloppy::commaSepStringFromStringList(constraintCache);
     }
 
     sql += ")";
+
+    return sql;
+  }
+
+  //----------------------------------------------------------------------------
+
+  DbTab* TableCreator::createTableAndResetCreator(const string& tabName, int* errCodeOut)
+  {
+    // get the SQL statement
+    string sql = getSqlStatement(tabName);
 
     // execute the statement
     bool isOk = db->execNonQuery(sql, errCodeOut);
