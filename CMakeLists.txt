@@ -125,6 +125,7 @@ set(LIB_SOURCES_TST
     tests/tstCopyAndBackup.cpp
     tests/tstUserManager.cpp
     tests/tstActionManager.cpp
+    tests/tstDataChangeCallback.cpp
 )
 
 find_package(GTest)

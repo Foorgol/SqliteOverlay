@@ -937,6 +937,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  void* SqliteDatabase::setDataChangeNotificationCallback(void(*f)(void*, int, const char*, const char*, sqlite3_int64), void* customPtr)
+  {
+    return sqlite3_update_hook(dbPtr.get(), f, customPtr);
+  }
+
+  //----------------------------------------------------------------------------
+
   upSqlStatement SqliteDatabase::prepStatement(const string& sqlText, int* errCodeOut)
   {
     return SqlStatement::get(dbPtr.get(), sqlText, errCodeOut, log.get());

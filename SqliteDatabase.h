@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include <functional>
 
 #include <Sloppy/libSloppy.h>
 #include <Sloppy/Logger/Logger.h>
@@ -174,6 +175,10 @@ namespace SqliteOverlay
     bool isDirty();
     void resetDirtyFlag();
     int getDirtyCounter();
+
+    // setting a callback function for
+    // data change notifications
+    void* setDataChangeNotificationCallback(void(*)(void*, int, const char*, const char*, sqlite3_int64), void* customPtr);
 
   protected:
     SqliteDatabase(string dbFileName = ":memory:", bool createNew=false);
