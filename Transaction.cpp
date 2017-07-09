@@ -45,7 +45,7 @@ namespace SqliteOverlay
 
   bool Transaction::commit(int* errCodeOut)
   {
-    string sql = "COMMIT";
+    string sql = getFinishSql(true);
     int err;
     db->execNonQuery(sql, &err);
     if (errCodeOut != nullptr) *errCodeOut = err;
@@ -58,7 +58,7 @@ namespace SqliteOverlay
 
   bool Transaction::rollback(int* errCodeOut)
   {
-    string sql = "ROLLBACK";
+    string sql = getFinishSql(false);
     int err;
     db->execNonQuery(sql, &err);
     if (errCodeOut != nullptr) *errCodeOut = err;
@@ -82,25 +82,7 @@ namespace SqliteOverlay
 
     // the transaction has not been finalized yet.
     // What to do?
-    string sql;
-    if (dtorAct == TRANSACTION_DESTRUCTOR_ACTION::COMMIT)
-    {
-      if (savepointName.empty())
-      {
-        sql = "COMMIT";
-      } else {
-        sql = "RELEASE SAVEPOINT " + savepointName;
-      }
-    }
-    if (dtorAct == TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK)
-    {
-      sql = "ROLLBACK";
-      if (!(savepointName.empty()))
-      {
-        sql += " TO SAVEPOINT " + savepointName;
-      }
-    }
-
+    string sql = getFinishSql(dtorAct == TRANSACTION_DESTRUCTOR_ACTION::COMMIT);
     if (!(sql.empty()) && (db != nullptr))
     {
       db->execNonQuery(sql);
@@ -133,7 +115,7 @@ namespace SqliteOverlay
       // a combination of a 5-digit random number
       // and the current time. Should be sufficiently
       // unique
-      savepointName = to_string(rand() % 100000);
+      savepointName = "s" + to_string(rand() % 100000);
       savepointName += "_" + to_string(time(nullptr));
 
       // create the savepoint
@@ -171,14 +153,22 @@ namespace SqliteOverlay
       throw std::runtime_error("Couldn't initiate transaction in Transaction ctor");
     }
   }
-    
-//----------------------------------------------------------------------------
 
-    
-//----------------------------------------------------------------------------
-    
-    
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
+  string Transaction::getFinishSql(bool isCommit) const
+  {
+    // create the SQL command for committing a
+    // transaction or an inner savepoint
+    if (isCommit)
+    {
+      return savepointName.empty() ? "COMMIT" : ("RELEASE SAVEPOINT " + savepointName);
+    }
+
+    // create the SQL command for rolling back a
+    // transaction or an inner savepoint
+    return savepointName.empty() ? "ROLLBACK" : ("ROLLBACK TO SAVEPOINT " + savepointName);
+  }
     
     
 //----------------------------------------------------------------------------

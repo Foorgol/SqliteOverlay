@@ -46,8 +46,9 @@ namespace SqliteOverlay
     TRANSACTION_DESTRUCTOR_ACTION dtorAct;
     string savepointName;
     bool isFinished;
+    string getFinishSql(bool isCommit) const;
   };
-  
+
 }
 #endif	/* SQLITE_OVERLAY_TRANSACTION_H */
 

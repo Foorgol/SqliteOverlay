@@ -41,7 +41,7 @@ TEST_F(DatabaseTestScenario, Transaction)
   TabRow r1_2 = t1_2->operator [](1);
   ASSERT_EQ(42, r1_2.getInt("i"));
 
-  // make sure that connectio 2 can't start a transaction
+  // make sure that connection 2 can't start a transaction
   // while the first one is still active
   auto tr2 = db2->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
   ASSERT_TRUE(tr2 == nullptr);
@@ -174,4 +174,321 @@ TEST_F(DatabaseTestScenario, TransactionWithKeyConflict)
   ASSERT_EQ(SQLITE_DONE, err);
   ASSERT_EQ(oldRowCount, t1->length());
   ASSERT_EQ(1, t1->getMatchCountForColumnValue("id", 3));
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, NestedTransaction)
+{
+  auto db = getScenario01();
+
+  // get a second, concurrent connection
+  auto db2 = SqliteDatabase::get<SampleDB>(getSqliteFileName(), false);
+
+  //
+  // Start an immediate transaction and change values
+  //
+  int err;
+  auto tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
+  ASSERT_TRUE(tr != nullptr);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_FALSE(tr->isNested());
+  DbTab* t1_1 = db->getTab("t1");
+  TabRow r1_1 = t1_1->operator [](1);
+  r1_1.update("i", 23, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(23, r1_1.getInt("i"));
+
+  //
+  // Start another transaction on the same DB-connection
+  //
+  auto trNested = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
+  ASSERT_TRUE(trNested != nullptr);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_TRUE(trNested->isNested());
+
+  // update a value as part of the inner transaction
+  r1_1.update("i", 0, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(0, r1_1.getInt("i"));
+
+  // make sure that connection 2 still sees the initial value
+  DbTab* t1_2 = db2->getTab("t1");
+  TabRow r1_2 = t1_2->operator [](1);
+  ASSERT_EQ(42, r1_2.getInt("i"));
+
+  // commit the inner transaction
+  ASSERT_TRUE(trNested->commit(&err));
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(0, r1_1.getInt("i"));
+
+  // make sure that connection 2 still sees the initial value
+  ASSERT_EQ(42, r1_2.getInt("i"));
+
+  // ROLLBACK the outer transaction with
+  // undoes the already committed changes of the
+  // inner transaction
+  ASSERT_TRUE(tr->rollback(&err));
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(42, r1_1.getInt("i"));
+  ASSERT_EQ(42, r1_2.getInt("i"));
+
+  //
+  // Same as before, but this time we ROLLBACK the inner
+  // transaction and commit the outer transaction
+  //
+  tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
+  ASSERT_TRUE(tr != nullptr);
+  ASSERT_EQ(SQLITE_DONE, err);
+  r1_1.update("i", 23, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(23, r1_1.getInt("i"));
+  ASSERT_EQ(42, r1_2.getInt("i"));
+
+  trNested = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
+  ASSERT_TRUE(trNested != nullptr);
+  ASSERT_EQ(SQLITE_DONE, err);
+  r1_1.update("i", 0, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(0, r1_1.getInt("i"));
+  ASSERT_EQ(42, r1_2.getInt("i"));
+
+  ASSERT_TRUE(trNested->rollback(&err));  // inner ROLLBACK
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(23, r1_1.getInt("i"));
+  ASSERT_EQ(42, r1_2.getInt("i"));
+
+  ASSERT_TRUE(tr->commit(&err));  // outer commit
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(23, r1_1.getInt("i"));
+  ASSERT_EQ(23, r1_2.getInt("i"));
+
+  //
+  // Same as before, but this time we only
+  // commit the outer transaction
+  //
+  tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
+  ASSERT_TRUE(tr != nullptr);
+  ASSERT_EQ(SQLITE_DONE, err);
+  r1_1.update("i", 42, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(42, r1_1.getInt("i"));
+  ASSERT_EQ(23, r1_2.getInt("i"));
+
+  trNested = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
+  ASSERT_TRUE(trNested != nullptr);
+  ASSERT_EQ(SQLITE_DONE, err);
+  r1_1.update("i", 0, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(0, r1_1.getInt("i"));
+  ASSERT_EQ(23, r1_2.getInt("i"));
+
+  ASSERT_TRUE(tr->commit(&err));  // outer commit
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(0, r1_1.getInt("i"));
+  ASSERT_EQ(0, r1_2.getInt("i"));
+
+  ASSERT_FALSE(trNested->commit(&err));   // an inner commit must fail after the outer commit
+  ASSERT_EQ(SQLITE_ERROR, err);
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, DtorAction)
+{
+  auto db = getScenario01();
+
+  // get a second, concurrent connection
+  auto db2 = SqliteDatabase::get<SampleDB>(getSqliteFileName(), false);
+
+  int err;
+  DbTab* t1_1 = db->getTab("t1");
+  TabRow r1_1 = t1_1->operator [](1);
+  DbTab* t1_2 = db2->getTab("t1");
+  TabRow r1_2 = t1_2->operator [](1);
+
+  //
+  // Start an immediate transaction and change values
+  // in a separate block so that the transaction's dtor
+  // is called when leaving the scope
+  //
+  {
+    auto tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
+    ASSERT_TRUE(tr != nullptr);
+    ASSERT_EQ(SQLITE_DONE, err);
+
+    // change a value via connection 1
+    r1_1.update("i", 23, &err);
+    ASSERT_EQ(SQLITE_DONE, err);
+    ASSERT_EQ(23, r1_1.getInt("i"));
+
+    // make sure that connection 2 still sees the old value
+    ASSERT_EQ(42, r1_2.getInt("i"));
+  }
+
+  // since the dtor-action was "rollback", also connection 1
+  // should see the old value again
+  ASSERT_EQ(42, r1_1.getInt("i"));
+  ASSERT_EQ(42, r1_2.getInt("i"));
+
+  //
+  // same as above, but this time with
+  // "commit" as the dtor-action
+  //
+  {
+    auto tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::COMMIT, &err);
+    ASSERT_TRUE(tr != nullptr);
+    ASSERT_EQ(SQLITE_DONE, err);
+
+    // change a value via connection 1
+    r1_1.update("i", 23, &err);
+    ASSERT_EQ(SQLITE_DONE, err);
+    ASSERT_EQ(23, r1_1.getInt("i"));
+
+    // make sure that connection 2 still sees the old value
+    ASSERT_EQ(42, r1_2.getInt("i"));
+  }
+
+  // since the dtor-action was "commit", both connections
+  // should see the updated value
+  ASSERT_EQ(23, r1_1.getInt("i"));
+  ASSERT_EQ(23, r1_2.getInt("i"));
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, NestedTransactionWithDtor)
+{
+  auto db = getScenario01();
+
+  // get a second, concurrent connection
+  auto db2 = SqliteDatabase::get<SampleDB>(getSqliteFileName(), false);
+
+  DbTab* t1_1 = db->getTab("t1");
+  TabRow r1_1 = t1_1->operator [](1);
+  DbTab* t1_2 = db2->getTab("t1");
+  TabRow r1_2 = t1_2->operator [](1);
+
+  //
+  // Start an immediate transaction and change values
+  //
+  int err;
+  auto tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
+  ASSERT_TRUE(tr != nullptr);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_FALSE(tr->isNested());
+  r1_1.update("i", 23, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(23, r1_1.getInt("i"));
+
+  //
+  // Start another transaction on the same DB-connection
+  // with dtor-action "rollback" and in a separate scope
+  //
+  {
+    auto trNested = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
+    ASSERT_TRUE(trNested != nullptr);
+    ASSERT_EQ(SQLITE_DONE, err);
+    ASSERT_TRUE(trNested->isNested());
+
+    // update a value as part of the inner transaction
+    r1_1.update("i", 0, &err);
+    ASSERT_EQ(SQLITE_DONE, err);
+    ASSERT_EQ(0, r1_1.getInt("i"));
+
+    // make sure that connection 2 still sees the initial value
+    ASSERT_EQ(42, r1_2.getInt("i"));
+
+    // the modification will be rolled back when leaving this scope
+  }
+
+  // make sure that connection 2 still sees the initial value
+  // and connection 1 the value of the outer transaction
+  ASSERT_EQ(23, r1_1.getInt("i"));
+  ASSERT_EQ(42, r1_2.getInt("i"));
+
+  // ROLLBACK the outer transaction by calling
+  // its destructor
+  tr.reset();
+  ASSERT_EQ(42, r1_1.getInt("i"));
+  ASSERT_EQ(42, r1_2.getInt("i"));
+
+  //
+  // same as above, but this time with "commit" as dtor-action
+  // in the inner transaction
+  //
+  tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
+  ASSERT_TRUE(tr != nullptr);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_FALSE(tr->isNested());
+  r1_1.update("i", 23, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(23, r1_1.getInt("i"));
+
+  {
+    auto trNested = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::COMMIT, &err);
+    ASSERT_TRUE(trNested != nullptr);
+    ASSERT_EQ(SQLITE_DONE, err);
+    ASSERT_TRUE(trNested->isNested());
+
+    r1_1.update("i", 0, &err);
+    ASSERT_EQ(SQLITE_DONE, err);
+    ASSERT_EQ(0, r1_1.getInt("i"));
+
+    // make sure that connection 2 still sees the initial value
+    ASSERT_EQ(42, r1_2.getInt("i"));
+
+    // dtor-call follows
+  }
+
+  // make sure that connection 2 still sees the initial value
+  // and connection 1 the value of the inner transaction
+  ASSERT_EQ(0, r1_1.getInt("i"));
+  ASSERT_EQ(42, r1_2.getInt("i"));
+
+  // ROLLBACK the outer transaction by calling
+  // its destructor
+  tr.reset();
+  ASSERT_EQ(42, r1_1.getInt("i"));
+  ASSERT_EQ(42, r1_2.getInt("i"));
+
+
+  //
+  // same as above, but this time with "rollback" as dtor-action
+  // in the inner transaction and "commit" in the outer
+  //
+  tr = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::COMMIT, &err);
+  ASSERT_TRUE(tr != nullptr);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_FALSE(tr->isNested());
+  r1_1.update("i", 23, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(23, r1_1.getInt("i"));
+
+  {
+    auto trNested = db->startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
+    ASSERT_TRUE(trNested != nullptr);
+    ASSERT_EQ(SQLITE_DONE, err);
+    ASSERT_TRUE(trNested->isNested());
+
+    r1_1.update("i", 0, &err);
+    ASSERT_EQ(SQLITE_DONE, err);
+    ASSERT_EQ(0, r1_1.getInt("i"));
+
+    // make sure that connection 2 still sees the initial value
+    ASSERT_EQ(42, r1_2.getInt("i"));
+
+    // dtor-call follows
+  }
+
+  // make sure that connection 2 still sees the initial value
+  // and connection 1 the value of the outer transaction
+  ASSERT_EQ(23, r1_1.getInt("i"));
+  ASSERT_EQ(42, r1_2.getInt("i"));
+
+  // commit the outer transaction by calling
+  // its destructor
+  tr.reset();
+  ASSERT_EQ(23, r1_1.getInt("i"));
+  ASSERT_EQ(23, r1_2.getInt("i"));
 }

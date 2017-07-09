@@ -2,7 +2,7 @@ project(SqliteOverlay)
 cmake_minimum_required(VERSION 2.8)
 aux_source_directory(. SRC_LIST)
 
-#set(BUILD_TESTS 1)
+set(BUILD_TESTS 1)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmakeModules/")
 find_package(SQLite3 REQUIRED)

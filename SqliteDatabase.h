@@ -135,7 +135,6 @@ namespace SqliteOverlay
     bool execScalarQueryString(const upSqlStatement& stmt, string* out, int* errCodeOut) const;
     unique_ptr<ScalarQueryResult<string>> execScalarQueryString(const upSqlStatement& stmt, int* errCodeOut=nullptr, bool skipPrep=false) const;
     unique_ptr<ScalarQueryResult<string>> execScalarQueryString(const string& sqlStatement, int* errCodeOut=nullptr);
-
     bool enforceSynchronousWrites(bool syncOn);
 
     virtual void populateTables() {}
@@ -223,6 +222,11 @@ namespace SqliteOverlay
     // handling of a "dirty flag" that indicates whether the database has changed
     // after a certain point in time
     int changeCounter_reset;
+
+    // a centralized transaction object that is
+    // shared by all users of this database instance
+    unique_ptr<Transaction> curTrans;
+
 
   };
 
