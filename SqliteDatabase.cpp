@@ -14,7 +14,8 @@ using namespace std;
 namespace SqliteOverlay
 {
   SqliteDatabase::SqliteDatabase(string dbFileName, bool createNew)
-    :dbPtr{nullptr}, log{nullptr}, changeCounter_reset(0), curTrans{nullptr}
+    :dbPtr{nullptr}, log{nullptr}, changeCounter_reset(0), curTrans{nullptr},
+      isChangeLogEnabled{false}
   {
     // check if the filename is valid
     if (dbFileName.empty())
@@ -58,6 +59,10 @@ namespace SqliteOverlay
     // prepare a logger
     log = unique_ptr<Logger>(new Logger(dbFileName));
     log->trace("Ready for use");
+
+    // initialize the pointers in the changeLogCallbackContext
+    logCallbackContext.logMutex = &changeLogMutex;
+    logCallbackContext.logPtr = &changeLog;
 
     // Explicitly enable support for foreign keys
     // and disable synchronous writes for better performance
@@ -944,6 +949,54 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  size_t SqliteDatabase::getChangeLogLength()
+  {
+    lock_guard<mutex> lg{changeLogMutex};
+    return changeLog.size();
+  }
+
+  //----------------------------------------------------------------------------
+
+  queue<ChangeLogEntry> SqliteDatabase::getAllChangesAndClearQueue()
+  {
+    lock_guard<mutex> lg{changeLogMutex};
+
+    queue<ChangeLogEntry> logCopy{changeLog};
+    changeLog = queue<ChangeLogEntry>{};   // there is now clear() for a queue...
+
+    return logCopy;
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqliteDatabase::enableChangeLog(bool clearLog)
+  {
+    lock_guard<mutex> lg{changeLogMutex};
+
+    if (isChangeLogEnabled) return;
+
+    if (clearLog) changeLog = queue<ChangeLogEntry>{};   // there is now clear() for a queue...
+
+    setDataChangeNotificationCallback(changeLogCallback, &logCallbackContext);
+    isChangeLogEnabled = true;
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqliteDatabase::disableChangeLog(bool clearLog)
+  {
+    lock_guard<mutex> lg{changeLogMutex};
+
+    if (!isChangeLogEnabled) return;
+
+    if (clearLog) changeLog = queue<ChangeLogEntry>{};
+
+    setDataChangeNotificationCallback(nullptr, nullptr);
+    isChangeLogEnabled = false;
+  }
+
+  //----------------------------------------------------------------------------
+
   upSqlStatement SqliteDatabase::prepStatement(const string& sqlText, int* errCodeOut)
   {
     return SqlStatement::get(dbPtr.get(), sqlText, errCodeOut, log.get());
@@ -1065,5 +1118,24 @@ namespace SqliteOverlay
 
     return result;
   }
+
+  //----------------------------------------------------------------------------
+
+  void changeLogCallback(void* customPtr, int modType, const char* _dbName, const char* _tabName, sqlite3_int64 id)
+  {
+    if (customPtr == nullptr) return;
+    ChangeLogCallbackContext* ctx = (ChangeLogCallbackContext *) customPtr;
+
+    string dbName{_dbName};
+    if (dbName == "main") dbName.clear();
+
+    lock_guard<mutex> lg{*(ctx->logMutex)};
+
+    ctx->logPtr->emplace(
+          static_cast<RowChangeAction>(modType),
+          dbName, string{_tabName}, id);
+
+  }
+
 
 }

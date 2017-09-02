@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <Sloppy/Crypto/Crypto.h>
+
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"
 #include "SqliteDatabase.h"
@@ -105,4 +107,118 @@ TEST_F(DatabaseTestScenario, DataChangeCallback)
   ASSERT_TRUE(cnt > 0);
   ASSERT_EQ(0, t1->length());
 
+}
+
+//----------------------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, ChangeLog)
+{
+  auto db = getScenario01();
+
+  // we start with an empty log
+  ASSERT_EQ(0, db->getChangeLogLength());
+
+  // get a pointer to t1
+  DbTab* t1 = db->getTab("t1");
+
+  // enable logging
+  db->enableChangeLog(false);
+
+  // test one:
+  // trigger an INSERT in t1
+  ColumnValueClause cvc;
+  cvc.addIntCol("i", 9999);
+  int err;
+  int row = t1->insertRow(&err);
+  ASSERT_TRUE(row > 0);
+  ASSERT_EQ(SQLITE_DONE, err);
+
+  ASSERT_EQ(1, db->getChangeLogLength());
+  queue<ChangeLogEntry> l = db->getAllChangesAndClearQueue();
+  ASSERT_EQ(0, db->getChangeLogLength());
+  ASSERT_EQ(1, l.size());
+  ChangeLogEntry e = l.front();
+  ASSERT_EQ(RowChangeAction::Insert, e.action);
+  ASSERT_EQ(row, e.rowId);
+  ASSERT_EQ("t1", e.tabName);
+  ASSERT_TRUE(e.dbName.empty());
+
+  // test two and three
+  // DELETE and UPDATE
+  ASSERT_TRUE(t1->deleteRowsByColumnValue("id", 2, &err));
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(1, db->getChangeLogLength());
+  TabRow r = (*t1)[3];
+  r.update("i", 0, &err);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(2, db->getChangeLogLength());
+  l = db->getAllChangesAndClearQueue();
+  ASSERT_EQ(0, db->getChangeLogLength());
+  ASSERT_EQ(2, l.size());
+
+  e = l.front();
+  ASSERT_EQ(RowChangeAction::Delete, e.action);
+  ASSERT_EQ(2, e.rowId);
+  ASSERT_EQ("t1", e.tabName);
+  ASSERT_TRUE(e.dbName.empty());
+
+  l.pop();
+  e = l.front();
+  ASSERT_EQ(RowChangeAction::Update, e.action);
+  ASSERT_EQ(3, e.rowId);
+  ASSERT_EQ("t1", e.tabName);
+  ASSERT_TRUE(e.dbName.empty());
+
+  // disable logging
+  db->disableChangeLog(true);
+  ASSERT_EQ(0, db->getChangeLogLength());
+  row = t1->insertRow(&err);
+  ASSERT_TRUE(row > 0);
+  ASSERT_EQ(SQLITE_DONE, err);
+  ASSERT_EQ(0, db->getChangeLogLength());
+}
+
+//----------------------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, ChangeLogSpeedImpact)
+{
+  auto db = getScenario01();
+
+  // we start with an empty log
+  ASSERT_EQ(0, db->getChangeLogLength());
+
+  // get a pointer to t1
+  DbTab* t1 = db->getTab("t1");
+
+  // insert 1000 random strings without logging
+  constexpr int nIter = 100000;
+  constexpr int sLen = 100;
+  int err;
+  auto start = chrono::high_resolution_clock::now();
+  for (int i=0; i < nIter; ++i)
+  {
+    ColumnValueClause cvc;
+    cvc.addStringCol("s", Sloppy::Crypto::getRandomAlphanumString(sLen));
+    int row = t1->insertRow(&err);
+    ASSERT_TRUE(row > 0);
+    ASSERT_EQ(SQLITE_DONE, err);
+  }
+  auto dt = chrono::high_resolution_clock::now() - start;
+  int elapsedTime1 = chrono::duration_cast<chrono::microseconds>(dt).count();
+  cerr << nIter << " random strings without logging: " << elapsedTime1 << " us" << endl;
+
+  db->enableChangeLog(true);
+  start = chrono::high_resolution_clock::now();
+  for (int i=0; i < nIter; ++i)
+  {
+    ColumnValueClause cvc;
+    cvc.addStringCol("s", Sloppy::Crypto::getRandomAlphanumString(sLen));
+    int row = t1->insertRow(&err);
+    ASSERT_TRUE(row > 0);
+    ASSERT_EQ(SQLITE_DONE, err);
+  }
+  dt = chrono::high_resolution_clock::now() - start;
+  int elapsedTime2 = chrono::duration_cast<chrono::microseconds>(dt).count();
+  cerr << nIter << " random strings WITH logging: " << elapsedTime2 << " us" << endl;
+  cerr << "Ratio: " << (elapsedTime2 * 1.0)/elapsedTime1 << endl;
 }

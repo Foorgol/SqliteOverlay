@@ -8,6 +8,8 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <mutex>
+#include <queue>
 
 #include <Sloppy/libSloppy.h>
 #include <Sloppy/Logger/Logger.h>
@@ -38,6 +40,13 @@ namespace SqliteOverlay
     __NOT_SET
   };
 
+  enum class RowChangeAction
+  {
+    Insert = SQLITE_INSERT,
+    Update = SQLITE_UPDATE,
+    Delete = SQLITE_DELETE
+  };
+
 
   //----------------------------------------------------------------------------
 
@@ -63,6 +72,27 @@ namespace SqliteOverlay
   {
     COMMIT,
     ROLLBACK,
+  };
+
+  //----------------------------------------------------------------------------
+
+  // The changelog
+  struct ChangeLogEntry
+  {
+    ChangeLogEntry(RowChangeAction a, const string& dn, const string& tn, size_t id)
+      :action{a}, dbName{dn}, tabName{tn}, rowId{id} {}
+
+    RowChangeAction action;
+    string dbName;  // will be empty for "main" to save some memory
+    string tabName;
+    size_t rowId;
+  };
+  void changeLogCallback(void* customPtr, int modType, char const * _dbName, char const* _tabName, sqlite3_int64 id);
+
+  struct ChangeLogCallbackContext
+  {
+    mutex* logMutex;
+    queue<ChangeLogEntry>* logPtr;
   };
 
   //----------------------------------------------------------------------------
@@ -180,6 +210,15 @@ namespace SqliteOverlay
     // data change notifications
     void* setDataChangeNotificationCallback(void(*)(void*, int, const char*, const char*, sqlite3_int64), void* customPtr);
 
+    // change log functions.
+    //
+    // THESE FUNCTIONS OVERRIDE ANY CALLBACKS SET VIA
+    // setDataChangeNotificationCallback() !!
+    size_t getChangeLogLength();
+    queue<ChangeLogEntry> getAllChangesAndClearQueue();
+    void enableChangeLog(bool clearLog);
+    void disableChangeLog(bool clearLog);
+
   protected:
     SqliteDatabase(string dbFileName = ":memory:", bool createNew=false);
     vector<string> foreignKeyCreationCache;
@@ -232,7 +271,11 @@ namespace SqliteOverlay
     // shared by all users of this database instance
     unique_ptr<Transaction> curTrans;
 
-
+    // a queue of changes
+    bool isChangeLogEnabled;
+    queue<ChangeLogEntry> changeLog;
+    mutex changeLogMutex;
+    ChangeLogCallbackContext logCallbackContext;
   };
 
   typedef unique_ptr<SqliteDatabase> upSqliteDatabase;
