@@ -134,9 +134,16 @@ if (GTEST_FOUND AND Boost_FOUND AND BUILD_TESTS)
     message("   !!! Tests will be build as well !!!")
     include_directories("." ${GTEST_INCLUDE_DIRS})
 
-    add_executable(${PROJECT_NAME}_Tests ${LIB_SOURCES} ${LIB_SOURCES_TST})
+    add_executable(${PROJECT_NAME}_Tests ${LIB_SOURCES_TST})
     set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD 14)
     set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD_REQUIRED ON)
 
+    set_target_properties(${PROJECT_NAME}_Tests PROPERTIES
+      IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}.so"
+    )
+
+    set(LIBS ${LIBS} ${PROJECT_NAME})
+
     target_link_libraries(${PROJECT_NAME}_Tests ${GTEST_BOTH_LIBRARIES} ${LIBS})
+
 endif (GTEST_FOUND AND Boost_FOUND AND BUILD_TESTS)
