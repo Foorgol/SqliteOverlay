@@ -134,7 +134,7 @@ TEST_F(DatabaseTestScenario, ChangeLog)
   ASSERT_EQ(SQLITE_DONE, err);
 
   ASSERT_EQ(1, db->getChangeLogLength());
-  queue<ChangeLogEntry> l = db->getAllChangesAndClearQueue();
+  ChangeLogList l = db->getAllChangesAndClearQueue();
   ASSERT_EQ(0, db->getChangeLogLength());
   ASSERT_EQ(1, l.size());
   ChangeLogEntry e = l.front();
@@ -162,7 +162,7 @@ TEST_F(DatabaseTestScenario, ChangeLog)
   ASSERT_EQ("t1", e.tabName);
   ASSERT_TRUE(e.dbName.empty());
 
-  l.pop();
+  l.erase(l.begin());
   e = l.front();
   ASSERT_EQ(RowChangeAction::Update, e.action);
   ASSERT_EQ(3, e.rowId);

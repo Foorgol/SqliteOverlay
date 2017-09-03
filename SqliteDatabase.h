@@ -9,7 +9,6 @@
 #include <unordered_map>
 #include <functional>
 #include <mutex>
-#include <queue>
 
 #include <Sloppy/libSloppy.h>
 #include <Sloppy/Logger/Logger.h>
@@ -87,12 +86,14 @@ namespace SqliteOverlay
     string tabName;
     size_t rowId;
   };
+  using ChangeLogList = vector<ChangeLogEntry>;
+
   void changeLogCallback(void* customPtr, int modType, char const * _dbName, char const* _tabName, sqlite3_int64 id);
 
   struct ChangeLogCallbackContext
   {
     mutex* logMutex;
-    queue<ChangeLogEntry>* logPtr;
+    ChangeLogList* logPtr;
   };
 
   //----------------------------------------------------------------------------
@@ -215,7 +216,7 @@ namespace SqliteOverlay
     // THESE FUNCTIONS OVERRIDE ANY CALLBACKS SET VIA
     // setDataChangeNotificationCallback() !!
     size_t getChangeLogLength();
-    queue<ChangeLogEntry> getAllChangesAndClearQueue();
+    ChangeLogList getAllChangesAndClearQueue();
     void enableChangeLog(bool clearLog);
     void disableChangeLog(bool clearLog);
 
@@ -273,7 +274,7 @@ namespace SqliteOverlay
 
     // a queue of changes
     bool isChangeLogEnabled;
-    queue<ChangeLogEntry> changeLog;
+    ChangeLogList changeLog;
     mutex changeLogMutex;
     ChangeLogCallbackContext logCallbackContext;
   };

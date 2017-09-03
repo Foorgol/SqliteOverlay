@@ -957,12 +957,12 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  queue<ChangeLogEntry> SqliteDatabase::getAllChangesAndClearQueue()
+  ChangeLogList SqliteDatabase::getAllChangesAndClearQueue()
   {
     lock_guard<mutex> lg{changeLogMutex};
 
-    queue<ChangeLogEntry> logCopy{changeLog};
-    changeLog = queue<ChangeLogEntry>{};   // there is now clear() for a queue...
+    ChangeLogList logCopy{changeLog};
+    changeLog.clear();
 
     return logCopy;
   }
@@ -975,7 +975,7 @@ namespace SqliteOverlay
 
     if (isChangeLogEnabled) return;
 
-    if (clearLog) changeLog = queue<ChangeLogEntry>{};   // there is now clear() for a queue...
+    if (clearLog) changeLog.clear();
 
     setDataChangeNotificationCallback(changeLogCallback, &logCallbackContext);
     isChangeLogEnabled = true;
@@ -989,7 +989,7 @@ namespace SqliteOverlay
 
     if (!isChangeLogEnabled) return;
 
-    if (clearLog) changeLog = queue<ChangeLogEntry>{};
+    if (clearLog) changeLog.clear();
 
     setDataChangeNotificationCallback(nullptr, nullptr);
     isChangeLogEnabled = false;
@@ -1131,9 +1131,9 @@ namespace SqliteOverlay
 
     lock_guard<mutex> lg{*(ctx->logMutex)};
 
-    ctx->logPtr->emplace(
+    ctx->logPtr->push_back(ChangeLogEntry{
           static_cast<RowChangeAction>(modType),
-          dbName, string{_tabName}, id);
+          dbName, string{_tabName}, id});
 
   }
 
