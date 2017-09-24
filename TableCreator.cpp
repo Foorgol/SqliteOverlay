@@ -84,13 +84,13 @@ namespace SqliteOverlay
   //----------------------------------------------------------------------------
 
   void TableCreator::addForeignKey(const string& keyName, const string& referedTable, CONSISTENCY_ACTION onDelete, CONSISTENCY_ACTION onUpdate,
-                                   bool notNull, CONFLICT_CLAUSE notNullConflictClause)
+                                   bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool isUnique, CONFLICT_CLAUSE uniqueConflictClause)
   {
     string ref = "FOREIGN KEY (" + keyName + ") ";
     ref += buildForeignKeyClause(referedTable, onDelete, onUpdate);
 
     constraintCache.push_back(ref);
-    addInt(keyName, false, CONFLICT_CLAUSE::__NOT_SET, notNull, notNullConflictClause);
+    addInt(keyName, isUnique, uniqueConflictClause, notNull, notNullConflictClause);
   }
 
   //----------------------------------------------------------------------------

@@ -53,7 +53,8 @@ namespace SqliteOverlay
     void addForeignKey(const string& keyName, const string& referedTable,
                                CONSISTENCY_ACTION onDelete=CONSISTENCY_ACTION::__NOT_SET,
                                CONSISTENCY_ACTION onUpdate=CONSISTENCY_ACTION::__NOT_SET,
-                       bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET);
+                       bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
+                       bool isUnique=false, CONFLICT_CLAUSE uniqueConflictClause=CONFLICT_CLAUSE::__NOT_SET);
 
     // add a unique combination of two or more
     // column values
