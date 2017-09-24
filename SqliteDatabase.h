@@ -220,6 +220,9 @@ namespace SqliteOverlay
     void enableChangeLog(bool clearLog);
     void disableChangeLog(bool clearLog);
 
+    // SQLite error message
+    string getErrMsg() const;
+
   protected:
     SqliteDatabase(string dbFileName = ":memory:", bool createNew=false);
     vector<string> foreignKeyCreationCache;

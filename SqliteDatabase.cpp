@@ -997,6 +997,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  string SqliteDatabase::getErrMsg() const
+  {
+    return string{sqlite3_errmsg(dbPtr.get())};
+  }
+
+  //----------------------------------------------------------------------------
+
   upSqlStatement SqliteDatabase::prepStatement(const string& sqlText, int* errCodeOut)
   {
     return SqlStatement::get(dbPtr.get(), sqlText, errCodeOut, log.get());
