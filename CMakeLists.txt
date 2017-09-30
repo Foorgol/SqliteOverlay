@@ -51,6 +51,7 @@ set(LIB_SOURCES
     Transaction.cpp
     UserMngr.cpp
     ActionMngr.cpp
+    Utils.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
@@ -126,6 +127,7 @@ set(LIB_SOURCES_TST
     tests/tstUserManager.cpp
     tests/tstActionManager.cpp
     tests/tstDataChangeCallback.cpp
+    tests/tstCSV.cpp
 )
 
 find_package(GTest)

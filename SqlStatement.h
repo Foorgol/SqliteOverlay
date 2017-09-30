@@ -42,6 +42,10 @@ namespace SqliteOverlay
     int getColType(int colId) const;
     string getColName(int colId) const;
     int isNull(int colId) const;
+    int getColCount() const { return resultColCount; }
+
+    // export a row as CSV
+    string toCSV(const string& sep=",") const;
 
   private:
     template<class T>

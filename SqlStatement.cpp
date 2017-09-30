@@ -6,6 +6,7 @@
 #include "Sloppy/DateTime/DateAndTime.h"
 
 #include "SqlStatement.h"
+#include "Utils.h"
 
 using namespace std;
 using namespace Sloppy::DateTime;
@@ -235,6 +236,44 @@ namespace SqliteOverlay
   int SqlStatement::isNull(int colId) const
   {
     return (getColType(colId) == SQLITE_NULL);
+  }
+
+  //----------------------------------------------------------------------------
+
+  string SqlStatement::toCSV(const string& sep) const
+  {
+    if (resultColCount < 1) return "";
+
+    string result;
+    int64_t i;  // placeholder for switch-case-section
+    double d;  // placeholder for switch-case-section
+    string s;  // placeholder for switch-case-section
+    for (int idx = 0; idx < resultColCount; ++idx)
+    {
+      if (idx > 0) result += sep;
+
+      switch (getColType(idx)) {
+      case SQLITE_INTEGER:
+        i = sqlite3_column_int64(stmt, idx);
+        result += to_string(i);
+        break;
+
+      case SQLITE_FLOAT:
+        d = sqlite3_column_double(stmt, idx);
+        result += to_string(d);
+        break;
+
+      case SQLITE_NULL:    // NULL results in ",," or just ",<EOL>"
+        break;
+
+      default:
+        s = reinterpret_cast<const char*>(sqlite3_column_text(stmt, idx));
+        s = quoteAndEscapeStringForCSV(s);
+        result += s;
+      }
+    }
+
+    return result;
   }
 
   //----------------------------------------------------------------------------
