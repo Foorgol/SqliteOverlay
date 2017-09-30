@@ -271,10 +271,6 @@ namespace SqliteOverlay
     // after a certain point in time
     int changeCounter_reset;
 
-    // a centralized transaction object that is
-    // shared by all users of this database instance
-    unique_ptr<Transaction> curTrans;
-
     // a queue of changes
     bool isChangeLogEnabled;
     ChangeLogList changeLog;

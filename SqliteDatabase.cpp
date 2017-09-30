@@ -14,7 +14,7 @@ using namespace std;
 namespace SqliteOverlay
 {
   SqliteDatabase::SqliteDatabase(string dbFileName, bool createNew)
-    :dbPtr{nullptr}, log{nullptr}, changeCounter_reset(0), curTrans{nullptr},
+    :dbPtr{nullptr}, log{nullptr}, changeCounter_reset(0),
       isChangeLogEnabled{false}
   {
     // check if the filename is valid
