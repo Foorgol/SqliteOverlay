@@ -15,7 +15,7 @@ namespace SqliteOverlay
 {
   SqliteDatabase::SqliteDatabase(string dbFileName, bool createNew)
     :dbPtr{nullptr}, log{nullptr}, changeCounter_reset(0),
-      isChangeLogEnabled{false}
+      isChangeLogEnabled{false}, isMultiThreadMutexLocked{false}
   {
     // check if the filename is valid
     if (dbFileName.empty())
@@ -1004,6 +1004,48 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  bool SqliteDatabase::acquireDatabaseLock(int roleId)
+  {
+    // make sure this method is only accessed
+    // by one thread at a time
+    lock_guard<mutex> lg{acquisitionHelperMutex};
+
+    if (isMultiThreadMutexLocked)
+    {
+      // we don't need to create a new lock because
+      // we are already possessed by the correct thread
+      if (curMutexHolderRole == roleId) return false;
+    }
+
+    // at this point, we...
+    // EITHER have to wait for another thread to release the lock
+    // OR no thread did lock the mutex previously.
+    //
+    // no matter what, it is safe to call lock() now although
+    // this could been blocking the calling thread
+    multiThreadMutex.lock();
+    curMutexHolderRole = roleId;
+    isMultiThreadMutexLocked = true;
+    return true;    // true == new lock acquired
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqliteDatabase::releaseDatabaseLock()
+  {
+    // make sure this method is only accessed
+    // by one thread at a time
+    lock_guard<mutex> lg{releaseHelperMutex};
+
+    if (!isMultiThreadMutexLocked) return;
+
+    // unlock the mutex
+    multiThreadMutex.unlock();
+    isMultiThreadMutexLocked = false;
+  }
+
+  //----------------------------------------------------------------------------
+
   upSqlStatement SqliteDatabase::prepStatement(const string& sqlText, int* errCodeOut)
   {
     return SqlStatement::get(dbPtr.get(), sqlText, errCodeOut, log.get());
@@ -1143,6 +1185,5 @@ namespace SqliteOverlay
           dbName, string{_tabName}, id});
 
   }
-
 
 }

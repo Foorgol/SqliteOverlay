@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <functional>
 #include <mutex>
+#include <atomic>
 
 #include <Sloppy/libSloppy.h>
 #include <Sloppy/Logger/Logger.h>
@@ -121,6 +122,9 @@ namespace SqliteOverlay
 
   class SqliteDatabase
   {
+    template<typename RoleEnumType>
+    friend class DatabaseLockHolder;
+
   public:
     template<class T>
     static unique_ptr<T> get(string dbFileName = ":memory:", bool createNew=false) {
@@ -276,9 +280,45 @@ namespace SqliteOverlay
     ChangeLogList changeLog;
     mutex changeLogMutex;
     ChangeLogCallbackContext logCallbackContext;
+
+    // mutex support if this database instance is
+    // access by more than one thread.
+    //
+    // different threads are distinguished based on
+    // a "role" value that is supplied as a enum
+    // convertible to int.
+    bool acquireDatabaseLock(int roleId);   // protected; only to be accessed by DatabaseLockHolder
+    void releaseDatabaseLock();             // protected; only to be accessed by DatabaseLockHolder
+    mutex multiThreadMutex;
+    mutex acquisitionHelperMutex;
+    mutex releaseHelperMutex;
+    atomic<int> curMutexHolderRole;
+    atomic<bool> isMultiThreadMutexLocked;
   };
 
   typedef unique_ptr<SqliteDatabase> upSqliteDatabase;
+
+  //----------------------------------------------------------------------------
+
+  template<typename RoleEnumType>
+  class DatabaseLockHolder
+  {
+  public:
+    DatabaseLockHolder(SqliteDatabase* db, RoleEnumType role)
+      :dbPtr{db},
+       releaseLockInDtor{db->acquireDatabaseLock(static_cast<int>(role))}
+    {}
+
+    ~DatabaseLockHolder()
+    {
+      if (releaseLockInDtor) dbPtr->releaseDatabaseLock();
+    }
+
+  protected:
+    SqliteDatabase* dbPtr;
+    bool releaseLockInDtor;
+  };
+
 }
 
 #endif  /* SQLITEDATABASE_H */

@@ -128,6 +128,7 @@ set(LIB_SOURCES_TST
     tests/tstActionManager.cpp
     tests/tstDataChangeCallback.cpp
     tests/tstCSV.cpp
+    tests/tstMultithreadLocking.cpp
 )
 
 find_package(GTest)
@@ -144,7 +145,7 @@ if (GTEST_FOUND AND Boost_FOUND AND BUILD_TESTS)
       IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}.so"
     )
 
-    set(LIBS ${LIBS} ${PROJECT_NAME})
+    set(LIBS ${LIBS} ${PROJECT_NAME} pthread)
 
     target_link_libraries(${PROJECT_NAME}_Tests ${GTEST_BOTH_LIBRARIES} ${LIBS})
 
