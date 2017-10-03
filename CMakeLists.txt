@@ -101,6 +101,7 @@ set(INSTALLATION_HEADERS
     Transaction.h
     UserMngr.h
     ActionMngr.h
+    Utils.h
     )
 install(FILES ${INSTALLATION_HEADERS} DESTINATION include/SqliteOverlay)
 
