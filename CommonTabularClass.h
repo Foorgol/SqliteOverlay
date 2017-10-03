@@ -66,6 +66,8 @@ namespace SqliteOverlay
     int getMatchCountForColumnValueNull(const string& col) const;
     int length() const;
 
+    string getName() const { return tabName; }
+
   protected:
     /**
      * the handle to the (parent) database
