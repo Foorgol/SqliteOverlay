@@ -146,18 +146,8 @@ namespace SqliteOverlay
   {
     if (hasNullValue) return false;
 
-    // simply try a conversion to double. that should work
-    // for all decent numeric types
-    try
-    {
-      stod(val);
-    }
-    catch (...)
-    {
-      return false;
-    }
-
-    return true;
+    // this return "true" for any valid int or double
+    return Sloppy::isDouble(val);
   }
 
   //----------------------------------------------------------------------------
