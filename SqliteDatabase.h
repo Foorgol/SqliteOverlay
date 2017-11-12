@@ -287,7 +287,7 @@ namespace SqliteOverlay
     // different threads are distinguished based on
     // a "role" value that is supplied as a enum
     // convertible to int.
-    bool acquireDatabaseLock(int roleId);   // protected; only to be accessed by DatabaseLockHolder
+    int acquireDatabaseLock(int roleId, bool blocking=true);   // protected; only to be accessed by DatabaseLockHolder
     void releaseDatabaseLock();             // protected; only to be accessed by DatabaseLockHolder
     mutex multiThreadMutex;
     mutex acquisitionHelperMutex;
@@ -304,19 +304,25 @@ namespace SqliteOverlay
   class DatabaseLockHolder
   {
   public:
-    DatabaseLockHolder(SqliteDatabase* db, RoleEnumType role)
-      :dbPtr{db},
-       releaseLockInDtor{db->acquireDatabaseLock(static_cast<int>(role))}
-    {}
+    DatabaseLockHolder(SqliteDatabase* db, RoleEnumType role, bool blocking=true)
+      :dbPtr{db}
+    {
+      int rc = db->acquireDatabaseLock(static_cast<int>(role), blocking);
+      hasNewLockAcquired = (rc == 1);
+      _isLocked = (rc != -1);
+    }
 
     ~DatabaseLockHolder()
     {
-      if (releaseLockInDtor) dbPtr->releaseDatabaseLock();
+      if (hasNewLockAcquired) dbPtr->releaseDatabaseLock();
     }
+
+    bool islocked() const { return _isLocked; }
 
   protected:
     SqliteDatabase* dbPtr;
-    bool releaseLockInDtor;
+    bool hasNewLockAcquired;
+    bool _isLocked;
   };
 
 }

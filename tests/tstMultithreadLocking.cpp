@@ -34,9 +34,11 @@ TEST_F(DatabaseTestScenario, MultithreadLocking)
   // get a lock for the "Main" thread
   unique_ptr<DbLock> l1 = make_unique<DbLock>(db.get(), FakeRoles::Main);
   ASSERT_TRUE(l1 != nullptr);
+  ASSERT_TRUE(l1->islocked());
 
   // acquiring the lock again should not block
   DbLock l2{db.get(), FakeRoles::Main};
+  ASSERT_TRUE(l2.islocked());
 
   // start a thread that also wants to get access
   int flag = 0;
@@ -54,6 +56,25 @@ TEST_F(DatabaseTestScenario, MultithreadLocking)
 }
 
 //----------------------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, MultithreadLocking_NonBlocking)
+{
+
+  auto db = getScenario01();
+
+  // get a lock for the "Main" thread
+  DbLock l1{db.get(), FakeRoles::Main};
+  ASSERT_TRUE(l1.islocked());
+
+  // acquiring the lock again should not block
+  DbLock l2{db.get(), FakeRoles::Main};
+  ASSERT_TRUE(l2.islocked());
+
+  // test non-blocking access for a separate thread
+  DbLock l3{db.get(), FakeRoles::SeparateThread, false};
+  ASSERT_FALSE(l3.islocked());
+}
+
 
 //----------------------------------------------------------------------------
 

@@ -15,7 +15,8 @@ namespace SqliteOverlay
 {
   SqliteDatabase::SqliteDatabase(string dbFileName, bool createNew)
     :dbPtr{nullptr}, log{nullptr}, changeCounter_reset(0),
-      isChangeLogEnabled{false}, isMultiThreadMutexLocked{false}
+      isChangeLogEnabled{false}, isMultiThreadMutexLocked{false},
+      curMutexHolderRole{-1}
   {
     // check if the filename is valid
     if (dbFileName.empty())
@@ -1004,8 +1005,11 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::acquireDatabaseLock(int roleId)
+  int SqliteDatabase::acquireDatabaseLock(int roleId, bool blocking)
   {
+    // refuse a role "-1" because that's a reserved value
+    if (roleId == -1) return -1;
+
     // make sure this method is only accessed
     // by one thread at a time
     lock_guard<mutex> lg{acquisitionHelperMutex};
@@ -1014,19 +1018,26 @@ namespace SqliteOverlay
     {
       // we don't need to create a new lock because
       // we are already possessed by the correct thread
-      if (curMutexHolderRole == roleId) return false;
+      if (curMutexHolderRole == roleId) return 0;
     }
 
     // at this point, we...
     // EITHER have to wait for another thread to release the lock
     // OR no thread did lock the mutex previously.
-    //
-    // no matter what, it is safe to call lock() now although
+
+    // in non-blocking mode, we return if the database is possed
+    // by a different role
+    if (isMultiThreadMutexLocked && !blocking && (curMutexHolderRole != roleId))
+    {
+      return -1;
+    }
+
+    // now it is safe to call lock() now although
     // this could been blocking the calling thread
     multiThreadMutex.lock();
     curMutexHolderRole = roleId;
     isMultiThreadMutexLocked = true;
-    return true;    // true == new lock acquired
+    return 1;    // 1 == new lock acquired
   }
 
   //----------------------------------------------------------------------------
@@ -1042,6 +1053,7 @@ namespace SqliteOverlay
     // unlock the mutex
     multiThreadMutex.unlock();
     isMultiThreadMutexLocked = false;
+    curMutexHolderRole = -1;
   }
 
   //----------------------------------------------------------------------------
