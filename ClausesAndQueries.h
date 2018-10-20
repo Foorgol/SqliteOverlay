@@ -3,7 +3,6 @@
 
 #include <vector>
 
-#include <Sloppy/libSloppy.h>
 #include <Sloppy/DateTime/DateAndTime.h>
 
 #include "SqliteDatabase.h"

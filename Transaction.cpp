@@ -21,7 +21,7 @@
 namespace SqliteOverlay
 {
 
-  unique_ptr<Transaction> Transaction::startNew(SqliteDatabase* _db, TRANSACTION_TYPE tt, TRANSACTION_DESTRUCTOR_ACTION _dtorAct, int* errCodeOut)
+  unique_ptr<Transaction> Transaction::startNew(SqliteDatabase* _db, TransactionType tt, TransactionDtorAction _dtorAct, int* errCodeOut)
   {
     Transaction* tmpPtr;
     try
@@ -83,7 +83,7 @@ namespace SqliteOverlay
     // the transaction has not been finalized yet.
     // What to do?
     string sql;
-    if (dtorAct == TRANSACTION_DESTRUCTOR_ACTION::COMMIT)
+    if (dtorAct == TransactionDtorAction::COMMIT)
     {
       if (savepointName.empty())
       {
@@ -92,7 +92,7 @@ namespace SqliteOverlay
         sql = "RELEASE SAVEPOINT " + savepointName;
       }
     }
-    if (dtorAct == TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK)
+    if (dtorAct == TransactionDtorAction::ROLLBACK)
     {
       sql = "ROLLBACK";
       if (!(savepointName.empty()))
@@ -109,7 +109,7 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  Transaction::Transaction(SqliteDatabase* _db, TRANSACTION_TYPE tt, TRANSACTION_DESTRUCTOR_ACTION _dtorAct, int* errCodeOut)
+  Transaction::Transaction(SqliteDatabase* _db, TransactionType tt, TransactionDtorAction _dtorAct, int* errCodeOut)
     :db(_db), dtorAct(_dtorAct), isFinished(false)
   {
     if (db == nullptr)
@@ -145,11 +145,11 @@ namespace SqliteOverlay
       sql = "BEGIN ";
       switch (tt)
       {
-      case TRANSACTION_TYPE::DEFERRED:
+      case TransactionType::DEFERRED:
         sql += "DEFERRED";
         break;
 
-      case TRANSACTION_TYPE::EXCLUSIVE:
+      case TransactionType::EXCLUSIVE:
         sql += "EXCLUSIVE";
         break;
 

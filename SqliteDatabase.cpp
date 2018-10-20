@@ -2,7 +2,6 @@
 
 #include <boost/date_time/local_time/local_time.hpp>
 
-#include <Sloppy/libSloppy.h>
 #include <Sloppy/Logger/Logger.h>
 
 #include "SqliteDatabase.h"
@@ -152,18 +151,19 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::close(bool forceDeleteTabObjects)
+  bool SqliteDatabase::close(PrimaryResultCode* errCode)
   {
     if (dbPtr == nullptr) return true;
 
     int result = sqlite3_close(dbPtr.get());
-    if ((result != SQLITE_OK) && !forceDeleteTabObjects) return false;
+    Sloppy::assignIfNotNull<PrimaryResultCode>(errCode, static_cast<PrimaryResultCode>(result));
+
+    if (result != SQLITE_OK) return false;
 
     resetTabCache();
-
     dbPtr = nullptr;
 
-    return (result == SQLITE_OK);
+    return true;
   }
 
   //----------------------------------------------------------------------------
@@ -711,7 +711,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<Transaction> SqliteDatabase::startTransaction(TRANSACTION_TYPE tt, TRANSACTION_DESTRUCTOR_ACTION dtorAct, int* errCodeOut)
+  unique_ptr<Transaction> SqliteDatabase::startTransaction(TransactionType tt, TransactionDtorAction dtorAct, int* errCodeOut)
   {
     return Transaction::startNew(this, tt, dtorAct, errCodeOut);
   }
@@ -788,7 +788,7 @@ namespace SqliteOverlay
     // before we create the new table and copy the contents, we
     // explicitly start a transaction to be able to restore the
     // original database state in case of errors
-    auto tr = startTransaction(TRANSACTION_TYPE::IMMEDIATE, TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK, &err);
+    auto tr = startTransaction(TransactionType::IMMEDIATE, TransactionDtorAction::ROLLBACK, &err);
     if (tr == nullptr) return false;
     if (err != SQLITE_DONE) return false;
 
@@ -937,9 +937,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  upSqlStatement SqliteDatabase::prepStatement(const string& sqlText, int* errCodeOut)
+  SqlStatement SqliteDatabase::prepStatement(const string& sqlText)
   {
-    return SqlStatement::get(dbPtr.get(), sqlText, errCodeOut, log.get());
+    return SqlStatement{dbPtr.get(), sqlText};
   }
 
   //----------------------------------------------------------------------------
@@ -954,66 +954,55 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  string conflictClause2String(CONFLICT_CLAUSE cc)
+  string conflictClause2String(ConflictClause cc)
   {
     switch (cc)
     {
-    case CONFLICT_CLAUSE::ABORT:
+    case ConflictClause::Abort:
       return "ABORT";
 
-    case CONFLICT_CLAUSE::FAIL:
+    case ConflictClause::Fail:
       return "FAIL";
 
-    case CONFLICT_CLAUSE::IGNORE:
+    case ConflictClause::Ignore:
       return "IGNORE";
 
-    case CONFLICT_CLAUSE::REPLACE:
+    case ConflictClause::Replace:
       return "REPLACE";
 
-    case CONFLICT_CLAUSE::ROLLBACK:
+    case ConflictClause::Rollback:
       return "ROLLBACK";
 
     default:
       return "";
     }
 
-    return "";  // includes __NOT_SET
+    return "";  // includes NoAction
   }
 
   //----------------------------------------------------------------------------
 
-  string buildColumnConstraint(bool isUnique, CONFLICT_CLAUSE uniqueConflictClause, bool notNull, CONFLICT_CLAUSE notNullConflictClause,
-                               bool hasDefault, const string& defVal)
+  string buildColumnConstraint(ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause, optional<string> defaultVal)
   {
     string result;
 
-    if (isUnique)
+    if (uniqueConflictClause != ConflictClause::NotUsed)
     {
-      result += "UNIQUE";
-      if (uniqueConflictClause != CONFLICT_CLAUSE::__NOT_SET)
-      {
-        result += " ON CONFLICT " + conflictClause2String(uniqueConflictClause);
-      }
+      result += "UNIQUE ON CONFLICT " + conflictClause2String(uniqueConflictClause);
     }
 
-    if (notNull)
+    if (notNullConflictClause != ConflictClause::NotUsed)
     {
       if (!(result.empty())) result += " ";
 
-      result += "NOT NULL";
-      if (notNullConflictClause != CONFLICT_CLAUSE::__NOT_SET)
-      {
-        result += " ON CONFLICT " + conflictClause2String(notNullConflictClause);
-      }
+      result += "NOT NULL ON CONFLICT " + conflictClause2String(notNullConflictClause);
     }
 
-    if (hasDefault)
+    if (defaultVal.has_value())
     {
       if (!(result.empty())) result += " ";
 
-      result += "DEFAULT '";
-      if (!(defVal.empty())) result += defVal;
-      result += "'";
+      result += "DEFAULT '" + defaultVal.value() + "'";
     }
 
     return result;
@@ -1021,21 +1010,21 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  string buildForeignKeyClause(const string& referedTable, CONSISTENCY_ACTION onDelete, CONSISTENCY_ACTION onUpdate, string referedColumn)
+  string buildForeignKeyClause(const string& referedTable, ConsistencyAction onDelete, ConsistencyAction onUpdate, string referedColumn)
   {
     // a little helper to translate a CONSISTENCY_ACTION value into a string
-    auto ca2string = [](CONSISTENCY_ACTION ca) -> string {
+    auto ca2string = [](ConsistencyAction ca) -> string {
       switch (ca)
       {
-        case CONSISTENCY_ACTION::NO_ACTION:
+        case ConsistencyAction::NoAction:
           return "NO ACTION";
-        case CONSISTENCY_ACTION::SET_NULL:
+        case ConsistencyAction::SetNull:
           return "SET NULL";
-        case CONSISTENCY_ACTION::SET_DEFAULT:
+        case ConsistencyAction::SetDefault:
           return "SET DEFAULT";
-        case CONSISTENCY_ACTION::CASCADE:
+        case ConsistencyAction::Cascade:
           return "CASCADE";
-        case CONSISTENCY_ACTION::RESTRICT:
+        case ConsistencyAction::Restrict:
           return "RESTRICT";
         default:
           return "";
@@ -1045,18 +1034,14 @@ namespace SqliteOverlay
 
     string result = "REFERENCES " + referedTable + "(" + referedColumn + ")";
 
-    if (onDelete != CONSISTENCY_ACTION::__NOT_SET)
-    {
-      result += " ON DELETE " + ca2string(onDelete);
-    }
+    result += " ON DELETE " + ca2string(onDelete);
 
-    if (onUpdate != CONSISTENCY_ACTION::__NOT_SET)
-    {
-      if (!(result.empty())) result += " ";
-      result += " ON UPDATE " + ca2string(onUpdate);
-    }
+    result += " ON UPDATE " + ca2string(onUpdate);
 
     return result;
   }
+
+  //----------------------------------------------------------------------------
+
 
 }

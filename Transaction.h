@@ -29,8 +29,8 @@ namespace SqliteOverlay
   class Transaction
   {
   public:
-    static unique_ptr<Transaction> startNew(SqliteDatabase* _db, TRANSACTION_TYPE tt=TRANSACTION_TYPE::IMMEDIATE,
-                                            TRANSACTION_DESTRUCTOR_ACTION _dtorAct = TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK,
+    static unique_ptr<Transaction> startNew(SqliteDatabase* _db, TransactionType tt=TransactionType::IMMEDIATE,
+                                            TransactionDtorAction _dtorAct = TransactionDtorAction::ROLLBACK,
                                             int* errCodeOut=nullptr);
     bool isActive() const;
     bool commit(int* errCodeOut=nullptr);
@@ -39,11 +39,11 @@ namespace SqliteOverlay
     ~Transaction();
 
   private:
-    Transaction(SqliteDatabase* _db, TRANSACTION_TYPE tt=TRANSACTION_TYPE::IMMEDIATE,
-                TRANSACTION_DESTRUCTOR_ACTION _dtorAct = TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK,
+    Transaction(SqliteDatabase* _db, TransactionType tt=TransactionType::IMMEDIATE,
+                TransactionDtorAction _dtorAct = TransactionDtorAction::ROLLBACK,
                 int* errCodeOut=nullptr);
     SqliteDatabase* db;
-    TRANSACTION_DESTRUCTOR_ACTION dtorAct;
+    TransactionDtorAction dtorAct;
     string savepointName;
     bool isFinished;
   };

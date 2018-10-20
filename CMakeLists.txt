@@ -51,6 +51,8 @@ set(LIB_SOURCES
     Transaction.cpp
     UserMngr.cpp
     ActionMngr.cpp
+    SqliteExceptions.h
+    Defs.h
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
@@ -59,7 +61,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE "-Wall")
 target_compile_options(${PROJECT_NAME} PRIVATE "-Wextra")
 #target_compile_options(${PROJECT_NAME} PRIVATE "-Weffc++")
 
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 set(LIB_VERSION_MAJOR 0)
@@ -134,7 +136,7 @@ if (GTEST_FOUND AND Boost_FOUND AND BUILD_TESTS)
     include_directories("." ${GTEST_INCLUDE_DIRS})
 
     add_executable(${PROJECT_NAME}_Tests ${LIB_SOURCES} ${LIB_SOURCES_TST})
-    set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD 14)
+    set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD 17)
     set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD_REQUIRED ON)
 
     target_link_libraries(${PROJECT_NAME}_Tests ${GTEST_BOTH_LIBRARIES} ${LIBS})

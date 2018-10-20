@@ -3,21 +3,23 @@
 #include <cstring>
 #include <cstdlib>
 
-#include "Sloppy/DateTime/DateAndTime.h"
+#include <Sloppy/DateTime/DateAndTime.h>
+#include <Sloppy/String.h>
 
 #include "SqlStatement.h"
+#include "SqliteExceptions.h"
 
 using namespace std;
 using namespace Sloppy::DateTime;
 
 namespace SqliteOverlay
 {
-  SqlStatement::SqlStatement(sqlite3* dbPtr, const string& sqlTxt, int* errCodeOut)
+  SqlStatement::SqlStatement(sqlite3* dbPtr, const string& sqlTxt)
     :stmt(nullptr), _hasData(false), _isDone(false), resultColCount(-1), stepCount(0)
   {
     if (dbPtr == nullptr)
     {
-      throw std::runtime_error("Reived null-pointer for database handle");
+      throw std::invalid_argument("Reived null-pointer for database handle");
     }
 
     if (sqlTxt.empty())
@@ -26,51 +28,10 @@ namespace SqliteOverlay
     }
 
     int err = sqlite3_prepare_v2(dbPtr, sqlTxt.c_str(), -1, &stmt, nullptr);
-    if (errCodeOut != nullptr) *errCodeOut = err;
     if (err != SQLITE_OK)
     {
-      throw invalid_argument(sqlite3_errmsg(dbPtr));
+      throw SqlStatementCreationError(err, "SqlStatement ctor");
     }
-
-    // initialize the random number generator (need to generate
-    // random savepoint names in transaction)
-    //srand(time(nullptr));
-  }
-
-  //----------------------------------------------------------------------------
-
-  unique_ptr<SqlStatement> SqlStatement::get(sqlite3* dbPtr, const string& sqlTxt, int* errCodeOut, Logger* log)
-  {
-    SqlStatement* tmpPtr;
-    try
-    {
-      tmpPtr = new SqlStatement(dbPtr, sqlTxt, errCodeOut);
-    }
-    catch (invalid_argument e)
-    {
-      if (log != nullptr)
-      {
-        string msg = "Creating SQL statement '";
-        msg += sqlTxt;
-        msg += "' raised: ";
-        msg += e.what();
-        log->warn(msg);
-      }
-      return nullptr;
-    }
-
-    catch (...) {
-      if (log != nullptr)
-      {
-        string msg = "Creating SQL statement '";
-        msg += sqlTxt;
-        msg += "' caused an internal error!";
-        log->warn(msg);
-      }
-      return nullptr;
-    }
-
-    return upSqlStatement(tmpPtr);
   }
 
   //----------------------------------------------------------------------------
@@ -86,32 +47,23 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqlStatement::step(int* errCodeOut, Logger* log)
+  bool SqlStatement::step()
   {
     if (_isDone)
     {
-      if (log != nullptr)
-      {
-        string msg = "Tried to execute step ";
-        msg += to_string(stepCount + 1);
-        msg += " on the already finished query '";
-        msg += sqlite3_sql(stmt);
-        msg += "'";
-        log->warn(msg);
-      }
-      if (errCodeOut != nullptr)
-      {
-        *errCodeOut = SQLITE_DONE;
-      }
-
       return false;
     }
 
     int err = sqlite3_step(stmt);
     ++stepCount;
-    if (errCodeOut != nullptr)
+
+    if (err == SQLITE_BUSY)
     {
-      *errCodeOut = err;
+      throw BusyException("call to step() in a SQL statement");
+    }
+    if ((err != SQLITE_ROW) && (err != SQLITE_DONE) && (err != SQLITE_OK))
+    {
+      throw GenericSqliteException(err, "call to step() in a SQL statement");
     }
 
     _hasData = (err == SQLITE_ROW);
@@ -124,20 +76,7 @@ namespace SqliteOverlay
       resultColCount = -1;
     }
 
-    if (log != nullptr)
-    {
-      string msg = "Executed step ";
-      msg += to_string(stepCount);
-      msg += " on '";
-      msg += sqlite3_sql(stmt);
-      msg += "'; ";
-      msg += "hasData = " + to_string(_hasData);
-      msg += "; isDone = " + to_string(_isDone);
-      msg += "; columns returned = " + to_string(resultColCount);
-      log->trace(msg);
-    }
-
-    return ((err == SQLITE_ROW) || (err == SQLITE_DONE) || (err == SQLITE_OK));
+    return true;
   }
 
   //----------------------------------------------------------------------------
@@ -156,113 +95,135 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqlStatement::getInt(int colId, int* out) const
+  int SqlStatement::getInt(int colId) const
   {
-    if (getColumnValue_prep<int>(colId, out))
-    {
-      *out = sqlite3_column_int(stmt, colId);
-      return true;
-    }
-    return false;
+    assertColumnDataAccess(colId);
+
+    return sqlite3_column_int(stmt, colId);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqlStatement::getDouble(int colId, double* out) const
+  double SqlStatement::getDouble(int colId) const
   {
-    if (getColumnValue_prep<double>(colId, out))
-    {
-      *out = sqlite3_column_double(stmt, colId);
-      return true;
-    }
-    return false;
+    assertColumnDataAccess(colId);
+
+    return sqlite3_column_double(stmt, colId);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqlStatement::getString(int colId, string* out) const
+  string SqlStatement::getString(int colId) const
   {
-    if (getColumnValue_prep<string>(colId, out))
-    {
-      *out = reinterpret_cast<const char*>(sqlite3_column_text(stmt, colId));
-      return true;
-    }
-    return false;
+    assertColumnDataAccess(colId);
+
+    return string{reinterpret_cast<const char*>(sqlite3_column_text(stmt, colId))};
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqlStatement::getLocalTime(int colId, LocalTimestamp* out, boost::local_time::time_zone_ptr tzp) const
+  LocalTimestamp SqlStatement::getLocalTime(int colId, boost::local_time::time_zone_ptr tzp) const
   {
-    if (getColumnValue_prep<LocalTimestamp>(colId, out))
-    {
-      time_t rawTime = sqlite3_column_int(stmt, colId);
-      *out = LocalTimestamp(rawTime, tzp);
-      return true;
-    }
-    return false;
+    assertColumnDataAccess(colId);
+
+    time_t rawTime = sqlite3_column_int(stmt, colId);
+    return LocalTimestamp(rawTime, tzp);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqlStatement::getUTCTime(int colId, UTCTimestamp* out) const
+  UTCTimestamp SqlStatement::getUTCTime(int colId) const
   {
-    if (getColumnValue_prep<UTCTimestamp>(colId, out))
-    {
-      time_t rawTime = sqlite3_column_int(stmt, colId);
-      *out = UTCTimestamp(rawTime);
-      return true;
-    }
-    return false;
+    assertColumnDataAccess(colId);
+
+    time_t rawTime = sqlite3_column_int(stmt, colId);
+    return UTCTimestamp(rawTime);
   }
 
   //----------------------------------------------------------------------------
 
-  int SqlStatement::getColType(int colId) const
+  ColumnDataType SqlStatement::getColType(int colId) const
   {
-    return sqlite3_column_type(stmt, colId);
+    assertColumnDataAccess(colId);
+    return int2ColumnDataType(sqlite3_column_type(stmt, colId));
   }
 
   //----------------------------------------------------------------------------
 
   string SqlStatement::getColName(int colId) const
   {
+    assertColumnDataAccess(colId);
     return sqlite3_column_name(stmt, colId);
   }
 
   //----------------------------------------------------------------------------
 
-  int SqlStatement::isNull(int colId) const
+  bool SqlStatement::isNull(int colId) const
   {
-    return (getColType(colId) == SQLITE_NULL);
+    assertColumnDataAccess(colId);
+    return (sqlite3_column_type(stmt, colId) == SQLITE_NULL);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqlStatement::assertColumnDataAccess(int colId) const
+  {
+    if (!hasData())
+    {
+      throw NoDataException{"call to SqlStatement::getXXX() but the statement didn't return any data"};
+    }
+
+    if (colId >= resultColCount)
+    {
+      Sloppy::estring msg{"attempt to access column ID %1 of %2 columns"};
+      msg.arg(colId);
+      msg.arg(resultColCount);
+      throw InvalidColumnException(msg);
+    }
   }
 
   //----------------------------------------------------------------------------
 
   void SqlStatement::bindInt(int argPos, int val)
   {
-    sqlite3_bind_int(stmt, argPos, val);
+    int e = sqlite3_bind_int(stmt, argPos, val);
+    if (e != SQLITE_OK)
+    {
+      throw GenericSqliteException{e, "call to bindInt() of a SqlStatement"};
+    }
   }
 
   //----------------------------------------------------------------------------
 
   void SqlStatement::bindDouble(int argPos, double val)
   {
-    sqlite3_bind_double(stmt, argPos, val);
+    int e = sqlite3_bind_double(stmt, argPos, val);
+    if (e != SQLITE_OK)
+    {
+      throw GenericSqliteException{e, "call to bindDouble() of a SqlStatement"};
+    }
   }
 
   //----------------------------------------------------------------------------
 
   void SqlStatement::bindString(int argPos, const string& val)
   {
-    sqlite3_bind_text(stmt, argPos, val.c_str(), val.length(), SQLITE_TRANSIENT);
+    int e = sqlite3_bind_text(stmt, argPos, val.c_str(), val.length(), SQLITE_TRANSIENT);
+    if (e != SQLITE_OK)
+    {
+      throw GenericSqliteException{e, "call to bindString() of a SqlStatement"};
+    }
   }
 
   //----------------------------------------------------------------------------
 
   void SqlStatement::bindNull(int argPos)
   {
-    sqlite3_bind_null(stmt, argPos);
+    int e = sqlite3_bind_null(stmt, argPos);
+    if (e != SQLITE_OK)
+    {
+      throw GenericSqliteException{e, "call to bindNull() of a SqlStatement"};
+    }
   }
 
   //----------------------------------------------------------------------------

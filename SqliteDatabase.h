@@ -7,64 +7,55 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include <optional>
+#include <type_traits>
 
-#include <Sloppy/libSloppy.h>
+#include <Sloppy/Utils.h>
 #include <Sloppy/Logger/Logger.h>
 
 #include "SqlStatement.h"
+#include "SqliteExceptions.h"
+#include "Defs.h"
 
 using namespace std;
 
 namespace SqliteOverlay
 {
-  enum class CONSISTENCY_ACTION
-  {
-    SET_NULL,
-    SET_DEFAULT,
-    CASCADE,
-    RESTRICT,
-    NO_ACTION,
-    __NOT_SET
-  };
-
-  enum class CONFLICT_CLAUSE
-  {
-    ROLLBACK,
-    ABORT,
-    FAIL,
-    IGNORE,
-    REPLACE,
-    __NOT_SET
-  };
-
-
-  //----------------------------------------------------------------------------
-
   // some free functions, mostly for creating SQL strings
 
-  string conflictClause2String(CONFLICT_CLAUSE cc);
-  string buildColumnConstraint(bool isUnique, CONFLICT_CLAUSE uniqueConflictClause,
-                               bool notNull, CONFLICT_CLAUSE notNullConflictClause,
-                               bool hasDefault, const string& defVal="");
-  string buildForeignKeyClause(const string& referedTable, CONSISTENCY_ACTION onDelete,
-                               CONSISTENCY_ACTION onUpdate, string referedColumn="id");
+  /** \brief Converts a ConflictClause enum into a string that can be used
+   * for constructing a SQL statement.
+   *
+   * Example: `ConflictClause::Abort' --> "ABORT"
+   *
+   * \returns a string representing the provided ConflictClause enum value or "" for `ConflictClause::NotUsed`
+   */
+  string conflictClause2String(
+      ConflictClause cc   ///< the enum to convert to a string
+      );
 
-  //----------------------------------------------------------------------------
+  /** \brief Creates a column constraint string for CREATE TABLE statements
+   * according to [this description](https://www.sqlite.org/syntax/column-constraint.html).
+   *
+   * \returns a string with a column constraint clause for use in a CREATE TABLE statement.
+   */
+  string buildColumnConstraint(
+      ConflictClause uniqueConflictClause,   ///< unless set to `NotUsed` include a UNIQUE constraint and define what shall happen in violation
+      ConflictClause notNullConflictClause,   ///< unless set to `NotUsed` include a NOT NULL constraint and define what shall happen in violation
+      optional<string> defaultVal = optional<string>{}   ///< an optional default value for the column
+      );
 
-  enum class TRANSACTION_TYPE
-  {
-    DEFERRED,
-    IMMEDIATE,
-    EXCLUSIVE
-  };
-
-  enum class TRANSACTION_DESTRUCTOR_ACTION
-  {
-    COMMIT,
-    ROLLBACK,
-  };
-
-  //----------------------------------------------------------------------------
+  /** \brief Creates a foreign key clause for CREATE TABLE statements
+   * according to [this description](https://www.sqlite.org/syntax/foreign-key-clause.html).
+   *
+   * \returns a string with a foreign key clause for use in a CREATE TABLE statement.
+   */
+  string buildForeignKeyClause(
+      const string& referedTable,   ///< the name of the table that this column refers to
+      ConsistencyAction onDelete,   ///< the action to be taken if the refered row is being deleted
+      ConsistencyAction onUpdate,   ///< the action to be taken if the refered row is updated
+      string referedColumn="id"   ///< the name of the column we're pointing to in the refered table
+      );
 
   //
   // forward definitions
@@ -87,35 +78,94 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  /** \brief A class that handles a single database connection.
+   *
+   * \note If an instance of this class is shared by multiple threads you have to make sure on
+   * application level that no bad things happen. From SQLite's perspective, all
+   * statements are coming in over the same connection, no matter which thread
+   * actually sent them.
+   *
+   * \note This object is not inherently thread-safe. It uses no locking, mutexes
+   * or other magic before reading/writing its internal state.
+   */
   class SqliteDatabase
   {
   public:
+    /** \brief A convenience wrapper that opens a database file and instantiates
+     * a class derived from `SqliteDatabase` for it.
+     *
+     * The template parameter `T` is the type of the derived class.
+     *
+     * \note This function also calls the `populateTables()` and
+     * `populateViews()` functions of the (derived) database.
+     *
+     * \returns an heap allocated database instance of type `T` (with tables and views populated) or `nullptr` on error
+     */
     template<class T>
-    static unique_ptr<T> get(string dbFileName = ":memory:", bool createNew=false) {
-      T* tmpPtr;
+    static unique_ptr<T> get(
+        string dbFileName = ":memory:",   ///< the name of the database file
+        bool createNew=false   ///< set to `true` if a new, empty database shall be created if the file doesn't exist
+        )
+    {
+      static_assert (is_base_of<SqliteDatabase, T>(), "Template parameter must be a class derived from SqliteDatabase");
+      unique_ptr<T> tmpPtr;
 
       try
       {
-        tmpPtr = new T(dbFileName, createNew);
-      } catch (exception e) {
+        // we can't use make_unique here because the
+        // ctor is not public
+        T* p = new T(dbFileName, createNew);
+        tmpPtr.reset(p);
+      } catch (...) {
         return nullptr;
       }
+
       tmpPtr->populateTables();
       tmpPtr->populateViews();
-      return unique_ptr<T>(tmpPtr);
+
+      return tmpPtr;
     }
+
+    /** \brief Dtor; cleans up table cache and that's it.
+     */
     virtual ~SqliteDatabase();
 
-    bool close(bool forceDeleteTabObjects=false);
+    /** \brief Closes the database connection. The instance shouldn't be
+     * used anymore after calling this function.
+     *
+     * \warning On success, this function also deletes all cached `DbTab` instances!
+     * In case you stored any pointers to 'DbTab' instances anywhere in your code
+     * these pointers become invalid after calling `close()` and the call was successful!
+     *
+     * \returns `true` if the database connection could be closed successfully or
+     * if the database has already been closed before.
+     */
+    bool close(PrimaryResultCode* errCode = nullptr);
+
+    /** \brief Deletes all cached `DbTab` instances. */
     void resetTabCache();
+
+    /** \returns `true` if the database connection is still open and `false` otherwise */
     bool isAlive() const;
 
-    // disable copying of the database object
+    /** \brief Disabled copy ctor */
     SqliteDatabase(const SqliteDatabase&) = delete;
+
+    /** \brief Disabled copy assignment */
     SqliteDatabase& operator=(const SqliteDatabase&) = delete;
 
-    // statements and queries
-    upSqlStatement prepStatement(const string& sqlText, int* errCodeOut=nullptr);
+    /** \brief Creates a new SQL statement for this database connection
+     *
+     * \throws std::invalid_argument if the provided SQL string is empty or if the connection has been closed before calling this method
+     *
+     * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
+     *
+     * \returns a SqlStatement instance for the provided SQL text
+     */
+    SqlStatement prepStatement(
+        const string& sqlText   ///< the SQL text for which to create the statement
+        );
+
     bool execNonQuery(const string& sqlStatement, int* errCodeOut=nullptr);
     bool execNonQuery(const upSqlStatement& stmt, int* errCodeOut=nullptr) const;
     upSqlStatement execContentQuery(const string& sqlStatement, int* errCodeOut=nullptr);
@@ -158,8 +208,8 @@ namespace SqliteOverlay
     int getLastInsertId();
     int getRowsAffected();
     bool isAutoCommit() const;
-    unique_ptr<Transaction> startTransaction(TRANSACTION_TYPE tt = TRANSACTION_TYPE::IMMEDIATE,
-                                             TRANSACTION_DESTRUCTOR_ACTION dtorAct = TRANSACTION_DESTRUCTOR_ACTION::ROLLBACK,
+    unique_ptr<Transaction> startTransaction(TransactionType tt = TransactionType::IMMEDIATE,
+                                             TransactionDtorAction dtorAct = TransactionDtorAction::ROLLBACK,
                                              int* errCodeOut=nullptr);
 
     void setLogLevel(SeverityLevel newMinLvl);
