@@ -61,7 +61,7 @@ namespace SqliteOverlay
     void bindInt(
         int argPos,   ///< the placeholder to bind to
         int val   ///< the value to bind to the placeholder
-        );
+        ) const;
 
     /** \brief Binds a double value to a placeholder in the statement
      *
@@ -73,7 +73,7 @@ namespace SqliteOverlay
     void bindDouble(
         int argPos,   ///< the placeholder to bind to
         double val   ///< the value to bind to the placeholder
-        );
+        ) const;
 
     /** \brief Binds a string value to a placeholder in the statement
      *
@@ -85,7 +85,7 @@ namespace SqliteOverlay
     void bindString(
         int argPos,   ///< the placeholder to bind to
         const string& val   ///< the value to bind to the placeholder
-        );
+        ) const;
 
     /** \brief Binds a NULL value to a placeholder in the statement
      *
@@ -96,7 +96,7 @@ namespace SqliteOverlay
      */
     void bindNull(
         int argPos   ///< the placeholder to bind to
-        );
+        ) const;
 
     /** \brief Executes the next step of the SQL statement
      *

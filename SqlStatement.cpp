@@ -184,7 +184,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqlStatement::bindInt(int argPos, int val)
+  void SqlStatement::bindInt(int argPos, int val) const
   {
     int e = sqlite3_bind_int(stmt, argPos, val);
     if (e != SQLITE_OK)
@@ -195,7 +195,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqlStatement::bindDouble(int argPos, double val)
+  void SqlStatement::bindDouble(int argPos, double val) const
   {
     int e = sqlite3_bind_double(stmt, argPos, val);
     if (e != SQLITE_OK)
@@ -206,7 +206,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqlStatement::bindString(int argPos, const string& val)
+  void SqlStatement::bindString(int argPos, const string& val) const
   {
     int e = sqlite3_bind_text(stmt, argPos, val.c_str(), val.length(), SQLITE_TRANSIENT);
     if (e != SQLITE_OK)
@@ -217,7 +217,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqlStatement::bindNull(int argPos)
+  void SqlStatement::bindNull(int argPos) const
   {
     int e = sqlite3_bind_null(stmt, argPos);
     if (e != SQLITE_OK)

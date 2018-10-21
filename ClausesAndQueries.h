@@ -139,42 +139,6 @@ namespace SqliteOverlay {
     int limit;
   };
 
-
-  template<class T>
-  class ScalarQueryResult
-  {
-  public:
-    ScalarQueryResult(T result)
-      : cachedResult(result), _isNull(false)
-    {
-    }
-
-    ScalarQueryResult()
-      : _isNull(true)
-    {
-    }
-
-    virtual ~ScalarQueryResult(){}
-
-    bool isNull() const
-    {
-      return _isNull;
-    }
-
-    T get() const
-    {
-      if (_isNull)
-      {
-        throw std::invalid_argument("Attempt to access NULL result");
-      }
-      return cachedResult;
-    }
-
-  private:
-    T cachedResult;
-    bool _isNull;
-  };
-
 }
 
 #endif  /* CLAUSESANDQUERIES_H */

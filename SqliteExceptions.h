@@ -99,5 +99,25 @@ namespace SqliteOverlay
     NoDataException(const string& context = "")
       :BasicException("Column data access in a SQL statement that did not return any data or that is finished", context) {}
   };
+
+  /** \brief An exception that is thrown if we expected a cell to contain
+   * a real, scalar value but it contained NULL instead
+   */
+  class NullValueException : public BasicException
+  {
+  public:
+    NullValueException(const string& context = "")
+      :BasicException("Null Value Exception", context) {}
+  };
+
+  /** \brief An exception that is thrown if an invalid,
+   * non-existing table name is used
+   */
+  class NoSuchTableException : public BasicException
+  {
+  public:
+    NoSuchTableException(const string& context = "")
+      :BasicException("No Such Table Exception (e.g., invalid table name", context) {}
+  };
 }
 #endif

@@ -2,7 +2,8 @@
 
 #include <boost/date_time/local_time/local_time.hpp>
 
-#include <Sloppy/Logger/Logger.h>
+#include <Sloppy/String.h>
+#include <Sloppy/Utils.h>
 
 #include "SqliteDatabase.h"
 #include "DbTab.h"
@@ -71,28 +72,6 @@ namespace SqliteOverlay
     }
 
     enforceSynchronousWrites(false);
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool SqliteDatabase::execScalarQuery_prep(const upSqlStatement& stmt, int* errCodeOut) const
-  {
-    bool isOk = stmt->step(errCodeOut, log.get());
-    if (!isOk) return false;
-    if (!(stmt->hasData())) return false;
-
-    return true;
-  }
-
-  //----------------------------------------------------------------------------
-
-  upSqlStatement SqliteDatabase::execScalarQuery_prep(const string& sqlStatement, int* errCodeOut)
-  {
-    upSqlStatement stmt = execContentQuery(sqlStatement, errCodeOut);
-    if (stmt == nullptr) return nullptr;
-    if (!(stmt->hasData())) return nullptr;
-
-    return stmt;
   }
 
   //----------------------------------------------------------------------------
@@ -188,410 +167,251 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execNonQuery(const string& sqlStatement, int* errCodeOut)
+  void SqliteDatabase::execNonQuery(const string& sqlStatement) const
   {
-    upSqlStatement stmt = prepStatement(sqlStatement, errCodeOut);
-    if (stmt == nullptr)
-    {
-      // invalid statement
-      return false;
-    }
-
-    return execNonQuery(stmt, errCodeOut);
+    SqlStatement stmt = prepStatement(sqlStatement);
+    return execNonQuery(stmt);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execNonQuery(const upSqlStatement& stmt, int* errCodeOut) const
+  void SqliteDatabase::execNonQuery(SqlStatement& stmt) const
   {
     // execute the statement
-    if (stmt->step(errCodeOut, log.get()))
-    {
-      // if successful, execute further steps of the
-      // statement until the execution is complete
-      while (!(stmt->isDone()))
-      {
-        if (!(stmt->step(errCodeOut, log.get()))) return false;
-      }
-    } else {
-      // initial execution raised a failure
-      return false;
-    }
-
-    return true;
+    while (stmt.step()) {};
   }
 
   //----------------------------------------------------------------------------
 
-  upSqlStatement SqliteDatabase::execContentQuery(const string& sqlStatement, int* errCodeOut)
+  SqlStatement SqliteDatabase::execContentQuery(const string& sqlStatement) const
   {
-    upSqlStatement stmt = prepStatement(sqlStatement, errCodeOut);
-    if (stmt == nullptr)
-    {
-      // invalid statement
-      return nullptr;
-    }
-
-    if (!(stmt->step(errCodeOut, log.get())))
-    {
-      return nullptr;
-    }
+    SqlStatement stmt = prepStatement(sqlStatement);
+    stmt.step();
 
     return stmt;
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execContentQuery(const upSqlStatement& stmt, int* errCodeOut)
+  int SqliteDatabase::execScalarQueryInt(const string& sqlStatement) const
   {
-    return stmt->step(errCodeOut, log.get());
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool SqliteDatabase::execScalarQueryInt(const string& sqlStatement, int* out, int* errCodeOut)
-  {
-    auto stmt = execScalarQuery_prep<int>(sqlStatement, out, errCodeOut);
-
-    // Here, the SQLite result code can be SQLITE_ROW, because we
-    // called step() on the statememnt only once. If the statement
-    // would retrieve only one row, the next call to step() would yield
-    // SQLITE_DONE. If it would retrieve multiple rows, the next call
-    // to step() would yield SQLITE_ROW again.
-    //
-    // So we can't predict the result of the next call to step().
-    //
-    // But since all other queries always return SQLITE_DONE, we
-    // manually overwrite SQLite's last result code here
-    if ((errCodeOut != nullptr) && (*errCodeOut == SQLITE_ROW)) *errCodeOut = SQLITE_DONE;
-
-    return (stmt == nullptr) ? false : stmt->getInt(0, out);
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool SqliteDatabase::execScalarQueryInt(const upSqlStatement& stmt, int* out, int* errCodeOut) const
-  {
-    bool isSuccess = execScalarQuery_prep<int>(stmt, out, errCodeOut);
-
-    // Here, the SQLite result code can be SQLITE_ROW, because we
-    // called step() on the statememnt only once. If the statement
-    // would retrieve only one row, the next call to step() would yield
-    // SQLITE_DONE. If it would retrieve multiple rows, the next call
-    // to step() would yield SQLITE_ROW again.
-    //
-    // So we can't predict the result of the next call to step().
-    //
-    // But since all other queries always return SQLITE_DONE, we
-    // manually overwrite SQLite's last result code here
-    if ((errCodeOut != nullptr) && (*errCodeOut == SQLITE_ROW)) *errCodeOut = SQLITE_DONE;
-
-    return isSuccess ? stmt->getInt(0, out) : false;
-  }
-
-  //----------------------------------------------------------------------------
-
-  unique_ptr<ScalarQueryResult<int>> SqliteDatabase::execScalarQueryInt(const upSqlStatement& stmt, int* errCodeOut, bool skipPrep) const
-  {
-    if (!skipPrep)
+    optional<int> v = execScalarQueryIntOrNull(sqlStatement);
+    if (!(v.has_value()))
     {
-      if (!(execScalarQuery_prep(stmt, errCodeOut)))
-      {
-        return nullptr;
-      }
+      throw NullValueException("SQL = " + sqlStatement);
     }
 
-    ScalarQueryResult<int>* result;
+    return v.value();
+  }
 
-    // Here, the SQLite result code is SQLITE_ROW, because we
-    // called step() on the statememnt only once. If the statement
-    // would retrieve only one row, the next call to step() would yield
-    // SQLITE_DONE. If it would retrieve multiple rows, the next call
-    // to step() would yield SQLITE_ROW again.
-    //
-    // So we can't predict the result of the next call to step().
-    //
-    // But since all other queries always return SQLITE_DONE, we
-    // manually overwrite SQLite's last result code here
-    if (errCodeOut != nullptr) *errCodeOut = SQLITE_DONE;
+  //----------------------------------------------------------------------------
 
-    if (stmt->isNull(0))
+  int SqliteDatabase::execScalarQueryInt(SqlStatement& stmt) const
+  {
+    optional<int> v = execScalarQueryIntOrNull(stmt);
+    if (!(v.has_value()))
     {
-      result = new ScalarQueryResult<int>();
-    } else {
-      int i;
-      if (!(stmt->getInt(0, &i)))
-      {
-        return nullptr;
-      }
-      result = new ScalarQueryResult<int>(i);
+      throw NullValueException();
     }
 
-    return unique_ptr<ScalarQueryResult<int>>(result);
+    return v.value();
   }
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<int> > SqliteDatabase::execScalarQueryInt(const string& sqlStatement, int* errCodeOut)
+  optional<int> SqliteDatabase::execScalarQueryIntOrNull(const string& sqlStatement) const
   {
-    auto stmt = execScalarQuery_prep(sqlStatement, errCodeOut);
-    if (stmt == nullptr)
+    // throws invalid_argument or SqlStatementCreationError
+    SqlStatement stmt = prepStatement(sqlStatement);
+
+    // throws BusyException or GenericSqliteException
+    stmt.step();
+
+    // throws NoDataException
+    return stmt.isNull(0) ? optional<int>{} : stmt.getInt(0);
+  }
+
+  //----------------------------------------------------------------------------
+
+  optional<int> SqliteDatabase::execScalarQueryIntOrNull(SqlStatement& stmt) const
+  {
+    // throws BusyException or GenericSqliteException
+    stmt.step();
+
+    // throws NoDataException
+    return stmt.isNull(0) ? optional<int>{} : stmt.getInt(0);
+  }
+
+  //----------------------------------------------------------------------------
+
+  double SqliteDatabase::execScalarQueryDouble(const string& sqlStatement) const
+  {
+    optional<double> v = execScalarQueryDoubleOrNull(sqlStatement);
+    if (!(v.has_value()))
     {
-      return nullptr;
+      throw NullValueException("SQL = " + sqlStatement);
     }
 
-    return execScalarQueryInt(stmt, errCodeOut, true);
+    return v.value();
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execScalarQueryDouble(const string& sqlStatement, double* out, int* errCodeOut)
+  double SqliteDatabase::execScalarQueryDouble(SqlStatement& stmt) const
   {
-    auto stmt = execScalarQuery_prep<double>(sqlStatement, out, errCodeOut);
-
-    // Here, the SQLite result code can be SQLITE_ROW, because we
-    // called step() on the statememnt only once. If the statement
-    // would retrieve only one row, the next call to step() would yield
-    // SQLITE_DONE. If it would retrieve multiple rows, the next call
-    // to step() would yield SQLITE_ROW again.
-    //
-    // So we can't predict the result of the next call to step().
-    //
-    // But since all other queries always return SQLITE_DONE, we
-    // manually overwrite SQLite's last result code here
-    if ((errCodeOut != nullptr) && (*errCodeOut == SQLITE_ROW)) *errCodeOut = SQLITE_DONE;
-
-    return (stmt == nullptr) ? false : stmt->getDouble(0, out);
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool SqliteDatabase::execScalarQueryDouble(const upSqlStatement& stmt, double* out, int* errCodeOut) const
-  {
-    bool isSuccess = execScalarQuery_prep<double>(stmt, out, errCodeOut);
-
-    // Here, the SQLite result code can be SQLITE_ROW, because we
-    // called step() on the statememnt only once. If the statement
-    // would retrieve only one row, the next call to step() would yield
-    // SQLITE_DONE. If it would retrieve multiple rows, the next call
-    // to step() would yield SQLITE_ROW again.
-    //
-    // So we can't predict the result of the next call to step().
-    //
-    // But since all other queries always return SQLITE_DONE, we
-    // manually overwrite SQLite's last result code here
-    if ((errCodeOut != nullptr) && (*errCodeOut == SQLITE_ROW)) *errCodeOut = SQLITE_DONE;
-
-    return isSuccess ? stmt->getDouble(0, out) : false;
-  }
-
-  //----------------------------------------------------------------------------
-
-  unique_ptr<ScalarQueryResult<double> > SqliteDatabase::execScalarQueryDouble(const upSqlStatement& stmt, int* errCodeOut, bool skipPrep) const
-  {
-    if (!skipPrep)
+    optional<double> v = execScalarQueryDoubleOrNull(stmt);
+    if (!(v.has_value()))
     {
-      if (!(execScalarQuery_prep(stmt, errCodeOut)))
-      {
-        return nullptr;
-      }
+      throw NullValueException();
     }
 
-    ScalarQueryResult<double>* result;
+    return v.value();
+  }
 
-    // Here, the SQLite result code is SQLITE_ROW, because we
-    // called step() on the statememnt only once. If the statement
-    // would retrieve only one row, the next call to step() would yield
-    // SQLITE_DONE. If it would retrieve multiple rows, the next call
-    // to step() would yield SQLITE_ROW again.
-    //
-    // So we can't predict the result of the next call to step().
-    //
-    // But since all other queries always return SQLITE_DONE, we
-    // manually overwrite SQLite's last result code here
-    if (errCodeOut != nullptr) *errCodeOut = SQLITE_DONE;
+  //----------------------------------------------------------------------------
 
-    if (stmt->isNull(0))
+  optional<double> SqliteDatabase::execScalarQueryDoubleOrNull(const string& sqlStatement) const
+  {
+    // throws invalid_argument or SqlStatementCreationError
+    SqlStatement stmt = prepStatement(sqlStatement);
+
+    // throws BusyException or GenericSqliteException
+    stmt.step();
+
+    // throws NoDataException
+    return stmt.isNull(0) ? optional<double>{} : stmt.getDouble(0);
+  }
+
+  //----------------------------------------------------------------------------
+
+  optional<double> SqliteDatabase::execScalarQueryDoubleOrNull(SqlStatement& stmt) const
+  {
+    // throws BusyException or GenericSqliteException
+    stmt.step();
+
+    // throws NoDataException
+    return stmt.isNull(0) ? optional<double>{} : stmt.getDouble(0);
+  }
+
+  //----------------------------------------------------------------------------
+
+  string SqliteDatabase::execScalarQueryString(const string& sqlStatement) const
+  {
+    optional<string> v = execScalarQueryStringOrNull(sqlStatement);
+    if (!(v.has_value()))
     {
-      result = new ScalarQueryResult<double>();
-    } else {
-      double d;
-      if (!(stmt->getDouble(0, &d)))
-      {
-        return nullptr;
-      }
-      result = new ScalarQueryResult<double>(d);
+      throw NullValueException("SQL = " + sqlStatement);
     }
 
-    return unique_ptr<ScalarQueryResult<double>>(result);
+    return v.value();
   }
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<double> > SqliteDatabase::execScalarQueryDouble(const string& sqlStatement, int* errCodeOut)
+  string SqliteDatabase::execScalarQueryString(SqlStatement& stmt) const
   {
-    auto stmt = execScalarQuery_prep(sqlStatement, errCodeOut);
-    if (stmt == nullptr)
+    optional<string> v = execScalarQueryStringOrNull(stmt);
+    if (!(v.has_value()))
     {
-      return nullptr;
+      throw NullValueException();
     }
 
-    return execScalarQueryDouble(stmt, errCodeOut, true);
+    return v.value();
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execScalarQueryString(const string& sqlStatement, string* out, int* errCodeOut)
+  optional<string> SqliteDatabase::execScalarQueryStringOrNull(const string& sqlStatement) const
   {
-    auto stmt = execScalarQuery_prep<string>(sqlStatement, out, errCodeOut);
+    // throws invalid_argument or SqlStatementCreationError
+    SqlStatement stmt = prepStatement(sqlStatement);
 
-    // Here, the SQLite result code can be SQLITE_ROW, because we
-    // called step() on the statememnt only once. If the statement
-    // would retrieve only one row, the next call to step() would yield
-    // SQLITE_DONE. If it would retrieve multiple rows, the next call
-    // to step() would yield SQLITE_ROW again.
-    //
-    // So we can't predict the result of the next call to step().
-    //
-    // But since all other queries always return SQLITE_DONE, we
-    // manually overwrite SQLite's last result code here
-    if ((errCodeOut != nullptr) && (*errCodeOut == SQLITE_ROW)) *errCodeOut = SQLITE_DONE;
+    // throws BusyException or GenericSqliteException
+    stmt.step();
 
-    return (stmt == nullptr) ? false : stmt->getString(0, out);
+    // throws NoDataException
+    return stmt.isNull(0) ? optional<string>{} : stmt.getString(0);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::execScalarQueryString(const upSqlStatement& stmt, string* out, int* errCodeOut) const
+  optional<string> SqliteDatabase::execScalarQueryStringOrNull(SqlStatement& stmt) const
   {
-    bool isSuccess = execScalarQuery_prep<string>(stmt, out, errCodeOut);
+    // throws BusyException or GenericSqliteException
+    stmt.step();
 
-    // Here, the SQLite result code can be SQLITE_ROW, because we
-    // called step() on the statememnt only once. If the statement
-    // would retrieve only one row, the next call to step() would yield
-    // SQLITE_DONE. If it would retrieve multiple rows, the next call
-    // to step() would yield SQLITE_ROW again.
-    //
-    // So we can't predict the result of the next call to step().
-    //
-    // But since all other queries always return SQLITE_DONE, we
-    // manually overwrite SQLite's last result code here
-    if ((errCodeOut != nullptr) && (*errCodeOut == SQLITE_ROW)) *errCodeOut = SQLITE_DONE;
-
-    return isSuccess ? stmt->getString(0, out) : false;
+    // throws NoDataException
+    return stmt.isNull(0) ? optional<string>{} : stmt.getString(0);
   }
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<string> > SqliteDatabase::execScalarQueryString(const upSqlStatement& stmt, int* errCodeOut, bool skipPrep) const
+  void SqliteDatabase::enforceSynchronousWrites(bool syncOn) const
   {
-    if (!skipPrep)
-    {
-      if (!(execScalarQuery_prep(stmt, errCodeOut)))
-      {
-        return nullptr;
-      }
-    }
-
-    ScalarQueryResult<string>* result;
-
-    // Here, the SQLite result code is SQLITE_ROW, because we
-    // called step() on the statememnt only once. If the statement
-    // would retrieve only one row, the next call to step() would yield
-    // SQLITE_DONE. If it would retrieve multiple rows, the next call
-    // to step() would yield SQLITE_ROW again.
-    //
-    // So we can't predict the result of the next call to step().
-    //
-    // But since all other queries always return SQLITE_DONE, we
-    // manually overwrite SQLite's last result code here
-    if (errCodeOut != nullptr) *errCodeOut = SQLITE_DONE;
-
-    if (stmt->isNull(0))
-    {
-      result = new ScalarQueryResult<string>();
-    } else {
-      string s;
-      if (!(stmt->getString(0, &s)))
-      {
-        return nullptr;
-      }
-      result = new ScalarQueryResult<string>(s);
-    }
-
-    return unique_ptr<ScalarQueryResult<string>>(result);
-  }
-
-  //----------------------------------------------------------------------------
-
-  unique_ptr<ScalarQueryResult<string> > SqliteDatabase::execScalarQueryString(const string& sqlStatement, int* errCodeOut)
-  {
-    auto stmt = execScalarQuery_prep(sqlStatement, errCodeOut);
-    if (stmt == nullptr)
-    {
-      return nullptr;
-    }
-
-    return execScalarQueryString(stmt, errCodeOut, true);
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool SqliteDatabase::enforceSynchronousWrites(bool syncOn)
-  {
-    string sql = "PRAGMA synchronous = O";
+    string sql = "PRAGMA synchronous = ";
     if (syncOn)
     {
-      sql += "N";
+      sql += "ON";
     }
     else
     {
-      sql += "FF";
+      sql += "OFF";
     }
 
-    int err;
-    execNonQuery(sql, &err);
-    return (err == SQLITE_OK);
+    execNonQuery(sql);
   }
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::viewCreationHelper(const string& viewName, const string& selectStmt, int* errCodeOut)
+  void SqliteDatabase::viewCreationHelper(const string& viewName, const string& selectStmt)
   {
-    string sql = "CREATE VIEW IF NOT EXISTS";
+    string sql = "CREATE VIEW IF NOT EXISTS ";
 
     sql += " " + viewName + " AS ";
     sql += selectStmt;
-    execNonQuery(sql, errCodeOut);
+    execNonQuery(sql);
   }
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const Sloppy::StringList &colNames, bool isUnique, int* errCodeOut)
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const Sloppy::StringList &colNames, bool isUnique)
   {
+    if (tabName.empty()) return;
     if (idxName.empty()) return;
-    if (!(hasTable(tabName))) return;
+    if (colNames.empty()) return;
 
-    string sql = "CREATE ";
-    if (isUnique) sql += "UNIQUE ";
-    sql += "INDEX IF NOT EXISTS ";
-    sql += idxName + " ON " + tabName + " (";
-    sql += Sloppy::commaSepStringFromStringList(colNames) + ")";
-    execNonQuery(sql, errCodeOut);
+    if (!(hasTable(tabName)))
+    {
+      throw NoSuchTableException("indexCreationHelper() called with table name " + tabName);
+    }
+
+    Sloppy::estring sql{"CREATE %1 INDEX IF NOT EXISTS %2 ON %3 (%4)"};
+    if (isUnique)
+    {
+      sql.arg("UNIQUE");
+    } else {
+      sql.arg("");
+    }
+    sql.arg(idxName);
+    sql.arg(tabName);
+    sql.arg(Sloppy::estring{colNames, ","});
+    execNonQuery(sql);
   }
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const string &colName, bool isUnique, int* errCodeOut)
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const string &colName, bool isUnique)
   {
+    if (colName.empty()) return;
+
     Sloppy::StringList colList;
     colList.push_back(colName);
-    indexCreationHelper(tabName, idxName, colList, isUnique, errCodeOut);
+    indexCreationHelper(tabName, idxName, colList, isUnique);
   }
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &colName, bool isUnique, int* errCodeOut)
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &colName, bool isUnique)
   {
     if (tabName.empty()) return;
     if (colName.empty()) return;
@@ -599,7 +419,7 @@ namespace SqliteOverlay
     // auto-create a canonical index name
     string idxName = tabName + "_" + colName;
 
-    indexCreationHelper(tabName, idxName, colName, isUnique, errCodeOut);
+    indexCreationHelper(tabName, idxName, colName, isUnique);
   }
 
   //----------------------------------------------------------------------------
@@ -937,7 +757,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  SqlStatement SqliteDatabase::prepStatement(const string& sqlText)
+  SqlStatement SqliteDatabase::prepStatement(const string& sqlText) const
   {
     return SqlStatement{dbPtr.get(), sqlText};
   }
