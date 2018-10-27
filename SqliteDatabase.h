@@ -105,8 +105,8 @@ namespace SqliteOverlay
      */
     SqliteDatabase(
         string dbFileName, ///< the name of the database file to open or create
-        OpenMode om,
-        bool populate
+        OpenMode om,   ///< the opening mode (e.g., read-only)
+        bool populate   ///< set to `true` to call `populateTables()` and `populateViews()` (ignored if read-only)
         );
 
     /** \brief Dtor; closes the database connections and cleans up table cache
@@ -134,11 +134,8 @@ namespace SqliteOverlay
      * \warning On success, this function also deletes all cached `DbTab` instances!
      * In case you stored any pointers to 'DbTab' instances anywhere in your code
      * these pointers become invalid after calling `close()` and the call was successful!
-     *
-     * \returns `true` if the database connection could be closed successfully or
-     * if the database has already been closed before.
      */
-    bool close(PrimaryResultCode* errCode = nullptr);
+    void close();
 
     /** \brief Deletes all cached `DbTab` instances. */
     void resetTabCache();
@@ -649,7 +646,9 @@ namespace SqliteOverlay
      * \returns almost always `true` because most errors should be caught by exceptions; if `true`, the backup
      * is guaranteed to be successful
      */
-    bool backupToFile(const string& dstFileName) const;
+    bool backupToFile(
+        const string& dstFileName   ///< the name of the database file to copy the contents to
+        ) const;
 
     /** \brief Copies the content of a database file into the current database
      *
@@ -670,7 +669,9 @@ namespace SqliteOverlay
      * \returns almost always `true` because most errors should be caught by exceptions; if `true`, the backup
      * is guaranteed to be successful
      */
-    bool restoreFromFile(const string& srcFileName, int* errCodeOut=nullptr);
+    bool restoreFromFile(
+        const string& srcFileName    ///< the name of the database file to read from
+        );
 
     /** \returns `true` if the database contents have been modified by this or any other database connection
      */
@@ -708,13 +709,18 @@ namespace SqliteOverlay
      * \returns almost always `true` because most errors should be caught by exceptions; if `true`, the backup
      * is guaranteed to be successful
      */
-    static bool copyDatabaseContents(sqlite3* srcHandle, sqlite3* dstHandle);
+    static bool copyDatabaseContents(
+        sqlite3* srcHandle,   ///< the raw SQLite handle of the source database
+        sqlite3* dstHandle   ///< the raw SQLite handle of the destination database
+        );
 
     /**
-     * @brief dbPtr the internal database handle
+     * \brief the internal database handle
      */
     sqlite3* dbPtr{nullptr};
 
+    /** \brief Cached DbTab-instances for tables, accessible by table name
+     */
     unordered_map<string, DbTab*> tabCache{};
 
     // handling of a "dirty flag" that indicates whether the database has changed

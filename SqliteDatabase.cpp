@@ -208,19 +208,23 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::close(PrimaryResultCode* errCode)
+  void SqliteDatabase::close()
   {
-    if (dbPtr == nullptr) return true;
+    if (dbPtr == nullptr) return;
 
     int result = sqlite3_close(dbPtr);
-    Sloppy::assignIfNotNull<PrimaryResultCode>(errCode, static_cast<PrimaryResultCode>(result));
 
-    if (result != SQLITE_OK) return false;
+    if (result != SQLITE_OK)
+    {
+      if (result == SQLITE_BUSY)
+      {
+        throw BusyException("close()");
+      }
+      throw GenericSqliteException(result, "close()");
+    }
 
     resetTabCache();
     dbPtr = nullptr;
-
-    return true;
   }
 
   //----------------------------------------------------------------------------
@@ -511,11 +515,10 @@ namespace SqliteOverlay
     string sql = "SELECT name FROM sqlite_master WHERE type='";
     sql += getViews ? "view" : "table";
     sql +="';";
-    auto stmt = execContentQuery(sql, nullptr);
-    while (stmt->hasData())
+    auto stmt = execContentQuery(sql);
+    while (stmt.hasData())
     {
-      string tabName;
-      stmt->getString(0, &tabName);
+      string tabName = stmt.getString(0);
 
       // skip a special, internal table
       if (tabName != "sqlite_sequence")
@@ -523,7 +526,7 @@ namespace SqliteOverlay
         result.push_back(tabName);
       }
 
-      stmt->step(nullptr, log.get());
+      stmt.step();
     }
 
     return result;
@@ -563,21 +566,21 @@ namespace SqliteOverlay
 
   int SqliteDatabase::getLastInsertId() const
   {
-    return sqlite3_last_insert_rowid(dbPtr.get());
+    return sqlite3_last_insert_rowid(dbPtr);
   }
 
   //----------------------------------------------------------------------------
 
   int SqliteDatabase::getRowsAffected() const
   {
-    return sqlite3_changes(dbPtr.get());
+    return sqlite3_changes(dbPtr);
   }
 
   //----------------------------------------------------------------------------
 
   bool SqliteDatabase::isAutoCommit() const
   {
-    return (sqlite3_get_autocommit(dbPtr.get()) != 0);
+    return (sqlite3_get_autocommit(dbPtr) != 0);
   }
 
   //----------------------------------------------------------------------------
@@ -710,7 +713,7 @@ namespace SqliteOverlay
     }
 
     // copy the contents
-    bool isOkay = copyDatabaseContents(dbPtr.get(), dstDb);
+    bool isOkay = copyDatabaseContents(dbPtr, dstDb);
 
     // close the destination database
     //
@@ -726,7 +729,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::restoreFromFile(const string &srcFileName, int *errCodeOut)
+  bool SqliteDatabase::restoreFromFile(const string &srcFileName)
   {
     // check parameter validity
     if (srcFileName.empty())
@@ -751,7 +754,7 @@ namespace SqliteOverlay
     }
 
     // copy the contents and clear all cached DbTab pointers
-    bool isOkay = copyDatabaseContents(srcDb, dbPtr.get());
+    bool isOkay = copyDatabaseContents(srcDb, dbPtr);
     resetTabCache();
 
     // close the source database
@@ -771,14 +774,14 @@ namespace SqliteOverlay
   bool SqliteDatabase::isDirty() const
   {
     int dv = execScalarQueryInt("PRAGMA data_version;");
-    return ((sqlite3_total_changes(dbPtr.get()) != changeCounter_reset) || (dv != dataVersion_reset));
+    return ((sqlite3_total_changes(dbPtr) != changeCounter_reset) || (dv != dataVersion_reset));
   }
 
   //----------------------------------------------------------------------------
 
   void SqliteDatabase::resetDirtyFlag()
   {
-    changeCounter_reset = sqlite3_total_changes(dbPtr.get());
+    changeCounter_reset = sqlite3_total_changes(dbPtr);
     dataVersion_reset = execScalarQueryInt("PRAGMA data_version;");
   }
 
@@ -786,24 +789,14 @@ namespace SqliteOverlay
 
   int SqliteDatabase::getLocalChangeCounter() const
   {
-    return sqlite3_total_changes(dbPtr.get());
+    return sqlite3_total_changes(dbPtr);
   }
 
   //----------------------------------------------------------------------------
 
   SqlStatement SqliteDatabase::prepStatement(const string& sqlText) const
   {
-    return SqlStatement{dbPtr.get(), sqlText};
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqliteDeleter::operator()(sqlite3* p)
-  {
-    if (p != nullptr)
-    {
-      sqlite3_close_v2(p);
-    }
+    return SqlStatement{dbPtr, sqlText};
   }
 
   //----------------------------------------------------------------------------
