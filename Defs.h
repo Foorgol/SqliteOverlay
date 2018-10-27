@@ -128,6 +128,16 @@ namespace SqliteOverlay
     Rollback,   ///< rollback the transcation
   };
 
+  /** \brief The mode in which to open a new database connection
+   */
+  enum class OpenMode
+  {
+    ForceNew,   ///< create a new database and fail if the file already exists
+    OpenOrCreate_RW,  ///< open an existing database in read/write mode and create a new one if it doesn't exist
+    OpenExisting_RW,  ///< open an existing database in read/write mode and fail if it doesn't exist
+    OpenExisting_RO   ///< open an existing database in read-only mode and fail if it doesn't exist
+  };
+
 }
 
 #endif

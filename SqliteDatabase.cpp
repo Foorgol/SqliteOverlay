@@ -13,8 +13,60 @@ using namespace std;
 
 namespace SqliteOverlay
 {
-  SqliteDatabase::SqliteDatabase(string dbFileName, bool createNew)
-    :dbPtr{nullptr}, log{nullptr}, changeCounter_reset(0)
+
+  bool SqliteDatabase::copyDatabaseContents(sqlite3 *srcHandle, sqlite3 *dstHandle)
+  {
+    // check parameters
+    if ((srcHandle == nullptr) || (dstHandle == nullptr))
+    {
+      throw std::invalid_argument("copyDatabaseContents(): called with nullptr for database handles");
+    }
+    if (srcHandle == dstHandle)
+    {
+      throw std::invalid_argument("copyDatabaseContents(): identical source and destination DB");
+    }
+
+    // initialize backup procedure
+    sqlite3_backup* bck = sqlite3_backup_init(dstHandle, "main", srcHandle, "main");
+    if (bck == nullptr)
+    {
+      int err = sqlite3_errcode(dstHandle);
+      if (err == SQLITE_BUSY)
+      {
+        throw BusyException("copyDatabaseContents(): destination database is locked");
+      }
+      throw GenericSqliteException(err, "copyDatabaseContents(): error in the destination database during backup_init()");
+    }
+
+    // copy all data at once
+    //
+    // Regardless of the result, we call backup_finish because the
+    // manual demands to call the finish-function even after failures
+    // to release ressources
+    int errStep = sqlite3_backup_step(bck, -1);
+    int errFinish = sqlite3_backup_finish(bck);
+
+    if (errStep != SQLITE_DONE)
+    {
+      if (errStep == SQLITE_BUSY)
+      {
+        throw BusyException("copyDatabaseContents(): source or destination database is locked, backup_step() failed");
+      }
+      throw GenericSqliteException(errStep, "copyDatabaseContents(): backup_step() failed");
+    }
+
+    return (errFinish == SQLITE_OK); // should always be `true`, otherwise we would have thrown after `backup_step()`
+  }
+
+  //----------------------------------------------------------------------------
+
+  SqliteDatabase::SqliteDatabase()
+    :SqliteDatabase(":memory:", OpenMode::OpenOrCreate_RW, true)
+  {}
+
+  //----------------------------------------------------------------------------
+
+  SqliteDatabase::SqliteDatabase(string dbFileName, OpenMode om, bool populate)
   {
     // check if the filename is valid
     if (dbFileName.empty())
@@ -26,106 +78,132 @@ namespace SqliteOverlay
     bool isInMem = (dbFileName == ":memory:");
 
     // check if the file exists
-    struct stat buffer;
-    bool hasFile = (stat(dbFileName.c_str(), &buffer) == 0);
-
-    if (!isInMem && !hasFile && !createNew)
+    if (!isInMem)
     {
-      throw invalid_argument("Database file not existing and new file shall not be created");
+      struct stat buffer;
+      bool hasFile = (stat(dbFileName.c_str(), &buffer) == 0);
+
+      if (!hasFile && ((om == OpenMode::OpenExisting_RO) || (om == OpenMode::OpenExisting_RW)))
+      {
+        throw invalid_argument("Database file not existing and new file shall not be created");
+      }
+
+      if (hasFile && (om == OpenMode::ForceNew))
+      {
+        throw invalid_argument("Database existing but creation of a new file is mandatory");
+      }
+    }
+    if (isInMem && ((om == OpenMode::OpenExisting_RO) || (om == OpenMode::OpenExisting_RW)))
+    {
+      throw invalid_argument("In-memory file name for database, but opening of an existing file requested");
+    }
+
+    // determine the flags for the call to sqlite_open
+    int oFlags = 0;
+    switch (om)
+    {
+    case OpenMode::ForceNew:
+      oFlags = SQLITE_OPEN_CREATE;
+      break;
+
+    case OpenMode::OpenExisting_RO:
+      oFlags = SQLITE_OPEN_READONLY;
+      break;
+
+    case OpenMode::OpenExisting_RW:
+      oFlags = SQLITE_OPEN_READWRITE;
+      break;
+
+    case OpenMode::OpenOrCreate_RW:
+      oFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+      break;
+
+    default:
+      oFlags = SQLITE_OPEN_READONLY;  // most conservative setting
     }
 
     // try to open the database
-    sqlite3* tmpPtr;
-    int err = sqlite3_open(dbFileName.c_str(), &tmpPtr);
-    if (tmpPtr == nullptr)
+    int err = sqlite3_open_v2(dbFileName.c_str(), &dbPtr, oFlags, nullptr);
+    if (dbPtr == nullptr)
     {
       throw std::runtime_error("No memory for allocating sqlite instance");
     }
     if (err != SQLITE_OK)
     {
-      // delete the sqlite instance we've just created
-      SqliteDeleter sd;
-      sd(tmpPtr);
+      // delete the connection we've just created
+      sqlite3_close(dbPtr);
+      dbPtr = nullptr;
 
-      throw invalid_argument(sqlite3_errmsg(tmpPtr));
+      throw GenericSqliteException(err, "SqliteDatabase ctor");
     }
 
     // we're all set
-    dbPtr = unique_ptr<sqlite3, SqliteDeleter>(tmpPtr);
-    foreignKeyCreationCache.clear();
-    tabCache.clear();
-
-    // prepare a logger
-    log = unique_ptr<Logger>(new Logger(dbFileName));
-    log->trace("Ready for use");
-
+    //
     // Explicitly enable support for foreign keys
-    // and disable synchronous writes for better performance
-    execNonQuery("PRAGMA foreign_keys = ON", &err);
-    if (err != SQLITE_DONE)
+    // and disable synchronous writes for better performance.
+    //
+    // If requested, populate tables and views.
+    //
+    // Should anything go wrong, close the connection and
+    // re-throw the original exception
+    try
     {
-      // delete the sqlite instance we've just created
-      SqliteDeleter sd;
-      sd(tmpPtr);
-
-      throw invalid_argument(sqlite3_errmsg(tmpPtr));
+      execNonQuery("PRAGMA foreign_keys = ON");
+      enforceSynchronousWrites(false);
+      if (populate && (om != OpenMode::OpenExisting_RO))
+      {
+        Transaction t = Transaction(this, TransactionType::Deferred, TransactionDtorAction::Rollback);
+        populateTables();
+        populateViews();
+        t.commit();
+      }
+      resetDirtyFlag();
     }
+    catch (...)
+    {
+      // delete the connection we've just created
+      sqlite3_close(dbPtr);
+      dbPtr = nullptr;
 
-    enforceSynchronousWrites(false);
+      throw;
+    }
   }
-
-  //----------------------------------------------------------------------------
-
-  int SqliteDatabase::copyDatabaseContents(sqlite3 *srcHandle, sqlite3 *dstHandle)
-  {
-    // check parameters
-    if ((srcHandle == nullptr) || (dstHandle == nullptr)) return SQLITE_ERROR;
-
-    // initialize backup procedure
-    auto bck = sqlite3_backup_init(dstHandle, "main", srcHandle, "main");
-    if (bck == nullptr)
-    {
-      return SQLITE_ERROR;
-    }
-
-    // copy all data at once
-    int err = sqlite3_backup_step(bck, -1);
-    if (err != SQLITE_DONE)
-    {
-      // clean up and free ressources, but do not
-      // overwrite the error code returned by
-      // sqlite3_backup_step() above
-      sqlite3_backup_finish(bck);
-
-      return err;
-    }
-
-    // clean up and return
-    err = sqlite3_backup_finish(bck);
-    return err;
-  }
-
-  //----------------------------------------------------------------------------
-
-//  unique_ptr<SqliteDatabase> SqliteDatabase::get(string dbFileName, bool createNew)
-//  {
-//    SqliteDatabase* tmpPtr;
-
-//    try
-//    {
-//      tmpPtr = new SqliteDatabase(dbFileName, createNew);
-//    } catch (exception e) {
-//      return nullptr;
-//    }
-
-//    return unique_ptr<SqliteDatabase>(tmpPtr);
-//  }
 
   //----------------------------------------------------------------------------
 
   SqliteDatabase::~SqliteDatabase()
   {
+    // clear all cached DbTab objects
     resetTabCache();
+
+    // close the database, if not already done so
+    // no need to react to errors here because we're in
+    // the dtor anyway....
+    if (dbPtr != nullptr) sqlite3_close(dbPtr);
+  }
+
+  //----------------------------------------------------------------------------
+
+  SqliteDatabase& SqliteDatabase::operator=(SqliteDatabase&& other)
+  {
+    dbPtr = other.dbPtr;
+    other.dbPtr = nullptr;
+
+    // move, not copy the table cache
+    tabCache = std::move(other.tabCache);
+
+    // transfer the dirty counters; we don't need to
+    // reset them in 'other` because it becomes unusual
+    // anyway
+    changeCounter_reset = other.changeCounter_reset;
+    dataVersion_reset = other.changeCounter_reset;
+  }
+
+  //----------------------------------------------------------------------------
+
+  SqliteDatabase::SqliteDatabase(SqliteDatabase&& other)
+  {
+    operator=(std::move(other));
   }
 
   //----------------------------------------------------------------------------
@@ -134,7 +212,7 @@ namespace SqliteOverlay
   {
     if (dbPtr == nullptr) return true;
 
-    int result = sqlite3_close(dbPtr.get());
+    int result = sqlite3_close(dbPtr);
     Sloppy::assignIfNotNull<PrimaryResultCode>(errCode, static_cast<PrimaryResultCode>(result));
 
     if (result != SQLITE_OK) return false;
@@ -363,7 +441,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::viewCreationHelper(const string& viewName, const string& selectStmt)
+  void SqliteDatabase::viewCreationHelper(const string& viewName, const string& selectStmt) const
   {
     string sql = "CREATE VIEW IF NOT EXISTS ";
 
@@ -374,7 +452,8 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const Sloppy::StringList &colNames, bool isUnique)
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName,
+                                           const Sloppy::StringList &colNames, bool isUnique) const
   {
     if (tabName.empty()) return;
     if (idxName.empty()) return;
@@ -400,7 +479,8 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName, const string &colName, bool isUnique)
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &idxName,
+                                           const string &colName, bool isUnique) const
   {
     if (colName.empty()) return;
 
@@ -411,7 +491,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &colName, bool isUnique)
+  void SqliteDatabase::indexCreationHelper(const string &tabName, const string &colName, bool isUnique) const
   {
     if (tabName.empty()) return;
     if (colName.empty()) return;
@@ -424,7 +504,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  Sloppy::StringList SqliteDatabase::allTableNames(bool getViews)
+  Sloppy::StringList SqliteDatabase::allTableNames(bool getViews) const
   {
     Sloppy::StringList result;
 
@@ -451,73 +531,44 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  Sloppy::StringList SqliteDatabase::allViewNames()
+  Sloppy::StringList SqliteDatabase::allViewNames() const
   {
     return allTableNames(true);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::hasTable(const string& name, bool isView)
+  bool SqliteDatabase::hasTable(const string& name, bool isView) const
   {
-    Sloppy::StringList allTabs = allTableNames(isView);
-    for(string n : allTabs)
+    SqlStatement stmt = prepStatement("SELECT COUNT(name) FROM sqlite_master WHERE type='?1' AND name='?2'");
+    if (isView)
     {
-      if (n == name) return true;
+      stmt.bindString(1, "view");
+    } else {
+      stmt.bindString(1, "view");
     }
+    stmt.bindString(2, name);
 
-    return false;
+    return (execScalarQueryInt(stmt) != 0);
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::hasView(const string& name)
+  bool SqliteDatabase::hasView(const string& name) const
   {
     return hasTable(name, true);
   }
 
   //----------------------------------------------------------------------------
 
-  string SqliteDatabase::genForeignKeyClause(const string& keyName, const string& referedTable, CONSISTENCY_ACTION onDelete, CONSISTENCY_ACTION onUpdate)
-  {
-    // a little helper to translate a CONSISTENCY_ACTION value into a string
-    auto ca2string = [](CONSISTENCY_ACTION ca) -> string {
-      switch (ca)
-      {
-        case CONSISTENCY_ACTION::NO_ACTION:
-          return "NO ACTION";
-        case CONSISTENCY_ACTION::SET_NULL:
-          return "SET NULL";
-        case CONSISTENCY_ACTION::SET_DEFAULT:
-          return "SET DEFAULT";
-        case CONSISTENCY_ACTION::CASCADE:
-          return "CASCADE";
-        case CONSISTENCY_ACTION::RESTRICT:
-          return "RESTRICT";
-        default:
-          return "";
-      }
-      return "";
-    };
-
-    string ref = "FOREIGN KEY (" + keyName + ") REFERENCES " + referedTable + "(id)";
-    ref += " ON DELETE " + ca2string(onDelete);
-    ref += " ON UPDATE " + ca2string(onUpdate);
-
-    foreignKeyCreationCache.push_back(ref);
-    return keyName + " INTEGER";
-  }
-
-  //----------------------------------------------------------------------------
-
-  int SqliteDatabase::getLastInsertId()
+  int SqliteDatabase::getLastInsertId() const
   {
     return sqlite3_last_insert_rowid(dbPtr.get());
   }
 
   //----------------------------------------------------------------------------
 
-  int SqliteDatabase::getRowsAffected()
+  int SqliteDatabase::getRowsAffected() const
   {
     return sqlite3_changes(dbPtr.get());
   }
@@ -531,16 +582,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<Transaction> SqliteDatabase::startTransaction(TransactionType tt, TransactionDtorAction dtorAct, int* errCodeOut)
+  Transaction SqliteDatabase::startTransaction(TransactionType tt, TransactionDtorAction _dtorAct) const
   {
-    return Transaction::startNew(this, tt, dtorAct, errCodeOut);
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqliteDatabase::setLogLevel(Sloppy::Logger::SeverityLevel newMinLvl)
-  {
-    log->setMinLogLevel(newMinLvl);
+    return Transaction(this, tt, _dtorAct);
   }
 
   //----------------------------------------------------------------------------
@@ -575,7 +619,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::copyTable(const string& srcTabName, const string& dstTabName, int* errCodeOut, bool copyStructureOnly)
+  bool SqliteDatabase::copyTable(const string& srcTabName, const string& dstTabName, bool copyStructureOnly) const
   {
     // ensure validity of parameters
     if (srcTabName.empty()) return false;
@@ -584,17 +628,10 @@ namespace SqliteOverlay
     if (hasTable(dstTabName)) return false;
 
     // retrieve the CREATE TABLE statement that describes the source table's structure
-    int err;
-    auto stmt = prepStatement("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", &err);
-    if (errCodeOut != nullptr) *errCodeOut = err;
-    if (err != SQLITE_OK) return false;
-    stmt->bindString(1, srcTabName);
-    auto _sqlCreate = execScalarQueryString(stmt, &err);
-    if (errCodeOut != nullptr) *errCodeOut = err;
-    if (_sqlCreate == nullptr) return false;
-    if (err != SQLITE_DONE) return false;
-    if (_sqlCreate->isNull()) return false;
-    string sqlCreate = _sqlCreate->get();
+    auto stmt = prepStatement("SELECT sql FROM sqlite_master WHERE type='table' AND name=?");
+    stmt.bindString(1, srcTabName);
+    string sqlCreate = execScalarQueryString(stmt);
+    if (sqlCreate.empty()) return false;
 
     // Modify the string to be applicable to the new database name
     //
@@ -608,17 +645,17 @@ namespace SqliteOverlay
     // before we create the new table and copy the contents, we
     // explicitly start a transaction to be able to restore the
     // original database state in case of errors
-    auto tr = startTransaction(TransactionType::IMMEDIATE, TransactionDtorAction::ROLLBACK, &err);
-    if (tr == nullptr) return false;
-    if (err != SQLITE_DONE) return false;
+    Transaction tr = startTransaction(TransactionType::Immediate, TransactionDtorAction::Rollback);
 
     // actually create the new table
-    bool isSuccess = execNonQuery(sqlCreate, &err);
-    if (errCodeOut != nullptr) *errCodeOut = err;
-    if (!isSuccess)
+    try
     {
-      tr->rollback();
-      return false;
+      execNonQuery(sqlCreate);
+    }
+    catch (...)
+    {
+      tr.rollback();
+      throw;
     }
 
     // if we're only requested to copy the schema, skip
@@ -626,68 +663,65 @@ namespace SqliteOverlay
     if (!copyStructureOnly)
     {
       string sqlCopy = "INSERT INTO " + dstTabName + " SELECT * FROM " + srcTabName;
-      stmt = prepStatement(sqlCopy, &err);
-      if (errCodeOut != nullptr) *errCodeOut = err;
-      if (err != SQLITE_OK) return false;
+      SqlStatement cpyStmt = prepStatement(sqlCopy);
 
-      isSuccess = execNonQuery(stmt, &err);
-      if (errCodeOut != nullptr) *errCodeOut = err;
-      if (!isSuccess)
+      execNonQuery(cpyStmt);
+      try
       {
-        tr->rollback();
-        return false;
+        execNonQuery(cpyStmt);
+      }
+      catch (...)
+      {
+        tr.rollback();
+        throw;
       }
     }
 
     // we're done. Commit all changes at once
-    tr->commit(&err);
-    if (errCodeOut != nullptr) *errCodeOut = err;
+    tr.commit();
 
-    return (err == SQLITE_DONE);
+    return true;
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::backupToFile(const string &dstFileName, int* errCodeOut)
+  bool SqliteDatabase::backupToFile(const string &dstFileName) const
   {
     // check parameter validity
     if (dstFileName.empty())
     {
-      if (errCodeOut != nullptr) *errCodeOut = SQLITE_ERROR;
-      return false;
+      throw std::invalid_argument("backupToFile: called without filename");
     }
 
     // open the destination database
     sqlite3* dstDb;
     int err = sqlite3_open(dstFileName.c_str(), &dstDb);
+    if (err == SQLITE_BUSY)
+    {
+      throw BusyException("backupToFile(): weird... received SQLITE_BUSY when opening the destination database...");
+    }
     if (err != SQLITE_OK)
     {
-      if (errCodeOut != nullptr) *errCodeOut = err;
-      return false;
+      throw GenericSqliteException(err, "backupToFile(): opening destination database");
     }
     if (dstDb == nullptr)
     {
-      if (errCodeOut != nullptr) *errCodeOut = SQLITE_ERROR;
-      return false;
+      throw GenericSqliteException(SQLITE_ERROR, "backupToFile(): sqlite3_open() for destination database returned nullptr");
     }
 
     // copy the contents
-    err = copyDatabaseContents(dbPtr.get(), dstDb);
+    bool isOkay = copyDatabaseContents(dbPtr.get(), dstDb);
 
-    // close the destination database and return the
-    // error code of the copy process or of the
-    // close procedure
-    int closeErr = sqlite3_close(dstDb);
-    if (err != SQLITE_OK)
-    {
-      // error during copying ==> return the copy error
-      if (errCodeOut != nullptr) *errCodeOut = err;
-      return false;
-    }
+    // close the destination database
+    //
+    // no error checking here, because close() only fails with
+    // unfinalized prepared statements or unfinished sqlite3_backup objects.
+    // And we can guarantee that this is impossible on the destination DB handle
+    // because we only opened it a few lines of code above and because
+    // `copyDatabaseContents()` always calls 'backup_finish()'
+    sqlite3_close(dstDb);
 
-    // error during closing ==> return the close error
-    if (errCodeOut != nullptr) *errCodeOut = closeErr;
-    return (closeErr == SQLITE_OK);
+    return isOkay;
   }
 
   //----------------------------------------------------------------------------
@@ -697,48 +731,47 @@ namespace SqliteOverlay
     // check parameter validity
     if (srcFileName.empty())
     {
-      if (errCodeOut != nullptr) *errCodeOut = SQLITE_ERROR;
-      return false;
+      throw std::invalid_argument("restoreFromFile: called without filename");
     }
 
     // open the source database
     sqlite3* srcDb;
     int err = sqlite3_open(srcFileName.c_str(), &srcDb);
+    if (err == SQLITE_BUSY)
+    {
+      throw BusyException("restoreFromFile(): weird... received SQLITE_BUSY when opening the destination database...");
+    }
     if (err != SQLITE_OK)
     {
-      if (errCodeOut != nullptr) *errCodeOut = err;
-      return false;
+      throw GenericSqliteException(err, "restoreFromFile(): opening destination database");
     }
     if (srcDb == nullptr)
     {
-      if (errCodeOut != nullptr) *errCodeOut = SQLITE_ERROR;
-      return false;
+      throw GenericSqliteException(SQLITE_ERROR, "restoreFromFile(): sqlite3_open() for destination database returned nullptr");
     }
 
-    // copy the contents
-    err = copyDatabaseContents(srcDb, dbPtr.get());
+    // copy the contents and clear all cached DbTab pointers
+    bool isOkay = copyDatabaseContents(srcDb, dbPtr.get());
+    resetTabCache();
 
-    // close the source database and return the
-    // error code of the copy process or of the
-    // close procedure
-    int closeErr = sqlite3_close(srcDb);
-    if (err != SQLITE_OK)
-    {
-      // error during copying ==> return the copy error
-      if (errCodeOut != nullptr) *errCodeOut = err;
-      return false;
-    }
+    // close the source database
+    //
+    // no error checking here, because close() only fails with
+    // unfinalized prepared statements or unfinished sqlite3_backup objects.
+    // And we can guarantee that this is impossible on the source DB handle
+    // because we only opened it a few lines of code above and because
+    // `copyDatabaseContents()` always calls 'backup_finish()'
+    sqlite3_close(srcDb);
 
-    // error during closing ==> return the close error
-    if (errCodeOut != nullptr) *errCodeOut = closeErr;
-    return (closeErr == SQLITE_OK);
+    return isOkay;
   }
 
   //----------------------------------------------------------------------------
 
-  bool SqliteDatabase::isDirty()
+  bool SqliteDatabase::isDirty() const
   {
-    return (sqlite3_total_changes(dbPtr.get()) != changeCounter_reset);
+    int dv = execScalarQueryInt("PRAGMA data_version;");
+    return ((sqlite3_total_changes(dbPtr.get()) != changeCounter_reset) || (dv != dataVersion_reset));
   }
 
   //----------------------------------------------------------------------------
@@ -746,11 +779,12 @@ namespace SqliteOverlay
   void SqliteDatabase::resetDirtyFlag()
   {
     changeCounter_reset = sqlite3_total_changes(dbPtr.get());
+    dataVersion_reset = execScalarQueryInt("PRAGMA data_version;");
   }
 
   //----------------------------------------------------------------------------
 
-  int SqliteDatabase::getDirtyCounter()
+  int SqliteDatabase::getLocalChangeCounter() const
   {
     return sqlite3_total_changes(dbPtr.get());
   }

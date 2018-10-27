@@ -26,22 +26,77 @@
 namespace SqliteOverlay
 {
 
+  /** \brief A class that wraps a database transaction into a C++ object with the benefit
+   * that the transaction is automatically either commited or rolled back when the object's
+   * dtor is called.
+   */
   class Transaction
   {
   public:
-    static unique_ptr<Transaction> startNew(SqliteDatabase* _db, TransactionType tt=TransactionType::IMMEDIATE,
-                                            TransactionDtorAction _dtorAct = TransactionDtorAction::ROLLBACK,
-                                            int* errCodeOut=nullptr);
-    bool isActive() const;
-    bool commit(int* errCodeOut=nullptr);
-    bool rollback(int* errCodeOut=nullptr);
-    bool isNested() const;
+    /** \brief The standard ctor for a new transaction; if it completes, the new transaction is active.
+     *
+     * See [here](https://www.sqlite.org/lang_transaction.html) for the different transaction types.
+     *
+     * \throws std::invalid_argument if the provided database pointer is a `nullptr`
+     *
+     * \throws BusyException if the DB was busy and the required lock could not be acquired
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     */
+    Transaction(
+        const SqliteDatabase* _db,   ///< pointer to the database on which to create the new transaction
+        TransactionType tt=TransactionType::Immediate,   ///< the type of transaction, see [here](https://www.sqlite.org/lang_transaction.html)
+        TransactionDtorAction _dtorAct = TransactionDtorAction::Rollback   ///< what to do when the dtor is called
+        );
+
+    /** \brief Disabled copy ctor */
+    Transaction(const Transaction& other) = delete;
+
+    /** \brief Disabled copy assignment */
+    Transaction& operator=(const Transaction& other) = delete;
+
+    /** \brief Standard move ctor */
+    Transaction(Transaction&& other) = default;
+
+    /** \brief Standard move assignment */
+    Transaction& operator=(Transaction&& other) = default;
+
+    /** \brief Dtor; commits or rolls back the transaction if commit / rollback hasn't been called before
+     *
+     * If the transaction has already been finished (committed / rolled back), nothing happens in the dtor.
+     *
+     * \warning If a potential commit or rollback fails (because the DB was busy, for instance) then
+     * an exception would occur in the dtor that is not handled by the dtor. Essentially, this means
+     * that the programm is terminated immediately (dtor should never throw exception). So be sure to
+     * properly call `commit()` or `rollback()` before the dtor and handle possible errors gracefully.
+     */
     ~Transaction();
 
+    /** \returns `true` if the transaction hasn't been committed / rolled back yet
+     */
+    bool isActive() const;
+
+    /** \brief Commits a transaction and releases the lock on the database
+     *
+     * \throws BusyException if the DB was busy and the transaction could not be committed
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     */
+    void commit();
+
+    /** \brief Undoes all changes of a transaction and releases the lock on the database
+     *
+     * \throws BusyException if the DB was busy and the transaction could not be rolled back
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     */
+    void rollback();
+
+    /** \returns `true` if this is a nested transaction (a "sub-transaction") and `false` if it's not
+     */
+    bool isNested() const;
+
   private:
-    Transaction(SqliteDatabase* _db, TransactionType tt=TransactionType::IMMEDIATE,
-                TransactionDtorAction _dtorAct = TransactionDtorAction::ROLLBACK,
-                int* errCodeOut=nullptr);
     SqliteDatabase* db;
     TransactionDtorAction dtorAct;
     string savepointName;

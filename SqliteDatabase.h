@@ -11,7 +11,6 @@
 #include <type_traits>
 
 #include <Sloppy/Utils.h>
-#include <Sloppy/Logger/Logger.h>
 
 #include "SqlStatement.h"
 #include "SqliteExceptions.h"
@@ -69,15 +68,6 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  struct SqliteDeleter
-  {
-    void operator()(sqlite3* p);
-  };
-
-  typedef unique_ptr<sqlite3, SqliteDeleter> upSqlite3Db;
-
-  //----------------------------------------------------------------------------
-
   /** \brief A class that handles a single database connection.
    *
    * \note If an instance of this class is shared by multiple threads you have to make sure on
@@ -91,44 +81,52 @@ namespace SqliteOverlay
   class SqliteDatabase
   {
   public:
-    /** \brief A convenience wrapper that opens a database file and instantiates
-     * a class derived from `SqliteDatabase` for it.
-     *
-     * The template parameter `T` is the type of the derived class.
-     *
-     * \note This function also calls the `populateTables()` and
-     * `populateViews()` functions of the (derived) database.
-     *
-     * \returns an heap allocated database instance of type `T` (with tables and views populated) or `nullptr` on error
+    /** \brief Default ctor, creates a blank in-memory database and calls
+     * `populateTables()` and `populateViews()` on it.
      */
-    template<class T>
-    static unique_ptr<T> get(
-        string dbFileName = ":memory:",   ///< the name of the database file
-        bool createNew=false   ///< set to `true` if a new, empty database shall be created if the file doesn't exist
-        )
-    {
-      static_assert (is_base_of<SqliteDatabase, T>(), "Template parameter must be a class derived from SqliteDatabase");
-      unique_ptr<T> tmpPtr;
+    SqliteDatabase();
 
-      try
-      {
-        // we can't use make_unique here because the
-        // ctor is not public
-        T* p = new T(dbFileName, createNew);
-        tmpPtr.reset(p);
-      } catch (...) {
-        return nullptr;
-      }
+    /** \brief Standard dtor for creating or opening a database file.
+     *
+     * We can optionally call `populateTables()` and `populateViews()` on
+     * the new database connection (ignored if we're read-only). Database
+     * population is executed with a dedicated transaction which is rolled
+     * back if something goes wrong. So if we're open an existing database
+     * and anything bad happens, the database is guaranteed to remain
+     * untouched if this ctor throws.
+     *
+     * \throws std::invalid_argument if the filename is empty or if a
+     * parameter combination makes no sense (e.g., read-only access to a
+     * blank in-memory database, force-create an existing file or strict open
+     * on a non-existing file).
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     * with SQLite
+     */
+    SqliteDatabase(
+        string dbFileName, ///< the name of the database file to open or create
+        OpenMode om,
+        bool populate
+        );
 
-      tmpPtr->populateTables();
-      tmpPtr->populateViews();
-
-      return tmpPtr;
-    }
-
-    /** \brief Dtor; cleans up table cache and that's it.
+    /** \brief Dtor; closes the database connections and cleans up table cache
      */
     virtual ~SqliteDatabase();
+
+    /** \brief Disabled copy ctor */
+    SqliteDatabase(const SqliteDatabase&) = delete;
+
+    /** \brief Disabled copy assignment */
+    SqliteDatabase& operator=(const SqliteDatabase&) = delete;
+
+    /** \brief Move ctor, transfers all handles etc. to the destination object
+     */
+    SqliteDatabase(SqliteDatabase&& other);
+
+    /** \brief Move assignment, transfers all handles etc. to the destination object
+     */
+    SqliteDatabase& operator=(SqliteDatabase&&);
+
 
     /** \brief Closes the database connection. The instance shouldn't be
      * used anymore after calling this function.
@@ -147,12 +145,6 @@ namespace SqliteOverlay
 
     /** \returns `true` if the database connection is still open and `false` otherwise */
     bool isAlive() const;
-
-    /** \brief Disabled copy ctor */
-    SqliteDatabase(const SqliteDatabase&) = delete;
-
-    /** \brief Disabled copy assignment */
-    SqliteDatabase& operator=(const SqliteDatabase&) = delete;
 
     /** \brief Creates a new SQL statement for this database connection
      *
@@ -490,7 +482,7 @@ namespace SqliteOverlay
     void viewCreationHelper(
         const string& viewName,   ///< the name for the new view
         const string& selectStmt   ///< the SQL statement that represents the view's contents
-        );
+        ) const;
 
     /** \brief Convenience function for creating a new index that combines several columns
      * of one table.
@@ -509,7 +501,7 @@ namespace SqliteOverlay
         const string& idxName,   ///< the name of the new index
         const Sloppy::StringList& colNames,   ///< a list of column names that shall be ANDed for the index
         bool isUnique=false   ///< determines whether the index shall enforce unique combinations of the column values
-        );
+        ) const;
 
     /** \brief Convenience function for creating a new index on a single column
      * of one table.
@@ -528,7 +520,7 @@ namespace SqliteOverlay
         const string& idxName,   ///< the name of the new index
         const string& colName,   ///< the name of the column which should serve as an index
         bool isUnique=false   ///< determines whether the index shall enforce unique column values
-        );
+        ) const;
 
     /** \brief Convenience function for creating a new index with a canonically created name
      * on a single column of one table.
@@ -546,58 +538,192 @@ namespace SqliteOverlay
         const string& tabName,   ///< the table on which to create the new index
         const string& colName,   ///< the name of the column which should serve as an index
         bool isUnique=false   ///< determines whether the index shall enforce unique column values
+        ) const;
+
+    /** \returns a list of names of all tables or views in the DB
+     * */
+    Sloppy::StringList allTableNames(
+        bool getViews=false   ///< `false`: get table names (default); `true`: get view names
+        ) const;
+
+    /** \returns a list of names of all views in the DB */
+    Sloppy::StringList allViewNames() const;
+
+    /** \returns `true` if a table or view of the given name exists in the database
+     */
+    bool hasTable(
+        const string& name,   ///< the name to search for (case-sensitive)
+        bool isView=false   ///< `false`: search among all tables (default); `true`: search among all views
+        ) const;
+
+    /** \returns `true` if a view of the given name exists in the database
+     */
+    bool hasView(
+        const string& name   ///< the name to search for (case-sensitive)
+        ) const;
+
+    /** \returns the ID of the last inserted row
+     *
+     * See also [here](https://www.sqlite.org/c3ref/last_insert_rowid.html)
+     */
+    int getLastInsertId() const;
+
+    /** \returns the number of rows modified, inserted or deleted by the most recently completed INSERT, UPDATE or DELETE statement
+     *
+     * See also [here](https://www.sqlite.org/c3ref/changes.html)
+     */
+    int getRowsAffected() const;
+
+    /** \returns `true` if the database is in autocommit mode (read: no active transaction running), `false` otherwise.
+     *
+     * See also [here](https://www.sqlite.org/c3ref/get_autocommit.html)
+     */
+    bool isAutoCommit() const;
+
+    /** \brief Starts a new (and possibly nested) transaction on the database.
+     *
+     * The transaction is automatically finished when the transaction object's dtor is called.
+     *
+     * \throws BusyException if the DB was busy and the required lock could not be acquired
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * \returns A new transaction object.
+     */
+    Transaction startTransaction(
+        TransactionType tt=TransactionType::Immediate,   ///< the type of transaction, see [here](https://www.sqlite.org/lang_transaction.html)
+        TransactionDtorAction _dtorAct = TransactionDtorAction::Rollback   ///< what to do when the dtor is called
+        ) const;
+
+    /** \brief Retrieves a (shared!) pointer for a `DbTab` object that represents a table
+     * with a given name.
+     *
+     * Multiple call with same name parameter will always return the same pointer. Users
+     * should not use the pointer anymore after the database has been closed.
+     *
+     * \warning Sharing the same pointer among different callers is inherently *not*
+     * thread safe. If you need your own `DbTab` object, construct it directly. Construction
+     * of a `DbTab` object comes with a little penalty for checking the table name's correctness.
+     *
+     * \warning Calling `resetTabCache()` deletes all cached `DbTab` instances and voids all pointers
+     * ever returned by `getTab()`. Don't use stored pointers anymore after calling `resetTabCache()`.
+     * This, again, is inherently *not* thread-safe.
+     *
+     * \returns a (shared) pointer to a `DbTab` object for a table or `nullptr` if the table name is invalid
+     */
+    DbTab* getTab (
+        const string& tabName   ///< name of the requested table
         );
 
-    Sloppy::StringList allTableNames(bool getViews=false);
-    Sloppy::StringList allViewNames();
+    /** \brief Copies structure and, optionally, content of an exising table
+     * into a newly created table.
+     *
+     * The source table must exist and a table with the name of the destination table
+     * may not be existing.
+     *
+     * \throws BusyException if the statement couldn't be executed because the DB was busy
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * \returns `true` if the operation was successful and `false` if it failed or if the
+     * parameters where invalid
+     */
+    bool copyTable(
+        const string& srcTabName,   ///< name of the source table for the copy-operation
+        const string& dstTabName,   ///< name of the destination table (may not yet exist)
+        bool copyStructureOnly=false   ///< `true`: copy on the table structure/schema; `false`: deep copy the table's contents
+        ) const;
 
-    bool hasTable(const string& name, bool isView=false);
-    bool hasView(const string& name);
-    string genForeignKeyClause(const string& keyName, const string& referedTable,
-                               CONSISTENCY_ACTION onDelete=CONSISTENCY_ACTION::NO_ACTION,
-                               CONSISTENCY_ACTION onUpdate=CONSISTENCY_ACTION::NO_ACTION);
+    /** \brief Copies the content of whole database to a file on disk
+     *
+     * \note Only the `main` database is copied, not any attached database.
+     *
+     * \warning All content of the destination file will be overwritten!
+     *
+     * \throws std::invalid_argument if the provided destination file name is empty
+     *
+     * \throws BusyException if the source (the caller) or destination database (the filename) is busy
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * \returns almost always `true` because most errors should be caught by exceptions; if `true`, the backup
+     * is guaranteed to be successful
+     */
+    bool backupToFile(const string& dstFileName) const;
 
-    int getLastInsertId();
-    int getRowsAffected();
-    bool isAutoCommit() const;
-    unique_ptr<Transaction> startTransaction(TransactionType tt = TransactionType::IMMEDIATE,
-                                             TransactionDtorAction dtorAct = TransactionDtorAction::ROLLBACK,
-                                             int* errCodeOut=nullptr);
-
-    void setLogLevel(SeverityLevel newMinLvl);
-
-    DbTab* getTab (const string& tabName);
-
-    // table copies and database backups
-    bool copyTable(const string& srcTabName, const string& dstTabName, int* errCodeOut=nullptr, bool copyStructureOnly=false);
-    bool backupToFile(const string& dstFileName, int* errCodeOut=nullptr);
+    /** \brief Copies the content of a database file into the current database
+     *
+     * \note Only the `main` database is restored, not any attached database.
+     *
+     * \warning All content of the database will be overwritten!
+     *
+     * \warning We implicitly call `resetTabCache()` because we can't be sure that the
+     * database structure remains the same. Thus, all user-cached `DbTab` pointers become
+     * invalid!
+     *
+     * \throws std::invalid_argument if the provided source file name is empty
+     *
+     * \throws BusyException if the source (the caller) or destination database (the filename) is busy
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * \returns almost always `true` because most errors should be caught by exceptions; if `true`, the backup
+     * is guaranteed to be successful
+     */
     bool restoreFromFile(const string& srcFileName, int* errCodeOut=nullptr);
 
-    // the dirty flag
-    bool isDirty();
+    /** \returns `true` if the database contents have been modified by this or any other database connection
+     */
+    bool isDirty() const;
+
+    /** \brief Resets the internal "dirty flag", so that only future modifications will be reported by
+     * `isDirty()`
+     */
     void resetDirtyFlag();
-    int getDirtyCounter();
+
+    /** \returns the total number of rows inserted, modified or deleted by all INSERT,
+     * UPDATE or DELETE statements completed since the database connection was opened
+     *
+     * \note Modifications caused by other database connections are *not* reported
+     * by this call!
+     */
+    int getLocalChangeCounter() const;
 
   protected:
-    SqliteDatabase(string dbFileName = ":memory:", bool createNew=false);
-    vector<string> foreignKeyCreationCache;
-
-    static int copyDatabaseContents(sqlite3* srcHandle, sqlite3* dstHandle);
+    /** \brief Copies the contents of the source database into the destination database,
+     * original documentation of the backup process [here](https://www.sqlite.org/c3ref/backup_finish.html)
+     *
+     * \note Only the `main` database is copied, not any attached database.
+     *
+     * \warning All content of the destination database will be overwritten!
+     *
+     * \throws std::invalid_argument if source or destination database are `nullptr`
+     *
+     * \throws std::invalid_argument if source and destination are identical
+     *
+     * \throws BusyException if the destination database is busy and cannot be written
+     *
+     * \throws GenericSqliteException incl. error code (especially SQLITE_READONLY!) if anything else goes wrong
+     *
+     * \returns almost always `true` because most errors should be caught by exceptions; if `true`, the backup
+     * is guaranteed to be successful
+     */
+    static bool copyDatabaseContents(sqlite3* srcHandle, sqlite3* dstHandle);
 
     /**
      * @brief dbPtr the internal database handle
      */
-    upSqlite3Db dbPtr;
+    sqlite3* dbPtr{nullptr};
 
-    unordered_map<string, DbTab*> tabCache;
+    unordered_map<string, DbTab*> tabCache{};
 
     // handling of a "dirty flag" that indicates whether the database has changed
     // after a certain point in time
-    int changeCounter_reset;
+    int changeCounter_reset;  // used for calls to sqlite3_total_changes(), reporting changes on the local connection
+    int dataVersion_reset;   // used for calls to "PRAGMA data_version" which reports changes other than on the local connection
 
   };
 
-  typedef unique_ptr<SqliteDatabase> upSqliteDatabase;
 }
 
 #endif  /* SQLITEDATABASE_H */
