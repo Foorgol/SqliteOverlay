@@ -33,6 +33,8 @@ namespace SqliteOverlay
       ConflictClause cc   ///< the enum to convert to a string
       );
 
+  //----------------------------------------------------------------------------
+
   /** \brief Creates a column constraint string for CREATE TABLE statements
    * according to [this description](https://www.sqlite.org/syntax/column-constraint.html).
    *
@@ -43,6 +45,8 @@ namespace SqliteOverlay
       ConflictClause notNullConflictClause,   ///< unless set to `NotUsed` include a NOT NULL constraint and define what shall happen in violation
       optional<string> defaultVal = optional<string>{}   ///< an optional default value for the column
       );
+
+  //----------------------------------------------------------------------------
 
   /** \brief Creates a foreign key clause for CREATE TABLE statements
    * according to [this description](https://www.sqlite.org/syntax/foreign-key-clause.html).
@@ -55,6 +59,15 @@ namespace SqliteOverlay
       ConsistencyAction onUpdate,   ///< the action to be taken if the refered row is updated
       string referedColumn="id"   ///< the name of the column we're pointing to in the refered table
       );
+
+  //----------------------------------------------------------------------------
+
+  /** \returns the type affinity for a given column type string according to the
+   * type affinity rules [specified here](https://www.sqlite.org/datatype3.html)
+   */
+  ColumnDataType string2Affinity(const string& colType);
+
+  //----------------------------------------------------------------------------
 
   //
   // forward definitions
@@ -689,6 +702,18 @@ namespace SqliteOverlay
      * by this call!
      */
     int getLocalChangeCounter() const;
+
+    /** \brief Defines the timeout for requests if the database is locked by another
+     * process (more precisely: another database connection); see [here](https://www.sqlite.org/c3ref/busy_timeout.html)
+     * for details.
+     *
+     * After the timeout has elapsed and the database has not become available,
+     * SQLite return SQLITE_BUSY which is translated
+     * into a BusyException. While waiting for the timeout, the triggering call blocks.
+     */
+    void setBusyTimeout(
+        int ms   ///< the timeout in milliseconds; if less or equal to 0, we don't wait an throw BusyException immediately
+        );
 
   protected:
     /** \brief Copies the contents of the source database into the destination database,

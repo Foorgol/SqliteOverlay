@@ -794,6 +794,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  void SqliteDatabase::setBusyTimeout(int ms)
+  {
+    sqlite3_busy_timeout(dbPtr, ms);
+  }
+
+  //----------------------------------------------------------------------------
+
   SqlStatement SqliteDatabase::prepStatement(const string& sqlText) const
   {
     return SqlStatement{dbPtr, sqlText};
@@ -889,6 +896,50 @@ namespace SqliteOverlay
   }
 
   //----------------------------------------------------------------------------
+
+  ColumnDataType string2Affinity(const string& colType)
+  {
+    Sloppy::estring t{colType};
+    t.toUpper();
+
+    //
+    // implement the "Column Affinity Rules" stated in the
+    // SQLite documentation
+    //
+
+    // Rule 1, integer affinity
+    if (t.contains("INT"))
+    {
+      return ColumnDataType::Integer;
+    }
+
+    // Rule 2, text affinity
+    for (const string& s : {"CHAR", "CLOB", "TEXT"})
+    {
+      if (t.contains(s))
+      {
+        return ColumnDataType::Text;
+      }
+    }
+
+    // Rule 3, blob affinity
+    if (colType.empty() || (t.contains("BLOB")))
+    {
+      return ColumnDataType::Blob;
+    }
+
+    // Rule 4, real affinity
+    for (const string& s : {"REAL", "FLOA", "DOUB"})
+    {
+      if (t.contains(s))
+      {
+        return ColumnDataType::Float;
+      }
+    }
+
+    // Rule 5, numeric affinity is the default
+    return ColumnDataType::NumericAffinity;
+  }
 
 
 }

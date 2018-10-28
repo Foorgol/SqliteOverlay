@@ -1,17 +1,15 @@
 #include <boost/date_time/local_time/local_time.hpp>
 
-#include <Sloppy/libSloppy.h>
-
 #include "ClausesAndQueries.h"
 #include "SqlStatement.h"
 
 namespace SqliteOverlay {
 
-  unique_ptr<SqlStatement> ColumnValueClause::getInsertStmt(SqliteDatabase* db, const string& tabName) const
+  SqlStatement ColumnValueClause::getInsertStmt(const SqliteDatabase* db, const string& tabName) const
   {
-    if (tabName.empty())
+    if ((db == nullptr) || tabName.empty())
     {
-      return nullptr;
+      throw std::invalid_argument("getInsertStmt(): empty parameters");
     }
 
     string sql;
@@ -42,11 +40,11 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<SqlStatement> ColumnValueClause::getUpdateStmt(SqliteDatabase* db, const string& tabName, int rowId) const
+  SqlStatement ColumnValueClause::getUpdateStmt(const SqliteDatabase* db, const string& tabName, int rowId) const
   {
-    if (tabName.empty() || colVals.empty())
+    if ((db == nullptr) || tabName.empty() || colVals.empty())
     {
-      return nullptr;
+      throw std::invalid_argument("getUpdateStmt(): empty parameters");
     }
 
     string sql;
@@ -107,22 +105,25 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<SqlStatement> WhereClause::getSelectStmt(SqliteDatabase* db, const string& tabName, bool countOnly) const
+  SqlStatement WhereClause::getSelectStmt(const SqliteDatabase* db, const string& tabName, bool countOnly) const
   {
-    if ((tabName.empty()) || (isEmpty()))
+    if ((db == nullptr) || tabName.empty() || isEmpty())
     {
-      return nullptr;
+      throw std::invalid_argument("getSelectStmt(): empty parameters");
     }
 
-    string sql = "SELECT ";
-    if (countOnly) sql += "COUNT(*)";
-    else sql += "id";
-    sql += " FROM " + tabName + " WHERE " + getWherePartWithPlaceholders();
-
-    if (!(orderBy.empty()))
+    Sloppy::estring sql{"SELECT %1 FROM %2 WHERE %3 %4"};
+    if (countOnly)
     {
-      sql += orderBy;
+      sql.arg("COUNT(*)");
+    } else
+    {
+      sql.arg("id");
     }
+    sql.arg(tabName);
+    sql.arg(getWherePartWithPlaceholders());
+
+    sql.arg(orderBy);   // removes the "%4" if orderBy is empty
 
     if (limit > 0)
     {
@@ -134,15 +135,16 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<SqlStatement> WhereClause::getDeleteStmt(SqliteDatabase* db, const string& tabName) const
+  SqlStatement WhereClause::getDeleteStmt(const SqliteDatabase* db, const string& tabName) const
   {
-    if ((tabName.empty()) || (isEmpty()))
+    if ((db == nullptr) || tabName.empty() || isEmpty())
     {
-      return nullptr;
+      throw std::invalid_argument("getDeleteStmt(): empty parameters");
     }
 
-    string sql = "DELETE ";
-    sql += "FROM " + tabName + " WHERE " + getWherePartWithPlaceholders();
+    Sloppy::estring sql{"DELETE FROM %1 WHERE %2"};
+    sql.arg(tabName);
+    sql.arg(getWherePartWithPlaceholders());
 
     return createStatementAndBindValuesToPlaceholders(db, sql);
   }
@@ -230,10 +232,9 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<SqlStatement> CommonClause::createStatementAndBindValuesToPlaceholders(SqliteDatabase* db, const string& sql) const
+  SqlStatement CommonClause::createStatementAndBindValuesToPlaceholders(const SqliteDatabase* db, const string& sql) const
   {
-    auto stmt = db->prepStatement(sql);
-    if (stmt == nullptr) return nullptr;
+    SqlStatement stmt = db->prepStatement(sql);
 
     // bind the actual column values to the placeholders
     int curPlaceholderIdx = 1;   // leftmost placeholder is at position 1
@@ -248,15 +249,15 @@ namespace SqliteOverlay {
       switch (curCol.type)
       {
       case ColValType::Int:
-        stmt->bindInt(curPlaceholderIdx, intVals[curCol.indexInList]);
+        stmt.bindInt(curPlaceholderIdx, intVals[curCol.indexInList]);
         break;
 
       case ColValType::Double:
-        stmt->bindDouble(curPlaceholderIdx, doubleVals[curCol.indexInList]);
+        stmt.bindDouble(curPlaceholderIdx, doubleVals[curCol.indexInList]);
         break;
 
       case ColValType::String:
-        stmt->bindString(curPlaceholderIdx, stringVals[curCol.indexInList]);
+        stmt.bindString(curPlaceholderIdx, stringVals[curCol.indexInList]);
         break;
 
       default:

@@ -78,6 +78,7 @@ namespace SqliteOverlay
   //----------------------------------------------------------------------------
 
   /** \brief Fundamental SQLite column types as defined [here](https://www.sqlite.org/c3ref/c_blob.html)
+   * plus an additional value for "NUMERIC type affinity" as explained [here](https://www.sqlite.org/datatype3.html).
    */
   enum class ColumnDataType
   {
@@ -86,7 +87,11 @@ namespace SqliteOverlay
     Text = 3,   ///< plain string
     Blob = 4,   ///< blob of binary data
     Null = 5,   ///< Null
+
+    NumericAffinity = 999   ///< special value so that we can use this enum for encoding type affinity, too
   };
+
+  //----------------------------------------------------------------------------
 
   /** \returns the ColumnDataType representation for an int
    *
@@ -127,6 +132,8 @@ namespace SqliteOverlay
     Commit,   ///< commit the transaction
     Rollback,   ///< rollback the transcation
   };
+
+  //----------------------------------------------------------------------------
 
   /** \brief The mode in which to open a new database connection
    */

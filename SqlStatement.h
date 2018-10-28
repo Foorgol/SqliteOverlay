@@ -214,6 +214,14 @@ namespace SqliteOverlay
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
+    /** \brief Resets a statement so that it can be executed all over again
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     */
+    void reset(
+        bool clearBindings   ///< `true`: clear existing placeholder bindings; `false`: bindings keep their values
+        ) const;
+
   protected:
     /** \brief "Guard function" that checks preconditions for
      * the getXXX methods and throws exceptions if necessary

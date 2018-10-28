@@ -166,6 +166,24 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  void SqlStatement::reset(bool clearBindings) const
+  {
+    int err = sqlite3_reset(stmt);
+    if (err != SQLITE_OK)
+    {
+      throw GenericSqliteException(err, "SqlStatement reset()");
+    }
+    if (clearBindings)
+    {
+      // no error checking here; the manual doesn't say
+      // anything about the return code. Most likely
+      // it's SQLITE_OK
+      sqlite3_clear_bindings(stmt);
+    }
+  }
+
+  //----------------------------------------------------------------------------
+
   void SqlStatement::assertColumnDataAccess(int colId) const
   {
     if (!hasData())
