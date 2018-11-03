@@ -14,8 +14,6 @@
 
 #include <boost/date_time/local_time/local_time.hpp>
 
-#include "Sloppy/libSloppy.h"
-
 #include "TabRow.h"
 #include "DbTab.h"
 #include "CommonTabularClass.h"
@@ -24,100 +22,55 @@
 namespace SqliteOverlay
 {
 
-  /**
-   * Constructor for a known rowID
-   * 
-   * @param _db the associated database instance
-   * @param _tabName the associated table name
-   * @param _rowId 
-   */
-  TabRow::TabRow(SqliteDatabase* _db, const string& _tabName, int _rowId, bool skipCheck)
-  : db(_db), tabName(_tabName), rowId(_rowId)
+  TabRow::TabRow(const SqliteDatabase* _db, const string& _tabName, int _rowId, bool skipCheck)
+  : db(_db), tabName(_tabName), rowId(_rowId),
+    cachedWhereStatementForRow{" FROM " + tabName + " WHERE id = " + to_string(rowId)},
+    cachedUpdateStatementForRow{"UPDATE " + tabName + " SET %1=? WHERE id=" + to_string(rowId)}
   {
-    // Dangerous short-cut for lib-internal purposes:
-    // if we're told that _db, _tabName and _rowId are GUARANTEED to be correct
-    // (e. g. they result from a previous SELECT), we don't need further database
-    // queries to check them again
-    if (skipCheck)
+    if ((db == nullptr) || tabName.empty() || (rowId < 1))
     {
-      cachedWhereStatementForRow = " FROM " + tabName + " WHERE id = " + to_string(rowId);
-      return; // all done
+      throw std::invalid_argument("TabRow ctor: empty or invalid parameters");
     }
-    
-    WhereClause where;
-    where.addIntCol("id", rowId);
-    doInit(where);
+
+    if (!skipCheck)
+    {
+      SqlStatement stmt = db->prepStatement("SELECT COUNT(*) " + cachedWhereStatementForRow);
+      if (db->execScalarQueryInt(stmt) == 0)
+      {
+        throw std::invalid_argument("TabRow ctor: invalid row ID");
+      }
+    }
+
   }
 
 //----------------------------------------------------------------------------
 
-  /**
-   * Constructor for the first row in the table that matches a custom where clause.
-   * 
-   * Throws an exception if the requested row doesn't exist
-   * 
-   * @param _db the associated database instance
-   * @param _tabName the associated table name
-   * @param args where clause and/or column/value pairs
-   */
-  TabRow::TabRow(SqliteDatabase* _db, const string& _tabName, const WhereClause& where)
+  TabRow::TabRow(const SqliteDatabase* _db, const string& _tabName, const WhereClause& where)
   : db(_db), tabName(_tabName), rowId(-1)
   {
-    doInit(where);
-  }
-
-//----------------------------------------------------------------------------
-
-  TabRow::~TabRow()
-  {
-  }
-
-//----------------------------------------------------------------------------
-
-  bool TabRow::doInit(WhereClause where)
-  {
-    // make sure the database handle is correct
-    if (db == NULL)
+    if ((db == nullptr) || tabName.empty())
     {
-      throw std::invalid_argument("Received nullptr for database handle");
-    }
-    
-    // make sure the table name exists
-    // the check is performed by the DbTab constructor (so we don't
-    // need to re-write it here) and we can reuse the DbTab instance later
-    // in this method
-    DbTab* tab = db->getTab(tabName);
-    if (tab == nullptr)
-    {
-      throw std::invalid_argument("Received invalid table name!");
+      throw std::invalid_argument("TabRow ctor: empty or invalid parameters");
     }
 
-    // create and execute a "SELECT id FROM ..." from the where clause
-    // and limit it to the first hit
-    where.setLimit(1);
-    auto stmt = where.getSelectStmt(db, tabName, false);
-    if (stmt == nullptr)
+    WhereClause w{where};
+    w.setLimit(1);
+    SqlStatement stmt = w.getSelectStmt(db, tabName, false);
+    try
     {
-      throw std::invalid_argument("Invalid where clause or no matches for where clause");
+      rowId = db->execScalarQueryInt(stmt);
     }
-    if (!(stmt->step()))
+    catch (BusyException e)
     {
-      throw std::invalid_argument("Invalid where clause or no matches for where clause");
+      throw;
     }
-
-    if (!(stmt->hasData()))
+    catch(...)
     {
-      throw std::invalid_argument("Invalid where clause or no matches for where clause");
-    }
-
-    if (!(stmt->getInt(0, &rowId)))
-    {
-      throw std::invalid_argument("Invalid where clause or no matches for where clause");
+      throw std::invalid_argument("TabRow ctor: invalid WHERE clause or no match for WHERE clause");
     }
 
     cachedWhereStatementForRow = " FROM " + tabName + " WHERE id = " + to_string(rowId);
-
-    return true;
+    cachedUpdateStatementForRow = "UPDATE " + tabName + " SET %1=? WHERE id=" + to_string(rowId);
   }
 
 //----------------------------------------------------------------------------
@@ -129,18 +82,16 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::update(const ColumnValueClause& cvc, int* errCodeOut) const
+  void TabRow::update(const ColumnValueClause& cvc) const
   {
     if (!(cvc.hasColumns()))
     {
-      return true;  // nothing to do
+      return;  // nothing to do
     }
     
     // create and execute the SQL statement
-    auto stmt = cvc.getUpdateStmt(db, tabName, rowId);
-    if (stmt == nullptr) return false;
-
-    return db->execNonQuery(stmt, errCodeOut);
+    SqlStatement stmt = cvc.getUpdateStmt(db, tabName, rowId);
+    db->execNonQuery(stmt);
   }
 
 //----------------------------------------------------------------------------
@@ -153,15 +104,7 @@ namespace SqliteOverlay
     }
     
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
-    string result;
-    bool isOk = db->execScalarQueryString(sql, &result, nullptr);
-    
-    if (!isOk)
-    {
-      throw std::invalid_argument("Column access: received invalid column name or row has been deleted in the meantime");
-    }
-    
-    return result;
+    return db->execScalarQueryString(sql);
   }
 
 //----------------------------------------------------------------------------
@@ -174,15 +117,7 @@ namespace SqliteOverlay
     }
 
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
-    int result;
-    bool isOk = db->execScalarQueryInt(sql, &result, nullptr);
-
-    if (!isOk)
-    {
-      throw std::invalid_argument("Column access: received invalid column name or row has been deleted in the meantime");
-    }
-
-    return result;
+    return db->execScalarQueryInt(sql);
   }
 
 //----------------------------------------------------------------------------
@@ -195,15 +130,7 @@ namespace SqliteOverlay
     }
 
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
-    double result;
-    bool isOk = db->execScalarQueryDouble(sql, &result, nullptr);
-
-    if (!isOk)
-    {
-      throw std::invalid_argument("Column access: received invalid column name or row has been deleted in the meantime");
-    }
-
-    return result;
+    return db->execScalarQueryDouble(sql);
   }
 
   //----------------------------------------------------------------------------
@@ -232,7 +159,7 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<int> > TabRow::getInt2(const string& colName) const
+  optional<int> TabRow::getInt2(const string& colName) const
   {
     if (colName.empty())
     {
@@ -240,13 +167,12 @@ namespace SqliteOverlay
     }
 
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
-
-    return db->execScalarQueryInt(sql, nullptr);
+    return db->execScalarQueryIntOrNull(sql);
   }
 
 //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<double> > TabRow::getDouble2(const string& colName) const
+  optional<double> TabRow::getDouble2(const string& colName) const
   {
     if (colName.empty())
     {
@@ -254,13 +180,12 @@ namespace SqliteOverlay
     }
 
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
-
-    return db->execScalarQueryDouble(sql, nullptr);
+    return db->execScalarQueryDoubleOrNull(sql);
   }
 
 //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<string> > TabRow::getString2(const string& colName) const
+  optional<string> TabRow::getString2(const string& colName) const
   {
     if (colName.empty())
     {
@@ -268,152 +193,102 @@ namespace SqliteOverlay
     }
 
     string sql = "SELECT " + colName + cachedWhereStatementForRow;
-
-    return db->execScalarQueryString(sql, nullptr);
+    return db->execScalarQueryStringOrNull(sql);
   }
 
 //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<LocalTimestamp> > TabRow::getLocalTime2(const string& colName, boost::local_time::time_zone_ptr tzp) const
+  optional<LocalTimestamp> TabRow::getLocalTime2(const string& colName, boost::local_time::time_zone_ptr tzp) const
   {
-    if (colName.empty())
+    optional<int> rawTime = getInt2(colName);
+
+    if (rawTime.has_value())
     {
-      throw std::invalid_argument("Column access: received empty column name");
+      return LocalTimestamp{rawTime.value(), tzp};
     }
 
-    string sql = "SELECT " + colName + cachedWhereStatementForRow;
-
-    auto rawTime = db->execScalarQueryInt(sql, nullptr);
-
-    if (rawTime->isNull())
-    {
-      return unique_ptr<ScalarQueryResult<LocalTimestamp>>(new ScalarQueryResult<LocalTimestamp>(tzp));
-    }
-
-    LocalTimestamp result(rawTime->get(), tzp);
-    return unique_ptr<ScalarQueryResult<LocalTimestamp>>(new ScalarQueryResult<LocalTimestamp>(result));
+    return optional<LocalTimestamp>{};
   }
 
 //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<UTCTimestamp> > TabRow::getUTCTime2(const string& colName) const
+  optional<UTCTimestamp> TabRow::getUTCTime2(const string& colName) const
   {
-    if (colName.empty())
+    optional<int> rawTime = getInt2(colName);
+
+    if (rawTime.has_value())
     {
-      throw std::invalid_argument("Column access: received empty column name");
+      return UTCTimestamp{rawTime.value()};
     }
 
-    string sql = "SELECT " + colName + cachedWhereStatementForRow;
-
-    auto rawTime = db->execScalarQueryInt(sql, nullptr);
-
-    if (rawTime->isNull())
-    {
-      return unique_ptr<ScalarQueryResult<UTCTimestamp>>(new ScalarQueryResult<UTCTimestamp>());
-    }
-
-    UTCTimestamp result(static_cast<time_t>(rawTime->get()));  // use the constructor for time_t, otherwise the int would be interpreted as YMD-notation!
-    return unique_ptr<ScalarQueryResult<UTCTimestamp>>(new ScalarQueryResult<UTCTimestamp>(result));
+    return optional<UTCTimestamp>{};
   }
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<ScalarQueryResult<boost::gregorian::date> > TabRow::getDate2(const string& colName) const
+  optional<boost::gregorian::date> TabRow::getDate2(const string& colName) const
   {
     auto ymd = getInt2(colName);
-    if (ymd == nullptr) return nullptr;
-
-    if (ymd->isNull())
+    if (ymd.has_value())
     {
-      return unique_ptr<ScalarQueryResult<greg::date>>(new ScalarQueryResult<greg::date>());
+      return greg::from_int(ymd.value());
     }
 
-    greg::date d = greg::from_int(ymd->get());
-    return unique_ptr<ScalarQueryResult<greg::date>>(new ScalarQueryResult<greg::date>(d));
+    return optional<greg::date>{};
   }
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::update(const string& colName, const int newVal, int* errCodeOut) const
-  {
-    ColumnValueClause cvc;
-    cvc.addIntCol(colName, newVal);
-    return update(cvc, errCodeOut);
-  }
-
-//----------------------------------------------------------------------------
-
-  bool TabRow::update(const string& colName, const double newVal, int* errCodeOut) const
-  {
-    ColumnValueClause cvc;
-    cvc.addDoubleCol(colName, newVal);
-    return update(cvc, errCodeOut);
-  }
-
-//----------------------------------------------------------------------------
-
-  bool TabRow::update(const string& colName, const string newVal, int* errCodeOut) const
-  {
-    ColumnValueClause cvc;
-    cvc.addStringCol(colName, newVal);
-    return update(cvc, errCodeOut);
-  }
-
-//----------------------------------------------------------------------------
-
-  bool TabRow::update(const string& colName, const LocalTimestamp& newVal, int* errCodeOut) const
+  void TabRow::update(const string& colName, const LocalTimestamp& newVal) const
   {
     ColumnValueClause cvc;
     cvc.addDateTimeCol(colName, &newVal);
-    return update(cvc, errCodeOut);
+    update(cvc);
   }
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::update(const string& colName, const UTCTimestamp& newVal, int* errCodeOut) const
+  void TabRow::update(const string& colName, const UTCTimestamp& newVal) const
   {
     ColumnValueClause cvc;
     cvc.addDateTimeCol(colName, &newVal);
-    return update(cvc, errCodeOut);
+    update(cvc);
   }
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::update(const string& colName, const boost::gregorian::date& newVal, int* errCodeOut) const
+  void TabRow::update(const string& colName, const boost::gregorian::date& newVal) const
   {
-    return update(colName, greg::to_int(newVal), errCodeOut);
+    Sloppy::estring sql{cachedUpdateStatementForRow};
+    sql.arg(colName);
+    SqlStatement stmt = db->prepStatement(sql);
+    stmt.bindInt(1, greg::to_int(newVal));
+
+    db->execNonQuery(stmt);
   }
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::updateToNull(const string& colName, int* errCodeOut) const
+  void TabRow::updateToNull(const string& colName) const
   {
     ColumnValueClause cvc;
     cvc.addNullCol(colName);
-    return update(cvc, errCodeOut);
+    update(cvc);
   }
 
 //----------------------------------------------------------------------------
 
-  SqliteDatabase* TabRow::getDb()
+  const SqliteDatabase* TabRow::getDb() const
   {
     return db;
   }
 
 //----------------------------------------------------------------------------
 
-  bool TabRow::erase(int* errCodeOut)
+  void TabRow::erase() const
   {
-    string sql = "DELETE FROM " + tabName + " WHERE id = " + to_string(rowId);
-    bool success = db->execNonQuery(sql, errCodeOut);
-    
-    // make this instance unusable by setting the ID to an invalid value
-    if (success)
-    {
-      rowId = -1;
-    }
-    
-    return success;
+    string sql = "DELETE " + cachedWhereStatementForRow;
+    db->execNonQuery(sql);
   }
 
 //----------------------------------------------------------------------------

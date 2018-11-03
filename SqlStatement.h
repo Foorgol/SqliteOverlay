@@ -58,7 +58,7 @@ namespace SqliteOverlay
      *
      * \throws GenericSqliteException incl. error code if anything goes wrong
      */
-    void bindInt(
+    void bind(
         int argPos,   ///< the placeholder to bind to
         int val   ///< the value to bind to the placeholder
         ) const;
@@ -70,7 +70,7 @@ namespace SqliteOverlay
      *
      * \throws GenericSqliteException incl. error code if anything goes wrong
      */
-    void bindDouble(
+    void bind(
         int argPos,   ///< the placeholder to bind to
         double val   ///< the value to bind to the placeholder
         ) const;
@@ -82,10 +82,49 @@ namespace SqliteOverlay
      *
      * \throws GenericSqliteException incl. error code if anything goes wrong
      */
-    void bindString(
+    void bind(
         int argPos,   ///< the placeholder to bind to
         const string& val   ///< the value to bind to the placeholder
         ) const;
+
+    /** \brief Binds a float value to a placeholder in the statement
+     *
+     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
+     * a specification how placeholders are defined in the SQLite language.
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     */
+    void bind(
+        int argPos,   ///< the placeholder to bind to
+        float val   ///< the value to bind to the placeholder
+        ) const
+    {
+      bind(argPos, static_cast<double>(val));
+    }
+
+    /** \brief Binds a boolean value to a placeholder in the statement
+     *
+     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
+     * a specification how placeholders are defined in the SQLite language.
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     */
+    void bind(
+        int argPos,   ///< the placeholder to bind to
+        bool val   ///< the value to bind to the placeholder
+        ) const
+    {
+      bind(argPos, val ? 1 : 0);
+    }
+
+    /** \brief Catches all calls to `bind()` with unsupported
+     * value types at compile time.
+     */
+    template<typename T>
+    void bind(int argPos, T val) const
+    {
+      static_assert (false, "SqlStatement: call to bind() with a unsupported value type!");
+    }
 
     /** \brief Binds a NULL value to a placeholder in the statement
      *

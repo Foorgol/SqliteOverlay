@@ -24,7 +24,7 @@ namespace SqliteOverlay {
 
     /** \brief Adds an integer to the list of column values;
      * uses the default operation "=" (equals) between column name and value. */
-    inline void addIntCol(
+    inline void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         int val   ///< the value itself
         )
@@ -35,7 +35,7 @@ namespace SqliteOverlay {
 
     /** \brief Adds a double to the list of column values;
      * uses the default operation "=" (equals) between column name and value. */
-    inline void addDoubleCol(
+    inline void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         double val   ///< the value itself
         )
@@ -46,7 +46,7 @@ namespace SqliteOverlay {
 
     /** \brief Adds a string to the list of column values;
      * uses the default operation "=" (equals) between column name and value. */
-    void addStringCol(
+    void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& val   ///< the value itself
         )
@@ -65,21 +65,22 @@ namespace SqliteOverlay {
 
     /** \brief Adds a timestamp to the list of column values;
      * uses the default operation "=" (equals) between column name and value. */
-    inline void addDateTimeCol(
+    inline void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const CommonTimestamp* pTimestamp   ///< the value itself
         )
     {
-      addIntCol(colName, pTimestamp->getRawTime());
+      addCol(colName, pTimestamp->getRawTime());
     }
 
     /** \brief Adds a date to the list of column values;
      * uses the default operation "=" (equals) between column name and value. */
-    inline void addDateCol(
-   ///< the value itself        const boost::gregorian::date& d   ///< the value itself
+    inline void addCol(
+        const string& colName,   ///< the name of the column that should contain the value
+        const boost::gregorian::date& d   ///< the value itself
         )
     {
-      addIntCol(colName, boost::gregorian::to_int(d));
+      addCol(colName, boost::gregorian::to_int(d));
     }
 
     /** \brief Deletes all column names and values from the internal lists and
@@ -185,17 +186,13 @@ namespace SqliteOverlay {
     WhereClause()
       :CommonClause(), limit{0} {}
 
-    using CommonClause::addIntCol;
-    using CommonClause::addDoubleCol;
-    using CommonClause::addStringCol;
-    using CommonClause::addDateTimeCol;
-    using CommonClause::addDateCol;
+    using CommonClause::addCol;
     using CommonClause::addNullCol;
 
 
     /** \brief Adds an integer to the list of column values with a custom
      * operator (e.g., "!=") between column name and value. */
-    void addIntCol(
+    void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& op,   ///< the operator between column name and value
         int val   ///< the value itself
@@ -203,7 +200,7 @@ namespace SqliteOverlay {
 
     /** \brief Adds a double to the list of column values with a custom
      * operator (e.g., "!=") between column name and value. */
-    void addDoubleCol(
+    void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& op,   ///< the operator between column name and value
         double val   ///< the value itself
@@ -211,7 +208,7 @@ namespace SqliteOverlay {
 
     /** \brief Adds a string to the list of column values with a custom
      * operator (e.g., "!=") between column name and value. */
-    void addStringCol(
+    void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& op,   ///< the operator between column name and value
         const string& val   ///< the value itself
@@ -219,7 +216,7 @@ namespace SqliteOverlay {
 
     /** \brief Adds a timestamp to the list of column values with a custom
      * operator (e.g., "!=") between column name and value. */
-    void addDateTimeCol(
+    void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& op,   ///< the operator between column name and value
         const CommonTimestamp* pTimestamp   ///< the value itself
@@ -235,16 +232,16 @@ namespace SqliteOverlay {
 
     /** \brief Adds a date to the list of column values with a custom
      * operator (e.g., "!=") between column name and value. */
-    inline void addDateCol(
+    inline void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& op,   ///< the operator between column name and value
         const boost::gregorian::date& d   ///< the value itself
         )
     {
-      addIntCol(colName, op, boost::gregorian::to_int(d));
+      addCol(colName, op, boost::gregorian::to_int(d));
     }
 
-    /** \brief Constructs a SELECT statement for a given
+    /** \brief Constructs a "`SELECT id`" or "`SELECT COUNT(*)`" statement for a given
      * database and table name, the statement using a WHERE clause
      * with the previously assigned column-value-pairs.
      *

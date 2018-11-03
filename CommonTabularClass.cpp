@@ -52,7 +52,8 @@ namespace SqliteOverlay
 //----------------------------------------------------------------------------
 
   CommonTabularClass::CommonTabularClass(SqliteDatabase* _db, const string& _tabName, bool _isView, bool forceNameCheck)
-  : db(_db), tabName(_tabName), isView(_isView)
+  : db(_db), tabName(_tabName), isView(_isView),
+    sqlColumnCount{"SELECT COUNT(*) FROM " + tabName + " WHERE "}
   {
     if (db == NULL)
     {
@@ -187,10 +188,9 @@ namespace SqliteOverlay
       throw std::invalid_argument("getMatchCountForColumnValue(): empty column name");
     }
 
-    SqlStatement stmt = db->prepStatement("SELECT COUNT(*) FROM ? WHERE ? = ?");
-    stmt.bindString(1, tabName);
-    stmt.bindString(2, col);
-    stmt.bindString(3, val);
+    string sql = sqlColumnCount + col + "=?";
+    SqlStatement stmt = db->prepStatement(sql);
+    stmt.bindString(1, val);
     return db->execScalarQueryInt(stmt);
   }
 
@@ -203,10 +203,9 @@ namespace SqliteOverlay
       throw std::invalid_argument("getMatchCountForColumnValue(): empty column name");
     }
 
-    SqlStatement stmt = db->prepStatement("SELECT COUNT(*) FROM ? WHERE ? = ?");
-    stmt.bindString(1, tabName);
-    stmt.bindString(2, col);
-    stmt.bindInt(3, val);
+    string sql = sqlColumnCount + col + "=?";
+    SqlStatement stmt = db->prepStatement(sql);
+    stmt.bindInt(1, val);
     return db->execScalarQueryInt(stmt);
   }
 
@@ -219,10 +218,9 @@ namespace SqliteOverlay
       throw std::invalid_argument("getMatchCountForColumnValue(): empty column name");
     }
 
-    SqlStatement stmt = db->prepStatement("SELECT COUNT(*) FROM ? WHERE ? = ?");
-    stmt.bindString(1, tabName);
-    stmt.bindString(2, col);
-    stmt.bindDouble(3, val);
+    string sql = sqlColumnCount + col + "=?";
+    SqlStatement stmt = db->prepStatement(sql);
+    stmt.bindDouble(1, val);
     return db->execScalarQueryInt(stmt);
   }
 
@@ -239,10 +237,9 @@ namespace SqliteOverlay
     // both LocalTimestamp and UTCTimestamp
     time_t rawTime = pTimestamp->getRawTime();
 
-    SqlStatement stmt = db->prepStatement("SELECT COUNT(*) FROM ? WHERE ? = ?");
-    stmt.bindString(1, tabName);
-    stmt.bindString(2, col);
-    stmt.bindInt(3, rawTime);
+    string sql = sqlColumnCount + col + "=?";
+    SqlStatement stmt = db->prepStatement(sql);
+    stmt.bindInt(1, rawTime);
     return db->execScalarQueryInt(stmt);
   }
 
@@ -255,9 +252,8 @@ namespace SqliteOverlay
       throw std::invalid_argument("getMatchCountForColumnValue(): empty column name");
     }
 
-    SqlStatement stmt = db->prepStatement("SELECT COUNT(*) FROM ? WHERE ? IS NULL");
-    stmt.bindString(1, tabName);
-    stmt.bindString(2, col);
+    string sql = sqlColumnCount + col + " IS NULL";
+    SqlStatement stmt = db->prepStatement(sql);
     return db->execScalarQueryInt(stmt);
   }
 
@@ -275,7 +271,7 @@ namespace SqliteOverlay
 
   int CommonTabularClass::length() const
   {
-    return db->execScalarQueryInt("SELECT count(*) FROM " + tabName);
+    return db->execScalarQueryInt("SELECT COUNT(*) FROM " + tabName);
   }
 
 //----------------------------------------------------------------------------

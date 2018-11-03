@@ -715,6 +715,29 @@ namespace SqliteOverlay
         int ms   ///< the timeout in milliseconds; if less or equal to 0, we don't wait an throw BusyException immediately
         );
 
+    /** \brief Creates a new SqliteDatabase object that works on the same database
+     * file as the current connection.
+     *
+     * The result is similar to calling the SqliteDatabase ctor with the database's
+     * filename. However, we do not call `populateTables()` or `populateViews()` on the new connection
+     * because we assume that the schema has been fully set up before.
+     *
+     * \note Only the main database ("main") will be cloned, not any other attached
+     * database.
+     *
+     * \throws std::invalid_argument if this method was called on a temporary or an
+     * in-memory database
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     * with SQLite
+     *
+     * \returns a new SqliteDatabase instance that works on the same database file
+     * as the current instance
+     */
+    SqliteDatabase duplicateConnection(
+        bool readOnly   ///< `true`: open the new connection in read-only mode; `false`: open in r/w mode
+        );
+
   protected:
     /** \brief Copies the contents of the source database into the destination database,
      * original documentation of the backup process [here](https://www.sqlite.org/c3ref/backup_finish.html)

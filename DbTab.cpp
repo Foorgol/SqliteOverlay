@@ -21,49 +21,45 @@
 namespace SqliteOverlay
 {
 
+  DbTab::DbTab(SqliteDatabase* _db, const string& _tabName, bool forceNameCheck)
+    : CommonTabularClass (_db, _tabName, false, forceNameCheck),
+      cachedSelectSql{"SELECT id FROM " + tabName + " WHERE %1=?"}
+  {
+
+  }
+
+  //----------------------------------------------------------------------------
+
   DbTab::~DbTab()
   {
   }
 
   //----------------------------------------------------------------------------
 
-  DbTab::DbTab(SqliteDatabase* _db, const string& _tabName)
-    : CommonTabularClass (_db, _tabName, false)
+  int DbTab::insertRow(const ColumnValueClause& ic) const
   {
+    SqlStatement stmt = ic.getInsertStmt(db, tabName);
+    db->execNonQuery(stmt);
 
-  }
-
-  //----------------------------------------------------------------------------
-
-  int DbTab::insertRow(const ColumnValueClause& ic, int* errCodeOut)
-  {
-    auto stmt = ic.getInsertStmt(db, tabName);
-    if (stmt == nullptr) return -1;
-    bool isOk = db->execNonQuery(stmt, errCodeOut);
-    if (!isOk)
-    {
-      // insert failed
-      return -1;
-    }
-
-    // insert succeeded
+    // insert succeeded, otherwise the commands
+    // above would have thrown an exception
     return db->getLastInsertId();
   }
 
   //----------------------------------------------------------------------------
 
-  int DbTab::insertRow(int* errCodeOut)
+  int DbTab::insertRow() const
   {
     ColumnValueClause empty;
 
-    return insertRow(empty, errCodeOut);
+    return insertRow(empty);
   }
 
   //----------------------------------------------------------------------------
 
   TabRow DbTab::operator [](const int id) const
   {
-    return TabRow(db, tabName, id);
+    return TabRow(db, tabName, id, true);
   }
 
   //----------------------------------------------------------------------------
@@ -75,229 +71,89 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<TabRow> DbTab::get2(int id) const
+  optional<TabRow> DbTab::get2(int id) const
   {
     try
     {
-      TabRow r{db, tabName, id};
+      TabRow r{db, tabName, id, false};
 
       // if we survived this, the row exists
-      return make_unique<TabRow>(db, tabName, id, true);
+      return optional<TabRow>{r};
     }
-    catch(...)
+    catch(std::invalid_argument& e)
     {
-      return nullptr;
+      // the row ID was invalid
+      return optional<TabRow>{};
+    }
+    catch (...)
+    {
+      // rethrow any other exception
+      throw;
     }
 
-    return nullptr;   // we should never reach this
+    return optional<TabRow>{};   // we should never reach this point...
   }
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<TabRow> DbTab::get2(const WhereClause& w) const
+  optional<TabRow> DbTab::get2(const WhereClause& w) const
   {
     try
     {
       TabRow r{db, tabName, w};
 
       // if we survived this, the row exists
-      return make_unique<TabRow>(db, tabName, r.getId(), true);
+      return r;
     }
-    catch(...)
+    catch(std::invalid_argument& e)
     {
-      return nullptr;
+      // the row ID was invalid
+      return optional<TabRow>{};
+    }
+    catch (...)
+    {
+      // rethrow any other exception
+      throw;
     }
 
-    return nullptr;   // we should never reach this
-  }
-
-  //----------------------------------------------------------------------------
-
-  TabRow DbTab::getSingleRowByColumnValue(const string& col, int val) const
-  {
-    WhereClause w;
-    w.addIntCol(col, val);
-    return TabRow(db, tabName, w);
-  }
-
-  //----------------------------------------------------------------------------
-
-  unique_ptr<TabRow> DbTab::getSingleRowByColumnValue2(const string& col, int val) const
-  {
-    WhereClause w;
-    w.addIntCol(col, val);
-    return get2(w);
-  }
-
-  //----------------------------------------------------------------------------
-
-  TabRow DbTab::getSingleRowByColumnValue(const string& col, double val) const
-  {
-    WhereClause w;
-    w.addDoubleCol(col, val);
-    return TabRow(db, tabName, w);
-  }
-
-  //----------------------------------------------------------------------------
-
-  unique_ptr<TabRow> DbTab::getSingleRowByColumnValue2(const string& col, double val) const
-  {
-    WhereClause w;
-    w.addDoubleCol(col, val);
-    return get2(w);
-  }
-
-  //----------------------------------------------------------------------------
-
-  TabRow DbTab::getSingleRowByColumnValue(const string& col, const string& val) const
-  {
-    WhereClause w;
-    w.addStringCol(col, val);
-    return TabRow(db, tabName, w);
-  }
-
-  //----------------------------------------------------------------------------
-
-  unique_ptr<TabRow> DbTab::getSingleRowByColumnValue2(const string& col, const string& val) const
-  {
-    WhereClause w;
-    w.addStringCol(col, val);
-    return get2(w);
+    return optional<TabRow>{};   // we should never reach this point...
   }
 
   //----------------------------------------------------------------------------
 
   TabRow DbTab::getSingleRowByColumnValueNull(const string& col) const
   {
-    WhereClause w;
-    w.addNullCol(col);
-    return TabRow(db, tabName, w);
-  }
-
-  //----------------------------------------------------------------------------
-
-  unique_ptr<TabRow> DbTab::getSingleRowByColumnValueNull2(const string& col) const
-  {
-    WhereClause w;
-    w.addNullCol(col);
-    return get2(w);
-  }
-
-  //----------------------------------------------------------------------------
-
-  DbTab::CachingRowIterator::CachingRowIterator(SqliteDatabase* _db, const string& _tabName, upSqlStatement stmt)
-    : db(_db), tabName(_tabName), curIdx{0}, cachedLength{0}
-  {
-    // no checks for the validity of _db and _tabName here, because
-    // we assume that the constructor is only called internally with
-    // pre-checked values
-
-    idList.clear();
-
-    // make sure that the query is valid
-    //
-    // IMPORTANT: we assume that the caller has executed the first step() call
-    // on the statement!
-    if (!(stmt->hasData()))
-    {
-      return; // empty table or invalid query... empty table is more likely... return, not throw
-    }
-    if (stmt->getColName(0) != "id")
-    {
-      throw std::invalid_argument("CachingRowIterator: invalid SELECT query provided to constructor");
-    }
-
-    // iterate over all matches/results in the query and cache their row IDs
-    do
-    {
-      int id;
-      stmt->getInt(0, &id);
-      idList.push_back(id);
-      stmt->step();
-    } while (!(stmt->isDone()));
-
-    cachedLength = idList.size();
-  }
-
-  //----------------------------------------------------------------------------
-
-  DbTab::CachingRowIterator::CachingRowIterator()
-    : db(nullptr), tabName("")
-  {
-    curIdx = -1;
-    cachedLength = 0;
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool DbTab::CachingRowIterator::isEnd() const
-  {
-    return (curIdx  == cachedLength);
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool DbTab::CachingRowIterator::pointsToElement() const
-  {
-    return (curIdx < cachedLength);
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool DbTab::CachingRowIterator::isEmpty() const
-  {
-    return (cachedLength == 0);
-  }
-
-  //----------------------------------------------------------------------------
-
-  void DbTab::CachingRowIterator::operator ++()
-  {
-    ++curIdx;
-
-    if (curIdx > cachedLength)
-    {
-      curIdx = cachedLength;
-    }
-  }
-
-  //----------------------------------------------------------------------------
-
-  TabRow DbTab::CachingRowIterator::operator *() const
-  {
-    if (curIdx >= cachedLength)
-    {
-      throw std::runtime_error("Access past the last item of the CachingRowIterator");
-    }
-    int id = idList.at(curIdx);
+    int id = db->execScalarQueryInt("SELECT id FROM " + tabName + " WHERE " + col + " IS NULL");
     return TabRow(db, tabName, id, true);
   }
 
   //----------------------------------------------------------------------------
 
-  int DbTab::CachingRowIterator::length() const
+  optional<TabRow> DbTab::getSingleRowByColumnValueNull2(const string& col) const
   {
-    return cachedLength;
+    try
+    {
+      // try a regular lookup and let the compiler
+      // pick the best function (int, double, string, ...)
+      return getSingleRowByColumnValueNull(col);
+    }
+    catch (NoDataException& e)
+    {
+      // return an empty optional if no such column exists
+      return optional<TabRow>{};
+    }
+    catch (...)
+    {
+      // rethrow any other exceptio
+      throw;
+    }
+
+    return optional<TabRow>{};   // we should never reach this point...
   }
 
   //----------------------------------------------------------------------------
 
-  double DbTab::CachingRowIterator::getPercentage() const
-  {
-    if (cachedLength == 0)
-    {
-      return -1;
-    }
-    if ((cachedLength == 1) && (curIdx >= 0))
-    {
-      return 1.0;
-    }
-    return curIdx / (cachedLength -1.0);
-  }
-
-  //----------------------------------------------------------------------------
-
-  DbTab::CachingRowIterator DbTab::getRowsByWhereClause(const WhereClause& w) const
+  vector<TabRow> DbTab::getRowsByWhereClause(const WhereClause& w) const
   {
     auto stmt = w.getSelectStmt(db, tabName, false);
 
@@ -316,7 +172,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  DbTab::CachingRowIterator DbTab::getRowsByWhereClause(const string& w, bool isWhereClauseOnly) const
+  vector<TabRow> DbTab::getRowsByWhereClause(const string& w, bool isWhereClauseOnly) const
   {
     string sql = w;
     if (isWhereClauseOnly)
@@ -341,7 +197,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  DbTab::CachingRowIterator DbTab::getRowsByColumnValue(const string& col, int val) const
+  vector<TabRow> DbTab::getRowsByColumnValue(const string& col, int val) const
   {
     WhereClause w;
     w.addIntCol(col, val);
@@ -350,7 +206,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  DbTab::CachingRowIterator DbTab::getRowsByColumnValue(const string& col, double val) const
+  vector<TabRow> DbTab::getRowsByColumnValue(const string& col, double val) const
   {
     WhereClause w;
     w.addDoubleCol(col, val);
@@ -359,7 +215,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  DbTab::CachingRowIterator DbTab::getRowsByColumnValue(const string& col, const string& val) const
+  vector<TabRow> DbTab::getRowsByColumnValue(const string& col, const string& val) const
   {
     WhereClause w;
     w.addStringCol(col, val);
@@ -368,7 +224,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  DbTab::CachingRowIterator DbTab::getRowsByColumnValueNull(const string& col) const
+  vector<TabRow> DbTab::getRowsByColumnValueNull(const string& col) const
   {
     WhereClause w;
     w.addNullCol(col);
@@ -377,7 +233,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  DbTab::CachingRowIterator DbTab::getAllRows() const
+  vector<TabRow> DbTab::getAllRows() const
   {
     string sql = "SELECT id FROM " + tabName;
     auto stmt = db->prepStatement(sql, nullptr);
@@ -594,6 +450,15 @@ namespace SqliteOverlay
     }
 
     return stmt->hasData();
+  }
+
+  //----------------------------------------------------------------------------
+
+  SqlStatement DbTab::getSelectStmtForColumn(const string& colName) const
+  {
+    Sloppy::estring sql{cachedSelectSql};
+    sql.arg(colName);
+    return db->prepStatement(sql);
   }
 
   //----------------------------------------------------------------------------

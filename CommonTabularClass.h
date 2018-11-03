@@ -222,6 +222,8 @@ namespace SqliteOverlay
      */
     const bool isView;
 
+    const string sqlColumnCount;
+
   private:
 
   };

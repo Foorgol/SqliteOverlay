@@ -73,33 +73,33 @@ namespace SqliteOverlay {
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
 
-  void WhereClause::addIntCol(const string& colName, const string& op, int val)
+  void WhereClause::addCol(const string& colName, const string& op, int val)
   {
-    addIntCol(colName, val);
+    addCol(colName, val);
     colVals[colVals.size() - 1].op = op;
   }
 
   //----------------------------------------------------------------------------
 
-  void WhereClause::addDoubleCol(const string& colName, const string& op, double val)
+  void WhereClause::addCol(const string& colName, const string& op, double val)
   {
-    addDoubleCol(colName, val);
+    addCol(colName, val);
     colVals[colVals.size() - 1].op = op;
   }
 
   //----------------------------------------------------------------------------
 
-  void WhereClause::addStringCol(const string& colName, const string& op, const string& val)
+  void WhereClause::addCol(const string& colName, const string& op, const string& val)
   {
-    addStringCol(colName, val);
+    addCol(colName, val);
     colVals[colVals.size() - 1].op = op;
   }
 
   //----------------------------------------------------------------------------
 
-  void WhereClause::addDateTimeCol(const string& colName, const string& op, const CommonTimestamp* pTimestamp)
+  void WhereClause::addCol(const string& colName, const string& op, const CommonTimestamp* pTimestamp)
   {
-    addDateTimeCol(colName, pTimestamp);
+    addCol(colName, pTimestamp);
     colVals[colVals.size() - 1].op = op;
   }
 
@@ -249,15 +249,15 @@ namespace SqliteOverlay {
       switch (curCol.type)
       {
       case ColValType::Int:
-        stmt.bindInt(curPlaceholderIdx, intVals[curCol.indexInList]);
+        stmt.bind(curPlaceholderIdx, intVals[curCol.indexInList]);
         break;
 
       case ColValType::Double:
-        stmt.bindDouble(curPlaceholderIdx, doubleVals[curCol.indexInList]);
+        stmt.bind(curPlaceholderIdx, doubleVals[curCol.indexInList]);
         break;
 
       case ColValType::String:
-        stmt.bindString(curPlaceholderIdx, stringVals[curCol.indexInList]);
+        stmt.bind(curPlaceholderIdx, stringVals[curCol.indexInList]);
         break;
 
       default:
