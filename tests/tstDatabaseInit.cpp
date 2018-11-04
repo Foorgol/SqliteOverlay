@@ -7,40 +7,50 @@
 using namespace SqliteOverlay;
 namespace bfs = boost::filesystem;
 
-TEST_F(DatabaseTestScenario, DatabaseInit)
+TEST_F(DatabaseTestScenario, DatabaseCtor)
 {
   // create a new, empty database
   string dbFileName = getSqliteFileName();
   bfs::path dbPathObj(dbFileName);
 
   ASSERT_FALSE(bfs::exists(dbPathObj));
-  auto db = SqliteDatabase::get<SampleDB>(dbFileName, true);
+  ASSERT_THROW(SqliteDatabase(dbFileName, OpenMode::OpenExisting_RW, false), std::invalid_argument);
+  ASSERT_THROW(SqliteDatabase(dbFileName, OpenMode::OpenExisting_RO, false), std::invalid_argument);
+  SqliteDatabase db{dbFileName, OpenMode::OpenOrCreate_RW, false};
   ASSERT_TRUE(bfs::exists(dbPathObj));
+  ASSERT_TRUE(db.isAlive());
 
   // close the database connection
-  db.reset(nullptr);
+  db.close();
+  ASSERT_FALSE(db.isAlive());
 
   // open an existing database
-  db = SqliteDatabase::get<SampleDB>(dbFileName, false);
-  ASSERT_TRUE(db != nullptr);
-  db.reset(nullptr);
+  ASSERT_THROW(SqliteDatabase(dbFileName, OpenMode::ForceNew, false), std::invalid_argument);
+  db = SqliteDatabase{dbFileName, OpenMode::OpenExisting_RO, false};
+  db.close();
+  db = SqliteDatabase{dbFileName, OpenMode::OpenExisting_RW, false};
+  db.close();
+  db = SqliteDatabase{dbFileName, OpenMode::OpenOrCreate_RW, false};
+  db.close();
 
-  // clean-up
+  // clean-up and test "force new"
+  ASSERT_TRUE(bfs::remove(dbPathObj));
+  ASSERT_FALSE(bfs::exists(dbPathObj));
+  db = SqliteDatabase{dbFileName, OpenMode::ForceNew, false};
+  ASSERT_TRUE(bfs::exists(dbPathObj));
   ASSERT_TRUE(bfs::remove(dbPathObj));
   ASSERT_FALSE(bfs::exists(dbPathObj));
 
-  // try to open a non-existing file
-  db = SqliteDatabase::get<SampleDB>(dbFileName, false);
-  ASSERT_TRUE(db == nullptr);
+  // try to open a non-existing / invalid / empty file
+  ASSERT_THROW(SqliteDatabase("", OpenMode::OpenOrCreate_RW, false), std::invalid_argument);
 
-  // invalid / empty filename
-  dbFileName = "";
-  db = SqliteDatabase::get<SampleDB>(dbFileName, false);
-  ASSERT_TRUE(db == nullptr);
+  // try invalid flag combinations
+  ASSERT_THROW(SqliteDatabase(":memory:", OpenMode::OpenExisting_RW, false), std::invalid_argument);
+  ASSERT_THROW(SqliteDatabase(":memory:", OpenMode::OpenExisting_RO, false), std::invalid_argument);
 }
 
 //----------------------------------------------------------------
-
+/*
 TEST_F(DatabaseTestScenario, PopulateTablesAndViews)
 {
   // create a new, empty database
@@ -84,3 +94,4 @@ TEST_F(DatabaseTestScenario, PopulateTablesAndViews)
   ASSERT_TRUE(expectedTables.empty());
 }
 
+*/

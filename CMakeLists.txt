@@ -121,7 +121,7 @@ set(LIB_SOURCES_TST
     tests/SampleDB.h
     tests/SampleDB.cpp
     tests/tstStatement.cpp
-    #tests/tstDatabaseInit.cpp
+    tests/tstDatabaseInit.cpp
     #tests/tstDatabaseQueries.cpp
     #tests/tstCommonTabularClass.cpp
     #tests/tstClausesAndQueries.cpp

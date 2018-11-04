@@ -103,7 +103,8 @@ namespace SqliteOverlay
     switch (om)
     {
     case OpenMode::ForceNew:
-      oFlags = SQLITE_OPEN_CREATE;
+    case OpenMode::OpenOrCreate_RW:
+      oFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
       break;
 
     case OpenMode::OpenExisting_RO:
@@ -112,10 +113,6 @@ namespace SqliteOverlay
 
     case OpenMode::OpenExisting_RW:
       oFlags = SQLITE_OPEN_READWRITE;
-      break;
-
-    case OpenMode::OpenOrCreate_RW:
-      oFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
       break;
 
     default:

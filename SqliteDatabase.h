@@ -76,9 +76,6 @@ namespace SqliteOverlay
   class DbTab;
   class Transaction;
 
-  template<class T>
-  class ScalarQueryResult;
-
   //----------------------------------------------------------------------------
 
   /** \brief A class that handles a single database connection.
