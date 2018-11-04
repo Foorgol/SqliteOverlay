@@ -138,7 +138,7 @@ void DatabaseTestScenario::prepScenario01()
 
 //----------------------------------------------------------------------------
 
-SqliteDatabase DatabaseTestScenario::getScenario01()
+SampleDB DatabaseTestScenario::getScenario01()
 {
   prepScenario01();
 

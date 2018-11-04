@@ -43,7 +43,7 @@ protected:
   RawSqliteStmt prepStatement(const RawSqlitePtr& db, const string& sql);
 
   void prepScenario01();
-  SqliteDatabase getScenario01();
+  SampleDB getScenario01();
   
   void SetUp () override;
   void TearDown () override;
