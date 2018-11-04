@@ -47,6 +47,36 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  SqlStatement& SqlStatement::operator=(SqlStatement&& other)
+  {
+    if (stmt != nullptr)
+    {
+      sqlite3_finalize(stmt);
+    }
+    stmt = other.stmt;
+    other.stmt = nullptr;
+
+    _hasData = other._hasData;
+    other._hasData = false;
+    _isDone = other._isDone;
+    other._isDone = true;
+    resultColCount = other.resultColCount;
+    other.resultColCount = -1;
+    stepCount = other.stepCount;
+    other.stepCount = -1;
+
+    return *this;
+  }
+
+  //----------------------------------------------------------------------------
+
+  SqlStatement::SqlStatement(SqlStatement&& other)
+  {
+    operator=(std::move(other));
+  }
+
+  //----------------------------------------------------------------------------
+
   bool SqlStatement::step()
   {
     if (_isDone)
@@ -76,7 +106,15 @@ namespace SqliteOverlay
       resultColCount = -1;
     }
 
-    return true;
+    // for single-step statements that don't yield any
+    // data, return "true" to indicate that everything was fine
+    //
+    // in all other cases, return "true" as long as we're not done
+    if (stepCount == 1)
+    {
+        return true;
+    }
+    return _hasData;
   }
 
   //----------------------------------------------------------------------------
@@ -227,6 +265,17 @@ namespace SqliteOverlay
   void SqlStatement::bind(int argPos, const string& val) const
   {
     int e = sqlite3_bind_text(stmt, argPos, val.c_str(), val.length(), SQLITE_TRANSIENT);
+    if (e != SQLITE_OK)
+    {
+      throw GenericSqliteException{e, "call to bindString() of a SqlStatement"};
+    }
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqlStatement::bind(int argPos, const char* val) const
+  {
+    int e = sqlite3_bind_text(stmt, argPos, val, strlen(val), SQLITE_TRANSIENT);
     if (e != SQLITE_OK)
     {
       throw GenericSqliteException{e, "call to bindString() of a SqlStatement"};

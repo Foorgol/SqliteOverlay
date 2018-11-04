@@ -621,9 +621,9 @@ namespace SqliteOverlay
      *
      * \returns a (shared) pointer to a `DbTab` object for a table or `nullptr` if the table name is invalid
      */
-    DbTab* getTab (
+    /*DbTab* getTab (
         const string& tabName   ///< name of the requested table
-        );
+        );*/
 
     /** \brief Copies structure and, optionally, content of an exising table
      * into a newly created table.

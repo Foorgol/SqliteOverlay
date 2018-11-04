@@ -97,15 +97,7 @@ namespace SqliteOverlay
    *
    * \throws std::invalid argument if the provided int was invalid
    */
-  ColumnDataType int2ColumnDataType(int i)
-  {
-    if ((i < 1) || (i > 5))
-    {
-      throw std::invalid_argument("invalid parameter for int2ColumnDataType()");
-    }
-
-    return static_cast<ColumnDataType>(i);
-  }
+  ColumnDataType int2ColumnDataType(int i);
 
   //----------------------------------------------------------------------------
 

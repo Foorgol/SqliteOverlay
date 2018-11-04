@@ -12,14 +12,12 @@
 
 #include <boost/date_time/local_time/local_time.hpp>
 
-#include <Sloppy/libSloppy.h>
-
 #include "SampleDB.h"
-#include "TableCreator.h"
+//#include "TableCreator.h"
 
 void SampleDB::populateTables()
 {
-  TableCreator tc{this};
+  /*TableCreator tc{this};
   tc.addInt("i");
   tc.addVarchar("s", 40);
   tc.addCol("f", "DOUBLE");
@@ -30,10 +28,10 @@ void SampleDB::populateTables()
   tc.addVarchar("s", 40);
   tc.addCol("f", "DOUBLE");
   tc.addCol("d", "DATETIME");
-  tc.createTableAndResetCreator("t2");
+  tc.createTableAndResetCreator("t2");*/
 }
 
 void SampleDB::populateViews()
 {
-  viewCreationHelper("v1", "SELECT i,f,s FROM t1 WHERE i=84", nullptr);
+  //viewCreationHelper("v1", "SELECT i,f,s FROM t1 WHERE i=84", nullptr);
 }

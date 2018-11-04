@@ -97,7 +97,7 @@ namespace SqliteOverlay
     bool isNested() const;
 
   private:
-    SqliteDatabase* db;
+    const SqliteDatabase* db;
     TransactionDtorAction dtorAct;
     string savepointName;
     bool isFinished;

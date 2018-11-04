@@ -45,11 +45,15 @@ namespace SqliteOverlay
     /** \brief Disabled copy assignment */
     SqlStatement& operator=(const SqlStatement& other) = delete;
 
-    /** \brief Standard move ctor */
-    SqlStatement(SqlStatement&& other) = default;
+    /** \brief Move ctor, transfers the statement pointer after finalizing any old,
+     * pending statements
+     */
+    SqlStatement(SqlStatement&& other);
 
-    /** \brief Standard move assignment */
-    SqlStatement& operator=(SqlStatement& other) = default;
+    /** \brief Move assigment, transfers the statement pointer after finalizing any old,
+     * pending statements
+     */
+    SqlStatement& operator=(SqlStatement&& other);
 
     /** \brief Binds an int value to a placeholder in the statement
      *
@@ -87,7 +91,10 @@ namespace SqliteOverlay
         const string& val   ///< the value to bind to the placeholder
         ) const;
 
-    /** \brief Binds a float value to a placeholder in the statement
+    /** \brief Binds a *zero-terminated* C-string to a placeholder in the statement
+     *
+     * \note The string length will be determined using `strlen()` so make sure that
+     * the string is properly zero-terminated.
      *
      * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
      * a specification how placeholders are defined in the SQLite language.
@@ -96,11 +103,8 @@ namespace SqliteOverlay
      */
     void bind(
         int argPos,   ///< the placeholder to bind to
-        float val   ///< the value to bind to the placeholder
-        ) const
-    {
-      bind(argPos, static_cast<double>(val));
-    }
+        const char* val   ///< the value to bind to the placeholder
+        ) const;
 
     /** \brief Binds a boolean value to a placeholder in the statement
      *
@@ -123,7 +127,9 @@ namespace SqliteOverlay
     template<typename T>
     void bind(int argPos, T val) const
     {
-      static_assert (false, "SqlStatement: call to bind() with a unsupported value type!");
+      //static_assert (false, "SqlStatement: call to bind() with a unsupported value type!");
+      cerr << "SqlStatement: call to bind() with a unsupported value type!" << endl;
+      assert(false);
     }
 
     /** \brief Binds a NULL value to a placeholder in the statement
@@ -146,9 +152,33 @@ namespace SqliteOverlay
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
-     * \returns `true` if the statement was executed successfully or `false` if there was nothing more to execute
+     * \returns after the first step: always `true` because we either have result rows
+     * or we successfully executed a no-data-query
+     *
+     * \returns after any subsequent step: `true` if the step produced more data rows; `false` if we're done
      */
     bool step();
+
+    /** \brief Executes the next step of the SQL statement
+     *
+     * This is nothing but a wrapper around `step()` with a modified return value.
+     * Unlike `step()`, `dataStep()` returns `false` even after the first step if this
+     * first step didn't produce any data rows.
+     *
+     * `dataStep()` is useful for a `while` loop. That loop would be executed zero or
+     * more times for each data row produced by the SQL statement.
+     *
+     * \throws BusyException if the statement couldn't be executed because the DB was busy
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * \returns `true` if the step produced a data row, `false` otherwise
+     */
+    bool dataStep()
+    {
+      step();
+      return _hasData;
+    }
 
     /** \returns `true` if the last call to `step()` returned row data
      */
@@ -182,6 +212,26 @@ namespace SqliteOverlay
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
+    /** \brief Retrieves the value of a column in the statement result as bool value
+     *
+     * \warning This function assumes that the column content can be converted to an
+     * integer value! This is only a wrapper around `getInt()` that compares the
+     * result with `0`.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \returns `false` if the column value is zero, `true` if it is not zero
+     */
+    double getBool(
+        int colId   ///< the zero-based column ID in the result row
+        ) const
+    {
+      return (getInt(colId) != 0);
+    }
+
+
     /** \brief Retrieves the value of a column in the statement result as string value
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
@@ -194,7 +244,8 @@ namespace SqliteOverlay
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
-    /** \brief Retrieves the value of a column in the statement result as LocalTimestamp instance
+    /** \brief Retrieves the value of a column in the statement result as LocalTimestamp instance;
+     * requires the cell content to be an integer with "seconds since epoch".
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
@@ -207,7 +258,8 @@ namespace SqliteOverlay
         boost::local_time::time_zone_ptr tzp   ///< a pointer to the time zone for the local time
         ) const;
 
-    /** \brief Retrieves the value of a column in the statement result as UTCTimestamp instance
+    /** \brief Retrieves the value of a column in the statement result as UTCTimestamp instance;
+     * requires the cell content to be an integer with "seconds since epoch".
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
@@ -260,6 +312,14 @@ namespace SqliteOverlay
     void reset(
         bool clearBindings   ///< `true`: clear existing placeholder bindings; `false`: bindings keep their values
         ) const;
+
+    /** \returns The expanded SQL statement with all bound parameters; un-bound parameters will
+     * be treated as NULL as described [here](https://www.sqlite.org/c3ref/expanded_sql.html)
+     */
+    string getExpandedSQL() const
+    {
+      return string{sqlite3_expanded_sql(stmt)};
+    }
 
   protected:
     /** \brief "Guard function" that checks preconditions for

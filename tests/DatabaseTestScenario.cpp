@@ -17,9 +17,9 @@
 
 namespace bfs = boost::filesystem;
 
-constexpr char DatabaseTestScenario::SQLITE_DB[];
+const string DatabaseTestScenario::DB_TEST_FILE_NAME{"SqliteTestDB.db"};
 
-upSqlite3Db DatabaseTestScenario::getRawDbHandle() const
+RawSqlitePtr DatabaseTestScenario::getRawDbHandle() const
 {
   sqlite3* tmpPtr = nullptr;
   int err = sqlite3_open(getSqliteFileName().c_str(), &tmpPtr);
@@ -30,19 +30,32 @@ upSqlite3Db DatabaseTestScenario::getRawDbHandle() const
   assert(tmpPtr != nullptr);
   assert(sqliteFileExists());
 
-  return upSqlite3Db(tmpPtr);
+  return RawSqlitePtr{tmpPtr, &closeRawSqliteDb};
 }
 
 //----------------------------------------------------------------------------
 
-sqlite3_stmt* DatabaseTestScenario::prepStatement(upSqlite3Db& db, const string& sql)
+RawSqlitePtr DatabaseTestScenario::getRawMemDb() const
+{
+  sqlite3* tmpPtr{nullptr};
+  int err = sqlite3_open(":memory:", &tmpPtr);
+
+  assert(err == SQLITE_OK);
+  assert(tmpPtr != nullptr);
+
+  return RawSqlitePtr{tmpPtr, &closeRawSqliteDb};
+}
+
+//----------------------------------------------------------------------------
+
+RawSqliteStmt DatabaseTestScenario::prepStatement(const RawSqlitePtr& db, const string& sql)
 {
   sqlite3_stmt* stmt = nullptr;
   int err = sqlite3_prepare_v2(db.get(), sql.c_str(), -1, &stmt, nullptr);
   assert(err == SQLITE_OK);
   assert(stmt != nullptr);
 
-  return stmt;
+  return RawSqliteStmt{stmt, &closeRawSqliteStmt};
 }
 
 //----------------------------------------------------------------------------
@@ -60,16 +73,13 @@ void DatabaseTestScenario::TearDown()
   }
   ASSERT_FALSE(bfs::exists(dbPathObj));
 
-  //DbTab::clearTabCache();
-  
-  //qDebug() << "----------- DatabaseTestScenario tearDown() finished! -----------";
 }
 
 //----------------------------------------------------------------------------
 
 string DatabaseTestScenario::getSqliteFileName() const
 {
-  return genTestFilePath(SQLITE_DB);
+  return genTestFilePath(DB_TEST_FILE_NAME);
 }
 
 //----------------------------------------------------------------------------
@@ -86,16 +96,18 @@ bool DatabaseTestScenario::sqliteFileExists() const
 void DatabaseTestScenario::prepScenario01()
 {
   ASSERT_FALSE(sqliteFileExists());
-  upSqlite3Db db = getRawDbHandle();
+  RawSqlitePtr db = getRawDbHandle();
 
   string aiStr = "AUTOINCREMENT";
   string nowStr = "date('now')";
   string viewStr = "CREATE VIEW IF NOT EXISTS";
 
   auto execStmt = [&](string _sql) {
-    sqlite3_stmt* stmt = prepStatement(db, _sql);
-    ASSERT_EQ(SQLITE_DONE, sqlite3_step(stmt));
-    ASSERT_EQ(SQLITE_OK, sqlite3_finalize(stmt));
+    RawSqliteStmt stmt = prepStatement(db, _sql);
+    ASSERT_EQ(SQLITE_DONE, sqlite3_step(stmt.get()));
+
+    // no need to call finalize() here, this will be done
+    // by the deleter of RawSqliteStmt
   };
 
   string sql = "CREATE TABLE IF NOT EXISTS t1 (id INTEGER NOT NULL PRIMARY KEY " + aiStr + ",";
@@ -117,7 +129,8 @@ void DatabaseTestScenario::prepScenario01()
 
   execStmt(viewStr + " v1 AS SELECT i, f, s FROM t1 WHERE i=84");
 
-  ASSERT_EQ(SQLITE_OK, sqlite3_close(db.get()));
+  // no need to call sqlite3_close() here because it will be called
+  // by the deleter of RawSqlitePtr
 
 }
 
@@ -125,11 +138,29 @@ void DatabaseTestScenario::prepScenario01()
 
 //----------------------------------------------------------------------------
 
-upSqliteDatabase DatabaseTestScenario::getScenario01()
+SqliteDatabase DatabaseTestScenario::getScenario01()
 {
   prepScenario01();
 
-  return SqliteDatabase::get<SampleDB>(getSqliteFileName(), false);
+  return SampleDB(getSqliteFileName(), SqliteOverlay::OpenMode::OpenExisting_RW, false);
+}
+
+//----------------------------------------------------------------------------
+
+void DatabaseTestScenario::SetUp()
+{
+  BasicTestFixture::SetUp();
+
+  // delete the test database, if still existing,
+  // so that we have a clean start
+  string dbFileName = getSqliteFileName();
+  bfs::path dbPathObj(dbFileName);
+  if (bfs::exists(dbPathObj))
+  {
+    ASSERT_TRUE(bfs::remove(dbPathObj));
+  }
+  ASSERT_FALSE(bfs::exists(dbPathObj));
+
 }
 
 //----------------------------------------------------------------------------
@@ -137,3 +168,15 @@ upSqliteDatabase DatabaseTestScenario::getScenario01()
 
 //----------------------------------------------------------------------------
     
+
+void closeRawSqliteDb(sqlite3* ptr)
+{
+  if (ptr != nullptr) sqlite3_close(ptr);
+  cout << "Deleter for raw DB called!" << endl;
+}
+
+void closeRawSqliteStmt(sqlite3_stmt* ptr)
+{
+  if (ptr != nullptr) sqlite3_finalize(ptr);
+  cout << "Deleter for raw statement called!" << endl;
+}

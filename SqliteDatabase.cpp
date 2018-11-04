@@ -6,7 +6,7 @@
 #include <Sloppy/Utils.h>
 
 #include "SqliteDatabase.h"
-#include "DbTab.h"
+//#include "DbTab.h"
 #include "Transaction.h"
 
 using namespace std;
@@ -197,6 +197,8 @@ namespace SqliteOverlay
     // anyway
     changeCounter_reset = other.changeCounter_reset;
     dataVersion_reset = other.changeCounter_reset;
+
+    return *this;
   }
 
   //----------------------------------------------------------------------------
@@ -231,12 +233,12 @@ namespace SqliteOverlay
 
   void SqliteDatabase::resetTabCache()
   {
-    auto it = tabCache.begin();
+    /*auto it = tabCache.begin();
     while (it != tabCache.end())
     {
       delete it->second;
       ++it;
-    }
+    }*/
     tabCache.clear();
   }
 
@@ -546,11 +548,11 @@ namespace SqliteOverlay
     SqlStatement stmt = prepStatement("SELECT COUNT(name) FROM sqlite_master WHERE type='?1' AND name='?2'");
     if (isView)
     {
-      stmt.bindString(1, "view");
+      stmt.bind(1, "view");
     } else {
-      stmt.bindString(1, "view");
+      stmt.bind(1, "table");
     }
-    stmt.bindString(2, name);
+    stmt.bind(2, name);
 
     return (execScalarQueryInt(stmt) != 0);
   }
@@ -592,7 +594,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  DbTab* SqliteDatabase::getTab(const string& tabName)
+  /*DbTab* SqliteDatabase::getTab(const string& tabName)
   {
     // try to find the tabl object in the cache
     auto it = tabCache.find(tabName);
@@ -618,7 +620,7 @@ namespace SqliteOverlay
     tabCache[tabName] = tab;
 
     return tab;
-  }
+  }*/
 
   //----------------------------------------------------------------------------
 
@@ -632,7 +634,7 @@ namespace SqliteOverlay
 
     // retrieve the CREATE TABLE statement that describes the source table's structure
     auto stmt = prepStatement("SELECT sql FROM sqlite_master WHERE type='table' AND name=?");
-    stmt.bindString(1, srcTabName);
+    stmt.bind(1, srcTabName);
     string sqlCreate = execScalarQueryString(stmt);
     if (sqlCreate.empty()) return false;
 
@@ -647,7 +649,7 @@ namespace SqliteOverlay
 
     // before we create the new table and copy the contents, we
     // explicitly start a transaction to be able to restore the
-    // original database state in case of errors
+    // original database state in case of errors   
     Transaction tr = startTransaction(TransactionType::Immediate, TransactionDtorAction::Rollback);
 
     // actually create the new table
