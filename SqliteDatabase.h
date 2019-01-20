@@ -165,7 +165,7 @@ namespace SqliteOverlay
         const string& sqlText   ///< the SQL text for which to create the statement
         ) const;
 
-    /** \brief Executes a SQL statement isn't expected to return any data.
+    /** \brief Executes a SQL statement that isn't expected to return any data.
      *
      * If the SQL statement consists of multiple steps, all steps are executed
      * until the whole statement is finished.
@@ -182,7 +182,7 @@ namespace SqliteOverlay
         const string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
-    /** \brief Executes a SQL statement isn't expected to return any data.
+    /** \brief Executes a SQL statement that isn't expected to return any data.
      *
      * If the SQL statement consists of multiple steps, all steps are executed
      * until the whole statement is finished.

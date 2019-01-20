@@ -74,44 +74,36 @@ TEST_F(DatabaseTestScenario, ContentQuery)
 }
 
 //----------------------------------------------------------------
-/*
+
 TEST_F(DatabaseTestScenario, QueryDouble)
 {
   auto db = getScenario01();
 
   // first version: SQL statement as string
-  double result = -1;
   string sql = "SELECT f FROM t1 WHERE id = 2";
-  ASSERT_TRUE(db->execScalarQueryDouble(sql, &result, nullptr));
-  ASSERT_EQ(666.66, result);
-  auto sqr = db->execScalarQueryDouble(sql, nullptr);
-  ASSERT_TRUE(sqr != nullptr);
-  ASSERT_FALSE(sqr->isNull());
-  ASSERT_EQ(666.66, sqr->get());
+  ASSERT_EQ(666.66, db.execScalarQueryDouble(sql));
+  auto opt = db.execScalarQueryDoubleOrNull(sql);
+  ASSERT_TRUE(opt.has_value());
+  ASSERT_EQ(666.66, opt.value());
 
   // second version: SQL statement as statement
-  result = 0;
-  auto stmt = db->prepStatement(sql, nullptr);
-  ASSERT_TRUE(db->execScalarQueryDouble(stmt, &result, nullptr));
-  ASSERT_EQ(666.66, result);
-  stmt = db->prepStatement(sql, nullptr);
-  sqr = db->execScalarQueryDouble(stmt, nullptr);
-  ASSERT_TRUE(sqr != nullptr);
-  ASSERT_FALSE(sqr->isNull());
-  ASSERT_EQ(666.66, sqr->get());
+  SqlStatement stmt = db.prepStatement(sql);
+  ASSERT_EQ(666.66, db.execScalarQueryDouble(stmt));
+  stmt = db.prepStatement(sql);
+  opt = db.execScalarQueryDoubleOrNull(stmt);
+  ASSERT_TRUE(opt.has_value());
+  ASSERT_EQ(666.66, opt.value());
 
   // special case: query returning NULL column value
   sql = "SELECT f FROM t1 WHERE id=3";
-  sqr = db->execScalarQueryDouble(sql, nullptr);
-  ASSERT_TRUE(sqr != nullptr);
-  ASSERT_TRUE(sqr->isNull());
-  ASSERT_THROW(sqr->get(), std::invalid_argument);
+  opt = db.execScalarQueryDoubleOrNull(sql);
+  ASSERT_FALSE(opt.has_value());
+  ASSERT_THROW(db.execScalarQueryDouble(sql), NullValueException);
 
   // special case: query returning no results
   sql = "SELECT i FROM t1 WHERE id=9999";
-  sqr = db->execScalarQueryDouble(sql, nullptr);
-  ASSERT_TRUE(sqr == nullptr);
-  ASSERT_FALSE(db->execScalarQueryDouble(sql, &result, nullptr));
+  ASSERT_THROW(db.execScalarQueryDoubleOrNull(sql), NoDataException);
+  ASSERT_THROW(db.execScalarQueryDouble(sql), NoDataException);
 }
 
 //----------------------------------------------------------------
@@ -121,31 +113,25 @@ TEST_F(DatabaseTestScenario, QueryString)
   auto db = getScenario01();
 
   // first version: SQL statement as string
-  string result = "xxx";
+  string result = "Ho";
   string sql = "SELECT s FROM t1 WHERE id = 5";
-  ASSERT_TRUE(db->execScalarQueryString(sql, &result, nullptr));
-  ASSERT_EQ("Ho", result);
-  auto sqr = db->execScalarQueryString(sql, nullptr);
-  ASSERT_TRUE(sqr != nullptr);
-  ASSERT_FALSE(sqr->isNull());
-  ASSERT_EQ("Ho", sqr->get());
+  ASSERT_EQ(result, db.execScalarQueryString(sql));
+  auto opt = db.execScalarQueryStringOrNull(sql);
+  ASSERT_TRUE(opt.has_value());
+  ASSERT_EQ(result, opt.value());
 
   // second version: SQL statement as statement
-  result = "xxx";
-  auto stmt = db->prepStatement(sql, nullptr);
-  ASSERT_TRUE(db->execScalarQueryString(stmt, &result, nullptr));
-  ASSERT_EQ("Ho", result);
-  stmt = db->prepStatement(sql, nullptr);
-  sqr = db->execScalarQueryString(stmt, nullptr);
-  ASSERT_TRUE(sqr != nullptr);
-  ASSERT_FALSE(sqr->isNull());
-  ASSERT_EQ("Ho", sqr->get());
+  SqlStatement stmt = db.prepStatement(sql);
+  ASSERT_EQ(result, db.execScalarQueryString(stmt));
+  stmt = db.prepStatement(sql);
+  opt = db.execScalarQueryStringOrNull(stmt);
+  ASSERT_TRUE(opt.has_value());
+  ASSERT_EQ(result, opt.value());
 
   // special case: query returning no results
-  sql = "SELECT i FROM t1 WHERE id=9999";
-  sqr = db->execScalarQueryString(sql, nullptr);
-  ASSERT_TRUE(sqr == nullptr);
-  ASSERT_FALSE(db->execScalarQueryString(sql, &result, nullptr));
+  sql = "SELECT s FROM t1 WHERE id=9999";
+  ASSERT_THROW(db.execScalarQueryStringOrNull(sql), NoDataException);
+  ASSERT_THROW(db.execScalarQueryString(sql), NoDataException);
 }
 
 //----------------------------------------------------------------
@@ -154,10 +140,8 @@ TEST_F(DatabaseTestScenario, QueryStringUTF8)
 {
   auto db = getScenario01();
 
-  string result = "xxx";
   string sql = "SELECT s FROM t1 WHERE id = 3";
-  ASSERT_TRUE(db->execScalarQueryString(sql, &result, nullptr));
-  ASSERT_EQ(u8"äöüÄÖÜ", result);
+  ASSERT_EQ(u8"äöüÄÖÜ", db.execScalarQueryString(sql));
 }
 
 //----------------------------------------------------------------
@@ -166,12 +150,12 @@ TEST_F(DatabaseTestScenario, QueryAllTableAndViewNames)
 {
   auto db = getScenario01();
 
-  Sloppy::StringList names = db->allTableNames();
+  Sloppy::StringList names = db.allTableNames();
   ASSERT_EQ(2, names.size());
   ASSERT_FALSE(names.at(0) == names.at(1));
   ASSERT_TRUE((names.at(0) == "t1") || (names.at(0) == "t2"));
   ASSERT_TRUE((names.at(1) == "t1") || (names.at(1) == "t2"));
 }
-*/
+
 //----------------------------------------------------------------
 
