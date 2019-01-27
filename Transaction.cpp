@@ -44,8 +44,8 @@ namespace SqliteOverlay
       // a combination of a 5-digit random number
       // and the current time. Should be sufficiently
       // unique
-      savepointName = to_string(rand() % 100000);
-      savepointName += "_" + to_string(time(nullptr));
+      savepointName = "SP" + to_string(rand() % 100000);
+      savepointName += to_string(time(nullptr));
 
       // create the savepoint
       sql = "SAVEPOINT " + savepointName;
@@ -74,6 +74,31 @@ namespace SqliteOverlay
     db->execNonQuery(sql);
   }
 
+  //----------------------------------------------------------------------------
+
+  Transaction::Transaction(Transaction&& other)
+  {
+    operator=(std::move(other));
+  }
+
+  //----------------------------------------------------------------------------
+
+  Transaction& Transaction::operator=(Transaction&& other)
+  {
+    db = other.db;
+    other.db = nullptr;
+
+    dtorAct =other.dtorAct;
+
+    savepointName = other.savepointName;
+    other.savepointName.clear();
+
+    isFinished = other.isFinished;
+    other.isFinished = true;
+
+    return *this;
+  }
+
 //----------------------------------------------------------------------------
 
   bool Transaction::isActive() const
@@ -85,7 +110,28 @@ namespace SqliteOverlay
 
   void Transaction::commit()
   {
-    db->execNonQuery("COMMIT");
+    try
+    {
+      if (savepointName.empty())
+      {
+        db->execNonQuery("COMMIT");   // we're the outermost transaction
+      } else {
+        db->execNonQuery("RELEASE " + savepointName);   // we're an inner, nested transaction
+      }
+    }
+    catch (GenericSqliteException e)
+    {
+      // re-throw anything but in case of a "SQL logic error"
+      // tag this transaction as finished because the
+      // logic error indicated that the transaction has already been committed / rolled back
+      // by an outer transaction
+      //
+      // tagging this transaction as finished avoids termination
+      // of the programm when we hit the dtor
+      if (e.errCode() == PrimaryResultCode::ERROR) isFinished = true;
+      throw;
+    }
+
     isFinished = true;
   }
 
@@ -93,7 +139,28 @@ namespace SqliteOverlay
 
   void Transaction::rollback()
   {
-    db->execNonQuery("ROLLBACK");
+    try
+    {
+      if (savepointName.empty())
+      {
+        db->execNonQuery("ROLLBACK");   // we're the outermost transaction
+      } else {
+        db->execNonQuery("ROLLBACK TO " + savepointName);   // we're an inner, nested transaction
+      }
+    }
+    catch (GenericSqliteException e)
+    {
+      // re-throw anything but in case of a "SQL logic error"
+      // tag this transaction as finished because the
+      // logic error indicated that the transaction has already been committed / rolled back
+      // by an outer transaction
+      //
+      // tagging this transaction as finished avoids termination
+      // of the programm when we hit the dtor
+      if (e.errCode() == PrimaryResultCode::ERROR) isFinished = true;
+      throw;
+    }
+
     isFinished = true;
   }
 

@@ -42,6 +42,9 @@ namespace SqliteOverlay
      * \throws BusyException if the DB was busy and the required lock could not be acquired
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes
+     *
      */
     Transaction(
         const SqliteDatabase* _db,   ///< pointer to the database on which to create the new transaction
@@ -56,10 +59,14 @@ namespace SqliteOverlay
     Transaction& operator=(const Transaction& other) = delete;
 
     /** \brief Standard move ctor */
-    Transaction(Transaction&& other) = default;
+    Transaction(Transaction&& other);
 
-    /** \brief Standard move assignment */
-    Transaction& operator=(Transaction&& other) = default;
+    /** \brief Move assignment
+     *
+     * Test case: implicitly in Transaction tests
+     *
+     */
+    Transaction& operator=(Transaction&& other);
 
     /** \brief Dtor; commits or rolls back the transaction if commit / rollback hasn't been called before
      *
@@ -69,10 +76,16 @@ namespace SqliteOverlay
      * an exception would occur in the dtor that is not handled by the dtor. Essentially, this means
      * that the programm is terminated immediately (dtor should never throw exception). So be sure to
      * properly call `commit()` or `rollback()` before the dtor and handle possible errors gracefully.
+     *
+     * Test case: yes
+     *
      */
     ~Transaction();
 
     /** \returns `true` if the transaction hasn't been committed / rolled back yet
+     *
+     * Test case: yes
+     *
      */
     bool isActive() const;
 
@@ -81,6 +94,9 @@ namespace SqliteOverlay
      * \throws BusyException if the DB was busy and the transaction could not be committed
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes
+     *
      */
     void commit();
 
@@ -89,10 +105,16 @@ namespace SqliteOverlay
      * \throws BusyException if the DB was busy and the transaction could not be rolled back
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes
+     *
      */
     void rollback();
 
     /** \returns `true` if this is a nested transaction (a "sub-transaction") and `false` if it's not
+     *
+     * Test case: yes
+     *
      */
     bool isNested() const;
 
