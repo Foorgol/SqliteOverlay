@@ -357,6 +357,100 @@ namespace SqliteOverlay
     /** \brief Executes a SQL statement by calling `step()` once and returns the value
      * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
      *
+     * \note The column should contain a real value and not NULL
+     *
+     * \throws std::invalid_argument if the provided SQL string is empty or if the connection has been closed before calling this method
+     *
+     * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
+     *
+     * \throws BusyException if the statement couldn't be executed because the DB was busy
+     *
+     * \throws NoDataException if the SQL statement didn't return any data
+     *
+     * \throws NullValueException if the query returned NULL instead of a regular value
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * \returns the first value in the first result row as `long`
+     *
+     * Test case: yes, but only with partial exception testing
+     *
+     */
+    long execScalarQueryLong(
+        const string& sqlStatement   ///< the SQL statement to execute
+        ) const;
+
+    /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
+     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
+     *
+     * \note The provided statement is modified in place and can be used in subsequent calls
+     * to `execScalarQueryInt` (or other) for retrieving more rows.
+     *
+     * \throws BusyException if the statement couldn't be executed because the DB was busy
+     *
+     * \throws NoDataException if the SQL statement didn't return any data
+     *
+     * \throws NullValueException if the query returned NULL instead of a regular value
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * \returns the first value in the result row as `long`
+     *
+     * Test case: yes, but only with partial exception testing
+     *
+     */
+    long execScalarQueryLong(
+        SqlStatement& stmt   ///< a prepared statement, ready for execution
+        ) const;
+
+    /** \brief Executes a SQL statement by calling `step()` once and returns the value
+     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
+     *
+     * \throws std::invalid_argument if the provided SQL string is empty or if the connection has been closed before calling this method
+     *
+     * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
+     *
+     * \throws BusyException if the statement couldn't be executed because the DB was busy
+     *
+     * \throws NoDataException if the SQL statement didn't return any data
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * \returns an `optional<long>` containing the first value in the first result row; if the cell
+     * contained NULL the return value is empty.
+     *
+     * Test case: yes, but only with partial exception testing
+     *
+     */
+    optional<long> execScalarQueryLongOrNull(
+        const string& sqlStatement   ///< the SQL statement to execute
+        ) const;
+
+    /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
+     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
+     *
+     * \note The provided statement is modified in place and can be used in subsequent calls
+     * to `execScalarQueryInt` (or other) for retrieving more rows.
+     *
+     * \throws BusyException if the statement couldn't be executed because the DB was busy
+     *
+     * \throws NoDataException if the SQL statement didn't return any data
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * \returns an `optional<int>` containing the first value in the result row; if the cell
+     * contained NULL the return value is empty.
+     *
+     * Test case: yes, but only with partial exception testing
+     *
+     */
+    optional<long> execScalarQueryLongOrNull(
+        SqlStatement& stmt   ///< a prepared statement, ready for execution
+        ) const;
+
+    /** \brief Executes a SQL statement by calling `step()` once and returns the value
+     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
+     *
      * \throws std::invalid_argument if the provided SQL string is empty or if the connection has been closed before calling this method
      *
      * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax

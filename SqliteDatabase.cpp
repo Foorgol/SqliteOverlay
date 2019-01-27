@@ -325,6 +325,57 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  long SqliteDatabase::execScalarQueryLong(const string& sqlStatement) const
+  {
+    optional<long> v = execScalarQueryLongOrNull(sqlStatement);
+    if (!(v.has_value()))
+    {
+      throw NullValueException("SQL = " + sqlStatement);
+    }
+
+    return v.value();
+  }
+
+  //----------------------------------------------------------------------------
+
+  long SqliteDatabase::execScalarQueryLong(SqlStatement& stmt) const
+  {
+    optional<long> v = execScalarQueryLongOrNull(stmt);
+    if (!(v.has_value()))
+    {
+      throw NullValueException();
+    }
+
+    return v.value();
+  }
+
+  //----------------------------------------------------------------------------
+
+  optional<long> SqliteDatabase::execScalarQueryLongOrNull(const string& sqlStatement) const
+  {
+    // throws invalid_argument or SqlStatementCreationError
+    SqlStatement stmt = prepStatement(sqlStatement);
+
+    // throws BusyException or GenericSqliteException
+    stmt.step();
+
+    // throws NoDataException
+    return stmt.isNull(0) ? optional<long>{} : stmt.getLong(0);
+  }
+
+  //----------------------------------------------------------------------------
+
+  optional<long> SqliteDatabase::execScalarQueryLongOrNull(SqlStatement& stmt) const
+  {
+    // throws BusyException or GenericSqliteException
+    stmt.step();
+
+    // throws NoDataException
+    return stmt.isNull(0) ? optional<long>{} : stmt.getLong(0);
+  }
+
+  //----------------------------------------------------------------------------
+
   double SqliteDatabase::execScalarQueryDouble(const string& sqlStatement) const
   {
     optional<double> v = execScalarQueryDoubleOrNull(sqlStatement);

@@ -159,11 +159,41 @@ TEST_F(DatabaseTestScenario, QueryAllTableAndViewNames)
 
 //----------------------------------------------------------------
 
-TEST_F(DatabaseTestScenario, QueryTimeStamps)
+TEST_F(DatabaseTestScenario, QueryLong)
 {
-  auto db = getScenario01();
+  SampleDB db = getScenario01();
 
-  string sql = "SELECT s FROM t1 WHERE id = 3";
-  ASSERT_EQ(u8"äöüÄÖÜ", db.execScalarQueryString(sql));
+  // write a long value to the database
+  // note: `bind` with longs is tested elsewhere; thus we can
+  // rely on it here
+  auto stmt = db.prepStatement("UPDATE t1 SET i = ? WHERE id=1");
+  stmt.bind(1, LONG_MAX);
+  ASSERT_TRUE(stmt.step());
+
+  // first version: SQL statement as string
+  string sql = "SELECT i FROM t1 WHERE id=1";
+  ASSERT_EQ(LONG_MAX, db.execScalarQueryLong(sql));
+  auto opt = db.execScalarQueryLongOrNull(sql);
+  ASSERT_TRUE(opt.has_value());
+  ASSERT_EQ(LONG_MAX, opt.value());
+
+  // second version: SQL statement as statement
+  stmt = db.prepStatement(sql);
+  ASSERT_EQ(LONG_MAX, db.execScalarQueryLong(stmt));
+  stmt = db.prepStatement(sql);
+  opt = db.execScalarQueryLongOrNull(stmt);
+  ASSERT_TRUE(opt.has_value());
+  ASSERT_EQ(LONG_MAX, opt.value());
+
+  // special case: query returning NULL column value
+  sql = "SELECT i FROM t1 WHERE id=2";
+  opt = db.execScalarQueryLongOrNull(sql);
+  ASSERT_FALSE(opt.has_value());
+  ASSERT_THROW(db.execScalarQueryLong(sql), NullValueException);
+
+  // special case: query returning no results
+  sql = "SELECT i FROM t1 WHERE id=9999";
+  ASSERT_THROW(db.execScalarQueryLongOrNull(sql), NoDataException);
+  ASSERT_THROW(db.execScalarQueryLong(sql), NoDataException);
 }
 
