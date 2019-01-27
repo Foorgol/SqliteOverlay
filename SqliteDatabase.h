@@ -663,7 +663,7 @@ namespace SqliteOverlay
 
     /** \returns `true` if a table or view of the given name exists in the database
      *
-     * Test case: not yet
+     * Test case: implicitly in `StmtBlob`
      *
      */
     bool hasTable(

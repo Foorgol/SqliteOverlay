@@ -542,7 +542,7 @@ namespace SqliteOverlay
 
   bool SqliteDatabase::hasTable(const string& name, bool isView) const
   {
-    SqlStatement stmt = prepStatement("SELECT COUNT(name) FROM sqlite_master WHERE type='?1' AND name='?2'");
+    SqlStatement stmt = prepStatement("SELECT COUNT(name) FROM sqlite_master WHERE type=?1 AND name=?2");
     if (isView)
     {
       stmt.bind(1, "view");

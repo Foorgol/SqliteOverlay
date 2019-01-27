@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <Sloppy/Crypto/Sodium.h>
+
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"
 #include "SqlStatement.h"
@@ -280,4 +282,36 @@ TEST_F(DatabaseTestScenario, StmtTime)
   UTCTimestamp u = stmt.getUTCTime(0);
   ASSERT_EQ(u, utcRef);
   ASSERT_EQ(rawRef, u.getRawTime());
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, StmtBlob)
+{
+  // start with a blank in-memory database
+  auto db = SqliteDatabase();
+
+  // create a table with a blob column
+  SqlStatement stmt = db.prepStatement("CREATE TABLE t1(b BLOB)");
+  ASSERT_TRUE(stmt.step());
+  ASSERT_TRUE(db.hasTable("t1"));
+
+  // create 1M dummy data
+  auto* sodium = Sloppy::Crypto::SodiumLib::getInstance();
+  Sloppy::MemArray buf{1000000};
+  sodium->randombytes_buf(buf);
+
+  // store the dummy data in the database
+  stmt = db.prepStatement("INSERT INTO t1(b) VALUES(?)");
+  stmt.bind(1, buf.view());
+  ASSERT_TRUE(stmt.step());
+
+  // retrieve the dummy data from the database
+  stmt = db.prepStatement("SELECT b FROM t1 WHERE rowid=1");
+  ASSERT_TRUE(stmt.step());
+  ASSERT_TRUE(stmt.hasData());
+  Sloppy::MemArray reBuf = stmt.getBlob(0);
+
+  // compare both buffers; only succeeds if the buffers have equal size and content
+  ASSERT_TRUE(sodium->memcmp(buf.view(), reBuf.view()));
 }

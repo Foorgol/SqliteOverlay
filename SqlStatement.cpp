@@ -189,6 +189,30 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  Sloppy::MemArray SqlStatement::getBlob(int colId) const
+  {
+    assertColumnDataAccess(colId);
+
+    // get the number of bytes in the blob
+    size_t nBytes = sqlite3_column_bytes(stmt, colId);
+    if (nBytes == 0)
+    {
+      return Sloppy::MemArray{}; // empty blob
+    }
+
+    // wrap the data from SQLite into a MemView
+    const void* srcPtr = sqlite3_column_blob(stmt, colId);
+    if (srcPtr == nullptr)  // shouldn't happen after the previous check, but we want to be sure
+    {
+      return Sloppy::MemArray{}; // empty blob
+    }
+    Sloppy::MemView fakeView{static_cast<const char*>(srcPtr), nBytes};
+
+    return Sloppy::MemArray{fakeView};  // creates a deep copy
+  }
+
+  //----------------------------------------------------------------------------
+
   ColumnDataType SqlStatement::getColType(int colId) const
   {
     assertColumnDataAccess(colId);
@@ -265,7 +289,7 @@ namespace SqliteOverlay
     int e = sqlite3_bind_int64(stmt, argPos, val);
     if (e != SQLITE_OK)
     {
-      throw GenericSqliteException{e, "call to bindInt() of a SqlStatement"};
+      throw GenericSqliteException{e, "call to bindInt64() of a SqlStatement"};
     }
   }
 
@@ -300,6 +324,18 @@ namespace SqliteOverlay
     {
       throw GenericSqliteException{e, "call to bindString() of a SqlStatement"};
     }
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqlStatement::bind(int argPos, const void* ptr, size_t nBytes) const
+  {
+    int e = sqlite3_bind_blob64(stmt, argPos, ptr, nBytes, SQLITE_TRANSIENT);
+    if (e != SQLITE_OK)
+    {
+      throw GenericSqliteException{e, "call to bindBlob64() of a SqlStatement"};
+    }
+
   }
 
   //----------------------------------------------------------------------------

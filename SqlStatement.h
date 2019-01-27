@@ -8,6 +8,7 @@
 #include <sqlite3.h>
 
 #include <Sloppy/DateTime/DateAndTime.h>
+#include <Sloppy/Memory.h>
 #include <Sloppy/Logger/Logger.h>
 
 #include "Defs.h"
@@ -187,7 +188,7 @@ namespace SqliteOverlay
      *
      */
     void bind(int argPos,   ///< the placeholder to bind to
-        const LocalTimestamp& val   ///< the value to bind to the placeholder
+              const LocalTimestamp& val   ///< the value to bind to the placeholder
               ) const
     {
       bind(argPos, val.getRawTime());  // forwards the call to a int64-bind
@@ -204,10 +205,48 @@ namespace SqliteOverlay
      *
      */
     void bind(int argPos,   ///< the placeholder to bind to
-        const UTCTimestamp& val   ///< the value to bind to the placeholder
+              const UTCTimestamp& val   ///< the value to bind to the placeholder
               ) const
     {
       bind(argPos, val.getRawTime());  // forwards the call to a int64-bind
+    }
+
+    /** \brief Binds a blob of data to a placeholder in the statement
+     *
+     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
+     * a specification how placeholders are defined in the SQLite language.
+     *
+     * \note SQLite makes an internal copy of the provided buffer; this is safer but
+     * also more memory consuming. Bear this in mind when dealing with very large blobs.
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
+     */
+    void bind(int argPos,   ///< the placeholder to bind to
+              const void* ptr,   ///< a pointer to blob data
+              size_t nBytes   ///< number of bytes in the blob data
+              ) const;
+
+    /** \brief Binds a blob of data to a placeholder in the statement
+     *
+     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
+     * a specification how placeholders are defined in the SQLite language.
+     *
+     * \note SQLite makes an internal copy of the provided buffer; this is safer but
+     * also more memory consuming. Bear this in mind when dealing with very large blobs.
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
+     */
+    void bind(int argPos,   ///< the placeholder to bind to
+              const Sloppy::MemView& v   ///< the buffer that shall be stored
+              ) const
+    {
+      bind(argPos, v.to_voidPtr(), v.byteSize());  // forward the call to the generic bindBlob
     }
 
     /** \brief Binds a NULL value to a placeholder in the statement
@@ -394,6 +433,23 @@ namespace SqliteOverlay
      *
      */
     UTCTimestamp getUTCTime(
+        int colId   ///< the zero-based column ID in the result row
+        ) const;
+
+    /** \brief Retrieves the value of a column in the statement result as a data blob.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \throws All exceptions that the ctor of `Sloppy::MemArray` can produce (i. e., if we run out of memory)
+     *
+     * \returns the whole blob contents in one heap-allocated buffer
+     *
+     * Test case: yes
+     *
+     */
+    Sloppy::MemArray getBlob(
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
