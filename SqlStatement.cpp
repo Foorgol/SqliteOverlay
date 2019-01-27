@@ -38,11 +38,7 @@ namespace SqliteOverlay
 
   SqlStatement::~SqlStatement()
   {
-    if (stmt != nullptr)
-    {
-      sqlite3_finalize(stmt);
-      stmt = nullptr;
-    }
+    forceFinalize();
   }
 
   //----------------------------------------------------------------------------
@@ -250,6 +246,17 @@ namespace SqliteOverlay
       // anything about the return code. Most likely
       // it's SQLITE_OK
       sqlite3_clear_bindings(stmt);
+    }
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqlStatement::forceFinalize()
+  {
+    if (stmt != nullptr)
+    {
+      sqlite3_finalize(stmt);
+      stmt = nullptr;
     }
   }
 

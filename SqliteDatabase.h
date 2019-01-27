@@ -796,7 +796,7 @@ namespace SqliteOverlay
      *
      * See also [here](https://www.sqlite.org/c3ref/get_autocommit.html)
      *
-     * Test case: not yet
+     * Test case: yes, included in the transaction tests
      *
      */
     bool isAutoCommit() const;

@@ -507,6 +507,16 @@ namespace SqliteOverlay
         bool clearBindings   ///< `true`: clear existing placeholder bindings; `false`: bindings keep their values
         ) const;
 
+    /** \brief Forcefully finalized the statement, no matter what its current status is; this is similar
+     * to calling the dtor on the statement.
+     *
+     * The function is useful if statements failed (e.g., because the database was busy) and they
+     * should not be retried later. Finalizing the statement then releases the associated locks.
+     *
+     * Test case: yes,implicitly in the dtor and in the transactio test cases
+     */
+    void forceFinalize();
+
     /** \returns The expanded SQL statement with all bound parameters; un-bound parameters will
      * be treated as NULL as described [here](https://www.sqlite.org/c3ref/expanded_sql.html)
      *
