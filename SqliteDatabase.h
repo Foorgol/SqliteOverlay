@@ -216,7 +216,7 @@ namespace SqliteOverlay
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
-     * Test case: not yet
+     * Test case: implicitly in many other test cases
      *
      */
     void execNonQuery(
@@ -232,7 +232,7 @@ namespace SqliteOverlay
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
-     * Test case: not yet
+     * Test case: implicitly in many other test cases
      *
      */
     void execNonQuery(
@@ -757,7 +757,7 @@ namespace SqliteOverlay
 
     /** \returns `true` if a table or view of the given name exists in the database
      *
-     * Test case: implicitly in `StmtBlob`
+     * Test case: implicitly in `StmtBlob` and also explicitly
      *
      */
     bool hasTable(
@@ -767,7 +767,7 @@ namespace SqliteOverlay
 
     /** \returns `true` if a view of the given name exists in the database
      *
-     * Test case: not yet
+     * Test case: yes
      *
      */
     bool hasView(
@@ -778,7 +778,7 @@ namespace SqliteOverlay
      *
      * See also [here](https://www.sqlite.org/c3ref/last_insert_rowid.html)
      *
-     * Test case: not yet
+     * Test case: yes
      *
      */
     int getLastInsertId() const;
@@ -787,7 +787,7 @@ namespace SqliteOverlay
      *
      * See also [here](https://www.sqlite.org/c3ref/changes.html)
      *
-     * Test case: not yet
+     * Test case: yes
      *
      */
     int getRowsAffected() const;
@@ -811,7 +811,7 @@ namespace SqliteOverlay
      *
      * \returns A new transaction object.
      *
-     * Test case: not yet
+     * Test case: yes
      *
      */
     Transaction startTransaction(
@@ -914,15 +914,15 @@ namespace SqliteOverlay
 
     /** \returns `true` if the database contents have been modified by this or any other database connection
      *
-     * Test case: not yet
+     * Test case: yes
      *
      */
     bool isDirty() const;
 
     /** \brief Resets the internal "dirty flag", so that only future modifications will be reported by
-     * `isDirty()`
+     * `isDirty()`. This call resets the flags for all local and global/external changes.
      *
-     * Test case: not yet
+     * Test case: yes
      *
      */
     void resetDirtyFlag();
@@ -933,10 +933,44 @@ namespace SqliteOverlay
      * \note Modifications caused by other database connections are *not* reported
      * by this call!
      *
-     * Test case: not yet
+     * Test case: yes
      *
      */
-    int getLocalChangeCounter() const;
+    int getLocalChangeCounter_total() const;
+
+    /** \brief Resets the internal flag for local data changes (local = on this connection);
+     * this does not affect the flag for external data changes through other connections.
+     *
+     * Test case: yes
+     *
+     */
+    void resetLocalChangeCounter();
+
+    /** \returns `true` if the database contents have been modified by this database connection since
+     * the last call to `resetLocalChangeCounter()` (or since opening the connection, resp.); modifications
+     * applied through other connections are not reported here.
+     *
+     * Test case: yes
+     *
+     */
+    bool hasLocalChanges() const;
+
+    /** \brief Resets the internal flag for external data changes (external = other than on this connection);
+     * this does not affect the flag for local data changes through this connections.
+     *
+     * Test case: yes
+     *
+     */
+    void resetExternalChangeCounter();
+
+    /** \returns `true` if the database contents have been modified by other connections since
+     * the last call to `resetExternalChangeCounter()` (or since opening the connection, resp.); modifications
+     * applied through this connection are not reported here.
+     *
+     * Test case: yes
+     *
+     */
+    bool hasExternalChanges() const;
 
     /** \brief Defines the timeout for requests if the database is locked by another
      * process (more precisely: another database connection); see [here](https://www.sqlite.org/c3ref/busy_timeout.html)
@@ -1017,8 +1051,8 @@ namespace SqliteOverlay
 
     // handling of a "dirty flag" that indicates whether the database has changed
     // after a certain point in time
-    int changeCounter_reset;  // used for calls to sqlite3_total_changes(), reporting changes on the local connection
-    int dataVersion_reset;   // used for calls to "PRAGMA data_version" which reports changes other than on the local connection
+    int localChangeCounter_resetValue;  // used for calls to sqlite3_total_changes(), reporting changes on the local connection
+    int externalChangeCounter_resetValue;   // used for calls to "PRAGMA data_version" which reports changes other than on the local connection
 
   };
 

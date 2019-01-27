@@ -192,8 +192,8 @@ namespace SqliteOverlay
     // transfer the dirty counters; we don't need to
     // reset them in 'other` because it becomes unusual
     // anyway
-    changeCounter_reset = other.changeCounter_reset;
-    dataVersion_reset = other.changeCounter_reset;
+    localChangeCounter_resetValue = other.localChangeCounter_resetValue;
+    externalChangeCounter_resetValue = other.localChangeCounter_resetValue;
 
     return *this;
   }
@@ -823,23 +823,50 @@ namespace SqliteOverlay
 
   bool SqliteDatabase::isDirty() const
   {
-    int dv = execScalarQueryInt("PRAGMA data_version;");
-    return ((sqlite3_total_changes(dbPtr) != changeCounter_reset) || (dv != dataVersion_reset));
+    return (hasExternalChanges() || hasLocalChanges());
   }
 
   //----------------------------------------------------------------------------
 
   void SqliteDatabase::resetDirtyFlag()
   {
-    changeCounter_reset = sqlite3_total_changes(dbPtr);
-    dataVersion_reset = execScalarQueryInt("PRAGMA data_version;");
+    resetLocalChangeCounter();
+    resetExternalChangeCounter();
   }
 
   //----------------------------------------------------------------------------
 
-  int SqliteDatabase::getLocalChangeCounter() const
+  int SqliteDatabase::getLocalChangeCounter_total() const
   {
     return sqlite3_total_changes(dbPtr);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqliteDatabase::resetLocalChangeCounter()
+  {
+    localChangeCounter_resetValue = sqlite3_total_changes(dbPtr);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::hasLocalChanges() const
+  {
+    return (getLocalChangeCounter_total() != localChangeCounter_resetValue);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqliteDatabase::resetExternalChangeCounter()
+  {
+    externalChangeCounter_resetValue = execScalarQueryInt("PRAGMA data_version;");
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::hasExternalChanges() const
+  {
+    return (execScalarQueryInt("PRAGMA data_version;") != externalChangeCounter_resetValue);
   }
 
   //----------------------------------------------------------------------------

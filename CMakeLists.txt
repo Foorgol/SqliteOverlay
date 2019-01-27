@@ -123,6 +123,7 @@ set(LIB_SOURCES_TST
     tests/tstStatement.cpp
     tests/tstDatabaseInit.cpp
     tests/tstDatabaseQueries.cpp
+    tests/tstDatabaseMisc.cpp
     #tests/tstCommonTabularClass.cpp
     #tests/tstClausesAndQueries.cpp
     #tests/tstDbTab.cpp
