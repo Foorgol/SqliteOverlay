@@ -179,3 +179,105 @@ TEST_F(DatabaseTestScenario, StmtColTypeAndName)
   ASSERT_TRUE(stmt.isNull(0));
 }
 
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, StmtLimits)
+{
+  prepScenario01();
+  auto db = getRawDbHandle();
+
+  // bind, update and retrieve INT_MIN and INT_MAX
+  for (int i : {INT_MIN, INT_MAX})
+  {
+    SqlStatement stmt{db.get(), "UPDATE t1 SET i = ? WHERE id=1"};
+    stmt.bind(1, i);
+    string sql{"UPDATE t1 SET i = "};
+    sql += to_string(i);
+    sql += " WHERE id=1";
+    ASSERT_EQ(sql, stmt.getExpandedSQL());
+
+    ASSERT_TRUE(stmt.step());
+    ASSERT_FALSE(stmt.hasData());
+    ASSERT_TRUE(stmt.isDone());
+
+    stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+    ASSERT_TRUE(stmt.step());
+    ASSERT_EQ(i, stmt.getInt(0));
+    ASSERT_EQ(i, stmt.getLong(0));  // should work for int as well
+  }
+
+  // bind, update and retrieve LONG_MIN and LONG_MAX
+  for (long i : {LONG_MIN, LONG_MAX})
+  {
+    SqlStatement stmt{db.get(), "UPDATE t1 SET i = ? WHERE id=1"};
+    stmt.bind(1, i);
+    string sql{"UPDATE t1 SET i = "};
+    sql += to_string(i);
+    sql += " WHERE id=1";
+    ASSERT_EQ(sql, stmt.getExpandedSQL());
+
+    ASSERT_TRUE(stmt.step());
+    ASSERT_FALSE(stmt.hasData());
+    ASSERT_TRUE(stmt.isDone());
+
+    stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+    ASSERT_TRUE(stmt.step());
+    ASSERT_EQ(i, stmt.getLong(0));
+    ASSERT_NE(i, stmt.getInt(0));  // should NOT work for int
+  }
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, StmtTime)
+{
+  prepScenario01();
+  auto db = getRawDbHandle();
+
+  // the following timestamps are all identical
+  auto tzp = Sloppy::DateTime::getPopulatedTzDatabase().time_zone_from_region("Europe/Berlin");
+  UTCTimestamp utcRef{2019, 1, 27, 9, 42, 42};
+  LocalTimestamp localRef{2019, 1, 27, 10, 42, 42, tzp};
+  time_t rawRef{1548582162};
+
+  // check consistency
+  ASSERT_EQ(rawRef, utcRef.getRawTime());
+  ASSERT_EQ(rawRef, localRef.getRawTime());
+
+  // storage of local time
+  SqlStatement stmt{db.get(), "UPDATE t1 SET i = ? WHERE id=1"};
+  stmt.bind(1, localRef);
+  ASSERT_TRUE(stmt.step());
+  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+  ASSERT_TRUE(stmt.step());
+  ASSERT_EQ(rawRef, stmt.getLong(0));
+
+  // reset
+  stmt = SqlStatement{db.get(), "UPDATE t1 SET i = 0 WHERE id=1"};
+  ASSERT_TRUE(stmt.step());
+  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+  ASSERT_TRUE(stmt.step());
+  ASSERT_EQ(0, stmt.getLong(0));
+
+  // storage of UTC time
+  stmt = SqlStatement{db.get(), "UPDATE t1 SET i = ? WHERE id=1"};
+  stmt.bind(1, utcRef);
+  ASSERT_TRUE(stmt.step());
+  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+  ASSERT_TRUE(stmt.step());
+  ASSERT_EQ(rawRef, stmt.getLong(0));
+
+  // retrieval of local time
+  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+  ASSERT_TRUE(stmt.step());
+  LocalTimestamp lt = stmt.getLocalTime(0, tzp);
+  ASSERT_EQ(lt, localRef);
+  ASSERT_EQ(rawRef, lt.getRawTime());
+
+  // retrieval of UTC time
+  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+  ASSERT_TRUE(stmt.step());
+  UTCTimestamp u = stmt.getUTCTime(0);
+  ASSERT_EQ(u, utcRef);
+  ASSERT_EQ(rawRef, u.getRawTime());
+}

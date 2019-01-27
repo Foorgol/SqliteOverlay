@@ -159,3 +159,11 @@ TEST_F(DatabaseTestScenario, QueryAllTableAndViewNames)
 
 //----------------------------------------------------------------
 
+TEST_F(DatabaseTestScenario, QueryTimeStamps)
+{
+  auto db = getScenario01();
+
+  string sql = "SELECT s FROM t1 WHERE id = 3";
+  ASSERT_EQ(u8"äöüÄÖÜ", db.execScalarQueryString(sql));
+}
+

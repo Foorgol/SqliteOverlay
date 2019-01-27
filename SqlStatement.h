@@ -29,6 +29,9 @@ namespace SqliteOverlay
      * \throws std::invalid_argument if one or both of the provided parameters are empty
      *
      * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
+     *
+     * Test case: implicitly by the database query tests; does not include exception testing
+     *
      */
     SqlStatement(
         sqlite3* dbPtr,   ///< the pointer to the raw database connection for which the statement should be created
@@ -47,13 +50,35 @@ namespace SqliteOverlay
 
     /** \brief Move ctor, transfers the statement pointer after finalizing any old,
      * pending statements
+     *
+     * Test case: not yet
+     *
      */
     SqlStatement(SqlStatement&& other);
 
     /** \brief Move assigment, transfers the statement pointer after finalizing any old,
      * pending statements
+     *
+     * Test case: implicitly by test case `StmtBind`
+     *
      */
     SqlStatement& operator=(SqlStatement&& other);
+
+    /** \brief Catches all calls to `bind()` with unsupported
+     * value types at compile time.
+     */
+    template<typename T>
+    void bind(int argPos, T val) const
+    {
+      // a literal 'false' is not possible here because it would
+      // trigger the static_assert even if the template has never
+      // been instantiated.
+      //
+      // Thus, we construct a "fake false" that depends on `T` and
+      // that is therefore only triggered if we actually instantiate
+      // this template.s
+      static_assert (!is_same<T,T>::value, "SqlStatement: call to bind() with a unsupported value type!");
+    }
 
     /** \brief Binds an int value to a placeholder in the statement
      *
@@ -61,10 +86,28 @@ namespace SqliteOverlay
      * a specification how placeholders are defined in the SQLite language.
      *
      * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
      */
     void bind(
         int argPos,   ///< the placeholder to bind to
         int val   ///< the value to bind to the placeholder
+        ) const;
+
+    /** \brief Binds a long value to a placeholder in the statement
+     *
+     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
+     * a specification how placeholders are defined in the SQLite language.
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
+     */
+    void bind(
+        int argPos,   ///< the placeholder to bind to
+        long val   ///< the value to bind to the placeholder
         ) const;
 
     /** \brief Binds a double value to a placeholder in the statement
@@ -73,6 +116,9 @@ namespace SqliteOverlay
      * a specification how placeholders are defined in the SQLite language.
      *
      * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
      */
     void bind(
         int argPos,   ///< the placeholder to bind to
@@ -85,6 +131,9 @@ namespace SqliteOverlay
      * a specification how placeholders are defined in the SQLite language.
      *
      * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
      */
     void bind(
         int argPos,   ///< the placeholder to bind to
@@ -100,6 +149,9 @@ namespace SqliteOverlay
      * a specification how placeholders are defined in the SQLite language.
      *
      * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
      */
     void bind(
         int argPos,   ///< the placeholder to bind to
@@ -112,6 +164,9 @@ namespace SqliteOverlay
      * a specification how placeholders are defined in the SQLite language.
      *
      * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
      */
     void bind(
         int argPos,   ///< the placeholder to bind to
@@ -121,15 +176,38 @@ namespace SqliteOverlay
       bind(argPos, val ? 1 : 0);
     }
 
-    /** \brief Catches all calls to `bind()` with unsupported
-     * value types at compile time.
+    /** \brief Binds a timestamp to a placeholder in the statement; time is always stored in UTC seconds
+     *
+     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
+     * a specification how placeholders are defined in the SQLite language.
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
      */
-    template<typename T>
-    void bind(int argPos, T val) const
+    void bind(int argPos,   ///< the placeholder to bind to
+        const LocalTimestamp& val   ///< the value to bind to the placeholder
+              ) const
     {
-      //static_assert (false, "SqlStatement: call to bind() with a unsupported value type!");
-      cerr << "SqlStatement: call to bind() with a unsupported value type!" << endl;
-      assert(false);
+      bind(argPos, val.getRawTime());  // forwards the call to a int64-bind
+    }
+
+    /** \brief Binds a timestamp to a placeholder in the statement; time is always stored in UTC seconds
+     *
+     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
+     * a specification how placeholders are defined in the SQLite language.
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
+     */
+    void bind(int argPos,   ///< the placeholder to bind to
+        const UTCTimestamp& val   ///< the value to bind to the placeholder
+              ) const
+    {
+      bind(argPos, val.getRawTime());  // forwards the call to a int64-bind
     }
 
     /** \brief Binds a NULL value to a placeholder in the statement
@@ -138,6 +216,9 @@ namespace SqliteOverlay
      * a specification how placeholders are defined in the SQLite language.
      *
      * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
      */
     void bindNull(
         int argPos   ///< the placeholder to bind to
@@ -156,6 +237,9 @@ namespace SqliteOverlay
      * or we successfully executed a no-data-query
      *
      * \returns after any subsequent step: `true` if the step produced more data rows; `false` if we're done
+     *
+     * Test case: yes, but onyl with partial exception testing
+     *
      */
     bool step();
 
@@ -173,6 +257,9 @@ namespace SqliteOverlay
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
      * \returns `true` if the step produced a data row, `false` otherwise
+     *
+     * Test case: yes, but onyl with partial exception testing
+     *
      */
     bool dataStep()
     {
@@ -181,22 +268,46 @@ namespace SqliteOverlay
     }
 
     /** \returns `true` if the last call to `step()` returned row data
+     *
+     * Test case: yes
+     *
      */
     bool hasData() const;
 
     /** \returns `true` if the statement has been completely executed
+     *
+     * Test case: yes
+     *
      */
     bool isDone() const;
 
-    /** \brief Retrieves the value of a column in the statement result as int value
+    /** \brief Retrieves the value of a column in the statement result as int value (32 bit)
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
      * \throws InvalidColumnException if the requested column does not exist
      *
      * \returns the value in the requested result column as int
+     *
+     * Test case: yes, but without implicit conversion and only with partial exception testing
+     *
      */
     int getInt(
+        int colId   ///< the zero-based column ID in the result row
+        ) const;
+
+    /** \brief Retrieves the value of a column in the statement result as long value (64 bit)
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \returns the value in the requested result column as int
+     *
+     * Test case: yes
+     *
+     */
+    long getLong(
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
@@ -207,6 +318,9 @@ namespace SqliteOverlay
      * \throws InvalidColumnException if the requested column does not exist
      *
      * \returns the value in the requested result column as double
+     *
+     * Test case: yes, but without implicit conversion and only with partial exception testing
+     *
      */
     double getDouble(
         int colId   ///< the zero-based column ID in the result row
@@ -223,6 +337,9 @@ namespace SqliteOverlay
      * \throws InvalidColumnException if the requested column does not exist
      *
      * \returns `false` if the column value is zero, `true` if it is not zero
+     *
+     * Test case: yes, but without implicit conversion and only with partial exception testing
+     *
      */
     double getBool(
         int colId   ///< the zero-based column ID in the result row
@@ -239,6 +356,9 @@ namespace SqliteOverlay
      * \throws InvalidColumnException if the requested column does not exist
      *
      * \returns the value in the requested result column as string
+     *
+     * Test case: yes, but without implicit conversion and only with partial exception testing
+     *
      */
     string getString(
         int colId   ///< the zero-based column ID in the result row
@@ -252,6 +372,9 @@ namespace SqliteOverlay
      * \throws InvalidColumnException if the requested column does not exist
      *
      * \returns the value in the requested result column as LocalTimestamp
+     *
+     * Test case: yes
+     *
      */
     LocalTimestamp getLocalTime(
         int colId,   ///< the zero-based column ID in the result row
@@ -266,6 +389,9 @@ namespace SqliteOverlay
      * \throws InvalidColumnException if the requested column does not exist
      *
      * \returns the value in the requested result column as UTCTimestamp
+     *
+     * Test case: yes
+     *
      */
     UTCTimestamp getUTCTime(
         int colId   ///< the zero-based column ID in the result row
@@ -278,6 +404,9 @@ namespace SqliteOverlay
      * \throws InvalidColumnException if the requested column does not exist
      *
      * \returns the fundamental SQLite data type for the column
+     *
+     * Test case: yes
+     *
      */
     ColumnDataType getColType(
         int colId   ///< the zero-based column ID in the result row
@@ -290,6 +419,9 @@ namespace SqliteOverlay
      * \throws InvalidColumnException if the requested column does not exist
      *
      * \returns the name of the column
+     *
+     * Test case: not yet
+     *
      */
     string getColName(
         int colId   ///< the zero-based column ID in the result row
@@ -300,6 +432,9 @@ namespace SqliteOverlay
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
      * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: yes, implicitly in the `getters` test case
+     *
      */
     bool isNull(
         int colId   ///< the zero-based column ID in the result row
@@ -308,6 +443,9 @@ namespace SqliteOverlay
     /** \brief Resets a statement so that it can be executed all over again
      *
      * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes, implicitly in the `getters` test case
+     *
      */
     void reset(
         bool clearBindings   ///< `true`: clear existing placeholder bindings; `false`: bindings keep their values
@@ -315,6 +453,9 @@ namespace SqliteOverlay
 
     /** \returns The expanded SQL statement with all bound parameters; un-bound parameters will
      * be treated as NULL as described [here](https://www.sqlite.org/c3ref/expanded_sql.html)
+     *
+     * Test case: yes, implicitly in the `bind` test case
+     *
      */
     string getExpandedSQL() const
     {
@@ -328,6 +469,8 @@ namespace SqliteOverlay
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
      * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: yes, implicitly in the `getters` test case
      *
      */
     void assertColumnDataAccess(

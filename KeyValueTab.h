@@ -22,7 +22,7 @@
 #include <memory>
 
 #include "SqliteDatabase.h"
-#include "DbTab.h"
+//#include "DbTab.h"
 #include "ClausesAndQueries.h"
 
 namespace SqliteOverlay

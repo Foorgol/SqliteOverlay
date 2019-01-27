@@ -27,6 +27,8 @@ namespace SqliteOverlay
    *
    * Example: `ConflictClause::Abort' --> "ABORT"
    *
+   * Test case: not yet
+   *
    * \returns a string representing the provided ConflictClause enum value or "" for `ConflictClause::NotUsed`
    */
   string conflictClause2String(
@@ -37,6 +39,8 @@ namespace SqliteOverlay
 
   /** \brief Creates a column constraint string for CREATE TABLE statements
    * according to [this description](https://www.sqlite.org/syntax/column-constraint.html).
+   *
+   * Test case: not yet
    *
    * \returns a string with a column constraint clause for use in a CREATE TABLE statement.
    */
@@ -51,6 +55,8 @@ namespace SqliteOverlay
   /** \brief Creates a foreign key clause for CREATE TABLE statements
    * according to [this description](https://www.sqlite.org/syntax/foreign-key-clause.html).
    *
+   * Test case: not yet
+   *
    * \returns a string with a foreign key clause for use in a CREATE TABLE statement.
    */
   string buildForeignKeyClause(
@@ -64,6 +70,9 @@ namespace SqliteOverlay
 
   /** \returns the type affinity for a given column type string according to the
    * type affinity rules [specified here](https://www.sqlite.org/datatype3.html)
+   *
+   * Test case: not yet
+   *
    */
   ColumnDataType string2Affinity(const string& colType);
 
@@ -93,6 +102,9 @@ namespace SqliteOverlay
   public:
     /** \brief Default ctor, creates a blank in-memory database and calls
      * `populateTables()` and `populateViews()` on it.
+     *
+     * Test case: not yet
+     *
      */
     SqliteDatabase();
 
@@ -112,6 +124,9 @@ namespace SqliteOverlay
      *
      * \throws GenericSqliteException incl. error code if anything goes wrong
      * with SQLite
+     *
+     * Test case: yes
+     *
      */
     SqliteDatabase(
         string dbFileName, ///< the name of the database file to open or create
@@ -120,6 +135,9 @@ namespace SqliteOverlay
         );
 
     /** \brief Dtor; closes the database connections and cleans up table cache
+     *
+     * Test case: not yet
+     *
      */
     virtual ~SqliteDatabase();
 
@@ -130,10 +148,16 @@ namespace SqliteOverlay
     SqliteDatabase& operator=(const SqliteDatabase&) = delete;
 
     /** \brief Move ctor, transfers all handles etc. to the destination object
+     *
+     * Test case: not yet
+     *
      */
     SqliteDatabase(SqliteDatabase&& other);
 
     /** \brief Move assignment, transfers all handles etc. to the destination object
+     *
+     * Test case: not yet
+     *
      */
     SqliteDatabase& operator=(SqliteDatabase&&);
 
@@ -144,13 +168,24 @@ namespace SqliteOverlay
      * \warning On success, this function also deletes all cached `DbTab` instances!
      * In case you stored any pointers to 'DbTab' instances anywhere in your code
      * these pointers become invalid after calling `close()` and the call was successful!
+     *
+     * Test case: partially, as part of the ctor tests
+     *
      */
     void close();
 
-    /** \brief Deletes all cached `DbTab` instances. */
+    /** \brief Deletes all cached `DbTab` instances.
+     *
+     * Test case: not yet
+     *
+     */
     void resetTabCache();
 
-    /** \returns `true` if the database connection is still open and `false` otherwise */
+    /** \returns `true` if the database connection is still open and `false` otherwise
+     *
+     * Test case: partially, as part of the ctor tests
+     *
+     */
     bool isAlive() const;
 
     /** \brief Creates a new SQL statement for this database connection
@@ -160,6 +195,9 @@ namespace SqliteOverlay
      * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
      *
      * \returns a SqlStatement instance for the provided SQL text
+     *
+     * Test case: partially, as part of the database query tests
+     *
      */
     SqlStatement prepStatement(
         const string& sqlText   ///< the SQL text for which to create the statement
@@ -177,6 +215,9 @@ namespace SqliteOverlay
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: not yet
+     *
      */
     void execNonQuery(
         const string& sqlStatement   ///< the SQL statement to execute
@@ -190,6 +231,9 @@ namespace SqliteOverlay
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: not yet
+     *
      */
     void execNonQuery(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
@@ -208,6 +252,9 @@ namespace SqliteOverlay
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes, but no exception testing
+     *
      */
     SqlStatement execContentQuery(
         const string& sqlStatement   ///< the SQL statement to execute
@@ -231,6 +278,9 @@ namespace SqliteOverlay
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
      * \returns the first value in the first result row as int
+     *
+     * Test case: yes, but only with partial exception testing
+     *
      */
     int execScalarQueryInt(
         const string& sqlStatement   ///< the SQL statement to execute
@@ -251,6 +301,9 @@ namespace SqliteOverlay
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
      * \returns the first value in the result row as int
+     *
+     * Test case: yes, but only with partial exception testing
+     *
      */
     int execScalarQueryInt(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
@@ -271,6 +324,9 @@ namespace SqliteOverlay
      *
      * \returns an `optional<int>` containing the first value in the first result row; if the cell
      * contained NULL the return value is empty.
+     *
+     * Test case: yes, but only with partial exception testing
+     *
      */
     optional<int> execScalarQueryIntOrNull(
         const string& sqlStatement   ///< the SQL statement to execute
@@ -290,6 +346,9 @@ namespace SqliteOverlay
      *
      * \returns an `optional<int>` containing the first value in the result row; if the cell
      * contained NULL the return value is empty.
+     *
+     * Test case: yes, but only with partial exception testing
+     *
      */
     optional<int> execScalarQueryIntOrNull(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
@@ -311,6 +370,9 @@ namespace SqliteOverlay
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
      * \returns the first value in the first result row as double
+     *
+     * Test case: yes, but only with partial exception testing
+     *
      */
     double execScalarQueryDouble(
         const string& sqlStatement   ///< the SQL statement to execute
@@ -331,6 +393,9 @@ namespace SqliteOverlay
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
      * \returns the first value in the result row as double
+     *
+     * Test case: yes, but only with partial exception testing
+     *
      */
     double execScalarQueryDouble(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
@@ -351,6 +416,9 @@ namespace SqliteOverlay
      *
      * \returns an `optional<double>` containing the first value in the first result row; if the cell
      * contained NULL the return value is empty.
+     *
+     * Test case: yes, but only with partial exception testing
+     *
      */
     optional<double> execScalarQueryDoubleOrNull(
         const string& sqlStatement   ///< the SQL statement to execute
@@ -370,6 +438,9 @@ namespace SqliteOverlay
      *
      * \returns an `optional<double>` containing the first value in the result row; if the cell
      * contained NULL the return value is empty.
+     *
+     * Test case: yes, but only with partial exception testing
+     *
      */
     optional<double> execScalarQueryDoubleOrNull(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
@@ -391,6 +462,9 @@ namespace SqliteOverlay
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
      * \returns the first value in the first result row as string
+     *
+     * Test case: yes, but only with partial exception testing
+     *
      */
     string execScalarQueryString(
         const string& sqlStatement   ///< the SQL statement to execute
@@ -411,6 +485,9 @@ namespace SqliteOverlay
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
      * \returns the first value in the result row as string
+     *
+     * Test case: yes, but only with partial exception testing
+     *
      */
     string execScalarQueryString(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
@@ -431,6 +508,9 @@ namespace SqliteOverlay
      *
      * \returns an `optional<string>` containing the first value in the first result row; if the cell
      * contained NULL the return value is empty.
+     *
+     * Test case: yes, but only with partial exception testing
+     *
      */
     optional<string> execScalarQueryStringOrNull(
         const string& sqlStatement   ///< the SQL statement to execute
@@ -450,6 +530,9 @@ namespace SqliteOverlay
      *
      * \returns an `optional<string>` containing the first value in the result row; if the cell
      * contained NULL the return value is empty.
+     *
+     * Test case: yes, but only with partial exception testing
+     *
      */
     optional<string> execScalarQueryStringOrNull(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
@@ -461,6 +544,9 @@ namespace SqliteOverlay
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: not explicitly, but it is called/tested implicitly in the ctor
+     *
      */
     void enforceSynchronousWrites(
         bool syncOn   ///< `true`: activate sync write, `false`: deactivate sync writes
@@ -485,6 +571,9 @@ namespace SqliteOverlay
      * \note If a view of the same name already exists, nothing happens.
      *
      * See `execNonQuery()` for possible exceptions.
+     *
+     * Test case: not yet
+     *
      */
     void viewCreationHelper(
         const string& viewName,   ///< the name for the new view
@@ -502,6 +591,9 @@ namespace SqliteOverlay
      * \throws NoSuchTableException if no table of the provided name exists
      *
      * See `execNonQuery()` for other possible exceptions.
+     *
+     * Test case: not yet
+     *
      */
     void indexCreationHelper(
         const string& tabName,   ///< the table on which to create the new index
@@ -521,6 +613,9 @@ namespace SqliteOverlay
      * \throws NoSuchTableException if no table of the provided name exists
      *
      * See `execNonQuery()` for other possible exceptions.
+     *
+     * Test case: not yet
+     *
      */
     void indexCreationHelper(
         const string& tabName,   ///< the table on which to create the new index
@@ -540,6 +635,9 @@ namespace SqliteOverlay
      * \throws NoSuchTableException if no table of the provided name exists
      *
      * See `execNonQuery()` for other possible exceptions.
+     *
+     * Test case: not yet
+     *
      */
     void indexCreationHelper(
         const string& tabName,   ///< the table on which to create the new index
@@ -548,15 +646,25 @@ namespace SqliteOverlay
         ) const;
 
     /** \returns a list of names of all tables or views in the DB
-     * */
+     *
+     * Test case: yes
+     *
+     */
     Sloppy::StringList allTableNames(
         bool getViews=false   ///< `false`: get table names (default); `true`: get view names
         ) const;
 
-    /** \returns a list of names of all views in the DB */
+    /** \returns a list of names of all views in the DB
+     *
+     * Test case: yes
+     *
+     */
     Sloppy::StringList allViewNames() const;
 
     /** \returns `true` if a table or view of the given name exists in the database
+     *
+     * Test case: not yet
+     *
      */
     bool hasTable(
         const string& name,   ///< the name to search for (case-sensitive)
@@ -564,6 +672,9 @@ namespace SqliteOverlay
         ) const;
 
     /** \returns `true` if a view of the given name exists in the database
+     *
+     * Test case: not yet
+     *
      */
     bool hasView(
         const string& name   ///< the name to search for (case-sensitive)
@@ -572,18 +683,27 @@ namespace SqliteOverlay
     /** \returns the ID of the last inserted row
      *
      * See also [here](https://www.sqlite.org/c3ref/last_insert_rowid.html)
+     *
+     * Test case: not yet
+     *
      */
     int getLastInsertId() const;
 
     /** \returns the number of rows modified, inserted or deleted by the most recently completed INSERT, UPDATE or DELETE statement
      *
      * See also [here](https://www.sqlite.org/c3ref/changes.html)
+     *
+     * Test case: not yet
+     *
      */
     int getRowsAffected() const;
 
     /** \returns `true` if the database is in autocommit mode (read: no active transaction running), `false` otherwise.
      *
      * See also [here](https://www.sqlite.org/c3ref/get_autocommit.html)
+     *
+     * Test case: not yet
+     *
      */
     bool isAutoCommit() const;
 
@@ -596,6 +716,9 @@ namespace SqliteOverlay
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
      * \returns A new transaction object.
+     *
+     * Test case: not yet
+     *
      */
     Transaction startTransaction(
         TransactionType tt=TransactionType::Immediate,   ///< the type of transaction, see [here](https://www.sqlite.org/lang_transaction.html)
@@ -617,6 +740,9 @@ namespace SqliteOverlay
      * This, again, is inherently *not* thread-safe.
      *
      * \returns a (shared) pointer to a `DbTab` object for a table or `nullptr` if the table name is invalid
+     *
+     * Test case: not yet
+     *
      */
     /*DbTab* getTab (
         const string& tabName   ///< name of the requested table
@@ -634,6 +760,9 @@ namespace SqliteOverlay
      *
      * \returns `true` if the operation was successful and `false` if it failed or if the
      * parameters where invalid
+     *
+     * Test case: not yet
+     *
      */
     bool copyTable(
         const string& srcTabName,   ///< name of the source table for the copy-operation
@@ -655,6 +784,9 @@ namespace SqliteOverlay
      *
      * \returns almost always `true` because most errors should be caught by exceptions; if `true`, the backup
      * is guaranteed to be successful
+     *
+     * Test case: not yet
+     *
      */
     bool backupToFile(
         const string& dstFileName   ///< the name of the database file to copy the contents to
@@ -678,17 +810,26 @@ namespace SqliteOverlay
      *
      * \returns almost always `true` because most errors should be caught by exceptions; if `true`, the backup
      * is guaranteed to be successful
+     *
+     * Test case: not yet
+     *
      */
     bool restoreFromFile(
         const string& srcFileName    ///< the name of the database file to read from
         );
 
     /** \returns `true` if the database contents have been modified by this or any other database connection
+     *
+     * Test case: not yet
+     *
      */
     bool isDirty() const;
 
     /** \brief Resets the internal "dirty flag", so that only future modifications will be reported by
      * `isDirty()`
+     *
+     * Test case: not yet
+     *
      */
     void resetDirtyFlag();
 
@@ -697,6 +838,9 @@ namespace SqliteOverlay
      *
      * \note Modifications caused by other database connections are *not* reported
      * by this call!
+     *
+     * Test case: not yet
+     *
      */
     int getLocalChangeCounter() const;
 
@@ -707,6 +851,9 @@ namespace SqliteOverlay
      * After the timeout has elapsed and the database has not become available,
      * SQLite return SQLITE_BUSY which is translated
      * into a BusyException. While waiting for the timeout, the triggering call blocks.
+     *
+     * Test case: not yet
+     *
      */
     void setBusyTimeout(
         int ms   ///< the timeout in milliseconds; if less or equal to 0, we don't wait an throw BusyException immediately
@@ -730,6 +877,9 @@ namespace SqliteOverlay
      *
      * \returns a new SqliteDatabase instance that works on the same database file
      * as the current instance
+     *
+     * Test case: not yet
+     *
      */
     SqliteDatabase duplicateConnection(
         bool readOnly   ///< `true`: open the new connection in read-only mode; `false`: open in r/w mode
@@ -753,6 +903,9 @@ namespace SqliteOverlay
      *
      * \returns almost always `true` because most errors should be caught by exceptions; if `true`, the backup
      * is guaranteed to be successful
+     *
+     * Test case: not yet
+     *
      */
     static bool copyDatabaseContents(
         sqlite3* srcHandle,   ///< the raw SQLite handle of the source database

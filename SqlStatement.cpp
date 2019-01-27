@@ -142,6 +142,15 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  long SqlStatement::getLong(int colId) const
+  {
+    assertColumnDataAccess(colId);
+
+    return sqlite3_column_int64(stmt, colId);
+  }
+
+  //----------------------------------------------------------------------------
+
   double SqlStatement::getDouble(int colId) const
   {
     assertColumnDataAccess(colId);
@@ -164,7 +173,7 @@ namespace SqliteOverlay
   {
     assertColumnDataAccess(colId);
 
-    time_t rawTime = sqlite3_column_int(stmt, colId);
+    time_t rawTime = sqlite3_column_int64(stmt, colId);
     return LocalTimestamp(rawTime, tzp);
   }
 
@@ -174,7 +183,7 @@ namespace SqliteOverlay
   {
     assertColumnDataAccess(colId);
 
-    time_t rawTime = sqlite3_column_int(stmt, colId);
+    time_t rawTime = sqlite3_column_int64(stmt, colId);
     return UTCTimestamp(rawTime);
   }
 
@@ -243,6 +252,17 @@ namespace SqliteOverlay
   void SqlStatement::bind(int argPos, int val) const
   {
     int e = sqlite3_bind_int(stmt, argPos, val);
+    if (e != SQLITE_OK)
+    {
+      throw GenericSqliteException{e, "call to bindInt() of a SqlStatement"};
+    }
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqlStatement::bind(int argPos, long val) const
+  {
+    int e = sqlite3_bind_int64(stmt, argPos, val);
     if (e != SQLITE_OK)
     {
       throw GenericSqliteException{e, "call to bindInt() of a SqlStatement"};

@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "SqliteDatabase.h"
-#include "DbTab.h"
+//#include "DbTab.h"
 #include "ClausesAndQueries.h"
 #include "TabRow.h"
 
