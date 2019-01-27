@@ -98,7 +98,6 @@ void DatabaseTestScenario::prepScenario01()
   ASSERT_FALSE(sqliteFileExists());
   RawSqlitePtr db = getRawDbHandle();
 
-  string aiStr = "AUTOINCREMENT";
   string nowStr = "date('now')";
   string viewStr = "CREATE VIEW IF NOT EXISTS";
 
@@ -110,22 +109,22 @@ void DatabaseTestScenario::prepScenario01()
     // by the deleter of RawSqliteStmt
   };
 
-  string sql = "CREATE TABLE IF NOT EXISTS t1 (id INTEGER NOT NULL PRIMARY KEY " + aiStr + ",";
+  string sql = "CREATE TABLE IF NOT EXISTS t1 (";
   sql += " i INT, f DOUBLE, s VARCHAR(40), d DATETIME)";
   execStmt(sql);
 
-  sql = "CREATE TABLE IF NOT EXISTS t2 (id INTEGER NOT NULL PRIMARY KEY " + aiStr + ",";
+  sql = "CREATE TABLE IF NOT EXISTS t2 (";
   sql += " i INT, f DOUBLE, s VARCHAR(40), d DATETIME)";
   execStmt(sql);
 
-  execStmt("INSERT INTO t1 VALUES (NULL, 42, 23.23, 'Hallo', " + nowStr + ")");
-  execStmt("INSERT INTO t1 VALUES (NULL, NULL, 666.66, 'Hi', " + nowStr + ")");
-  sql = "INSERT INTO t1 VALUES (NULL, 84, NULL, '";
+  execStmt("INSERT INTO t1 VALUES (42, 23.23, 'Hallo', " + nowStr + ")");
+  execStmt("INSERT INTO t1 VALUES (NULL, 666.66, 'Hi', " + nowStr + ")");
+  sql = "INSERT INTO t1 VALUES (84, NULL, '";
   sql += u8"äöüÄÖÜ";
   sql += "', " + nowStr + ")";
   execStmt(sql);
-  execStmt("INSERT INTO t1 VALUES (NULL, 84, NULL, 'Ho', " + nowStr + ")");
-  execStmt("INSERT INTO t1 VALUES (NULL, 84, 42.42, 'Ho', " + nowStr + ")");
+  execStmt("INSERT INTO t1 VALUES (84, NULL, 'Ho', " + nowStr + ")");
+  execStmt("INSERT INTO t1 VALUES (84, 42.42, 'Ho', " + nowStr + ")");
 
   execStmt(viewStr + " v1 AS SELECT i, f, s FROM t1 WHERE i=84");
 

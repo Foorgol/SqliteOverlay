@@ -14,7 +14,7 @@ TEST_F(DatabaseTestScenario, QueryInt)
   SampleDB db = getScenario01();
 
   // first version: SQL statement as string
-  string sql = "SELECT COUNT(*) FROM t1 WHERE id > 0";
+  string sql = "SELECT COUNT(*) FROM t1 WHERE rowid > 0";
   ASSERT_EQ(5, db.execScalarQueryInt(sql));
   auto opt = db.execScalarQueryIntOrNull(sql);
   ASSERT_TRUE(opt.has_value());
@@ -29,13 +29,13 @@ TEST_F(DatabaseTestScenario, QueryInt)
   ASSERT_EQ(5, opt.value());
 
   // special case: query returning NULL column value
-  sql = "SELECT i FROM t1 WHERE id=2";
+  sql = "SELECT i FROM t1 WHERE rowid=2";
   opt = db.execScalarQueryIntOrNull(sql);
   ASSERT_FALSE(opt.has_value());
   ASSERT_THROW(db.execScalarQueryInt(sql), NullValueException);
 
   // special case: query returning no results
-  sql = "SELECT i FROM t1 WHERE id=9999";
+  sql = "SELECT i FROM t1 WHERE rowid=9999";
   ASSERT_THROW(db.execScalarQueryIntOrNull(sql), NoDataException);
   ASSERT_THROW(db.execScalarQueryInt(sql), NoDataException);
 }
@@ -47,7 +47,7 @@ TEST_F(DatabaseTestScenario, ContentQuery)
   SampleDB db = getScenario01();
 
   // SQL statement as string
-  string sql = "SELECT * FROM t1 WHERE id > 0";
+  string sql = "SELECT rowid,* FROM t1 WHERE rowid > 0";
   SqlStatement stmt = db.execContentQuery(sql);
   int rowCount = 0;
   while (stmt.hasData())
@@ -80,7 +80,7 @@ TEST_F(DatabaseTestScenario, QueryDouble)
   auto db = getScenario01();
 
   // first version: SQL statement as string
-  string sql = "SELECT f FROM t1 WHERE id = 2";
+  string sql = "SELECT f FROM t1 WHERE rowid = 2";
   ASSERT_EQ(666.66, db.execScalarQueryDouble(sql));
   auto opt = db.execScalarQueryDoubleOrNull(sql);
   ASSERT_TRUE(opt.has_value());
@@ -95,13 +95,13 @@ TEST_F(DatabaseTestScenario, QueryDouble)
   ASSERT_EQ(666.66, opt.value());
 
   // special case: query returning NULL column value
-  sql = "SELECT f FROM t1 WHERE id=3";
+  sql = "SELECT f FROM t1 WHERE rowid=3";
   opt = db.execScalarQueryDoubleOrNull(sql);
   ASSERT_FALSE(opt.has_value());
   ASSERT_THROW(db.execScalarQueryDouble(sql), NullValueException);
 
   // special case: query returning no results
-  sql = "SELECT i FROM t1 WHERE id=9999";
+  sql = "SELECT i FROM t1 WHERE rowid=9999";
   ASSERT_THROW(db.execScalarQueryDoubleOrNull(sql), NoDataException);
   ASSERT_THROW(db.execScalarQueryDouble(sql), NoDataException);
 }
@@ -114,7 +114,7 @@ TEST_F(DatabaseTestScenario, QueryString)
 
   // first version: SQL statement as string
   string result = "Ho";
-  string sql = "SELECT s FROM t1 WHERE id = 5";
+  string sql = "SELECT s FROM t1 WHERE rowid = 5";
   ASSERT_EQ(result, db.execScalarQueryString(sql));
   auto opt = db.execScalarQueryStringOrNull(sql);
   ASSERT_TRUE(opt.has_value());
@@ -129,7 +129,7 @@ TEST_F(DatabaseTestScenario, QueryString)
   ASSERT_EQ(result, opt.value());
 
   // special case: query returning no results
-  sql = "SELECT s FROM t1 WHERE id=9999";
+  sql = "SELECT s FROM t1 WHERE rowid=9999";
   ASSERT_THROW(db.execScalarQueryStringOrNull(sql), NoDataException);
   ASSERT_THROW(db.execScalarQueryString(sql), NoDataException);
 }
@@ -140,7 +140,7 @@ TEST_F(DatabaseTestScenario, QueryStringUTF8)
 {
   auto db = getScenario01();
 
-  string sql = "SELECT s FROM t1 WHERE id = 3";
+  string sql = "SELECT s FROM t1 WHERE rowid = 3";
   ASSERT_EQ(u8"äöüÄÖÜ", db.execScalarQueryString(sql));
 }
 
@@ -166,12 +166,12 @@ TEST_F(DatabaseTestScenario, QueryLong)
   // write a long value to the database
   // note: `bind` with longs is tested elsewhere; thus we can
   // rely on it here
-  auto stmt = db.prepStatement("UPDATE t1 SET i = ? WHERE id=1");
+  auto stmt = db.prepStatement("UPDATE t1 SET i = ? WHERE rowid=1");
   stmt.bind(1, LONG_MAX);
   ASSERT_TRUE(stmt.step());
 
   // first version: SQL statement as string
-  string sql = "SELECT i FROM t1 WHERE id=1";
+  string sql = "SELECT i FROM t1 WHERE rowid=1";
   ASSERT_EQ(LONG_MAX, db.execScalarQueryLong(sql));
   auto opt = db.execScalarQueryLongOrNull(sql);
   ASSERT_TRUE(opt.has_value());
@@ -186,13 +186,13 @@ TEST_F(DatabaseTestScenario, QueryLong)
   ASSERT_EQ(LONG_MAX, opt.value());
 
   // special case: query returning NULL column value
-  sql = "SELECT i FROM t1 WHERE id=2";
+  sql = "SELECT i FROM t1 WHERE rowid=2";
   opt = db.execScalarQueryLongOrNull(sql);
   ASSERT_FALSE(opt.has_value());
   ASSERT_THROW(db.execScalarQueryLong(sql), NullValueException);
 
   // special case: query returning no results
-  sql = "SELECT i FROM t1 WHERE id=9999";
+  sql = "SELECT i FROM t1 WHERE rowid=9999";
   ASSERT_THROW(db.execScalarQueryLongOrNull(sql), NoDataException);
   ASSERT_THROW(db.execScalarQueryLong(sql), NoDataException);
 }

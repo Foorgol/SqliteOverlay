@@ -140,7 +140,7 @@ TEST_F(DatabaseTestScenario, StmtGetters)
   prepScenario01();
   auto db = getRawDbHandle();
 
-  SqlStatement stmt{db.get(), "SELECT id, i, f, s FROM t1 WHERE id=1"};
+  SqlStatement stmt{db.get(), "SELECT rowid, i, f, s FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.dataStep());
 
   // test all getters
@@ -161,7 +161,7 @@ TEST_F(DatabaseTestScenario, StmtColTypeAndName)
 {
   prepScenario01();
   auto db = getRawDbHandle();
-  SqlStatement stmt{db.get(), "SELECT id, i, f, s, d FROM t1 WHERE id=1"};
+  SqlStatement stmt{db.get(), "SELECT rowid, i, f, s, d FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.dataStep());
 
   // test all getters
@@ -175,7 +175,7 @@ TEST_F(DatabaseTestScenario, StmtColTypeAndName)
   ASSERT_THROW(stmt.getColType(42), InvalidColumnException);
 
   // test NULL columns
-  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=2"};
+  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=2"};
   ASSERT_TRUE(stmt.dataStep());
   ASSERT_EQ(ColumnDataType::Null, stmt.getColType(0));
   ASSERT_TRUE(stmt.isNull(0));
@@ -191,18 +191,18 @@ TEST_F(DatabaseTestScenario, StmtLimits)
   // bind, update and retrieve INT_MIN and INT_MAX
   for (int i : {INT_MIN, INT_MAX})
   {
-    SqlStatement stmt{db.get(), "UPDATE t1 SET i = ? WHERE id=1"};
+    SqlStatement stmt{db.get(), "UPDATE t1 SET i = ? WHERE rowid=1"};
     stmt.bind(1, i);
     string sql{"UPDATE t1 SET i = "};
     sql += to_string(i);
-    sql += " WHERE id=1";
+    sql += " WHERE rowid=1";
     ASSERT_EQ(sql, stmt.getExpandedSQL());
 
     ASSERT_TRUE(stmt.step());
     ASSERT_FALSE(stmt.hasData());
     ASSERT_TRUE(stmt.isDone());
 
-    stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+    stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
     ASSERT_TRUE(stmt.step());
     ASSERT_EQ(i, stmt.getInt(0));
     ASSERT_EQ(i, stmt.getLong(0));  // should work for int as well
@@ -211,18 +211,18 @@ TEST_F(DatabaseTestScenario, StmtLimits)
   // bind, update and retrieve LONG_MIN and LONG_MAX
   for (long i : {LONG_MIN, LONG_MAX})
   {
-    SqlStatement stmt{db.get(), "UPDATE t1 SET i = ? WHERE id=1"};
+    SqlStatement stmt{db.get(), "UPDATE t1 SET i = ? WHERE rowid=1"};
     stmt.bind(1, i);
     string sql{"UPDATE t1 SET i = "};
     sql += to_string(i);
-    sql += " WHERE id=1";
+    sql += " WHERE rowid=1";
     ASSERT_EQ(sql, stmt.getExpandedSQL());
 
     ASSERT_TRUE(stmt.step());
     ASSERT_FALSE(stmt.hasData());
     ASSERT_TRUE(stmt.isDone());
 
-    stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+    stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
     ASSERT_TRUE(stmt.step());
     ASSERT_EQ(i, stmt.getLong(0));
     ASSERT_NE(i, stmt.getInt(0));  // should NOT work for int
@@ -247,37 +247,37 @@ TEST_F(DatabaseTestScenario, StmtTime)
   ASSERT_EQ(rawRef, localRef.getRawTime());
 
   // storage of local time
-  SqlStatement stmt{db.get(), "UPDATE t1 SET i = ? WHERE id=1"};
+  SqlStatement stmt{db.get(), "UPDATE t1 SET i = ? WHERE rowid=1"};
   stmt.bind(1, localRef);
   ASSERT_TRUE(stmt.step());
-  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
   ASSERT_EQ(rawRef, stmt.getLong(0));
 
   // reset
-  stmt = SqlStatement{db.get(), "UPDATE t1 SET i = 0 WHERE id=1"};
+  stmt = SqlStatement{db.get(), "UPDATE t1 SET i = 0 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
-  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
   ASSERT_EQ(0, stmt.getLong(0));
 
   // storage of UTC time
-  stmt = SqlStatement{db.get(), "UPDATE t1 SET i = ? WHERE id=1"};
+  stmt = SqlStatement{db.get(), "UPDATE t1 SET i = ? WHERE rowid=1"};
   stmt.bind(1, utcRef);
   ASSERT_TRUE(stmt.step());
-  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
   ASSERT_EQ(rawRef, stmt.getLong(0));
 
   // retrieval of local time
-  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
   LocalTimestamp lt = stmt.getLocalTime(0, tzp);
   ASSERT_EQ(lt, localRef);
   ASSERT_EQ(rawRef, lt.getRawTime());
 
   // retrieval of UTC time
-  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE id=1"};
+  stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
   UTCTimestamp u = stmt.getUTCTime(0);
   ASSERT_EQ(u, utcRef);
