@@ -528,6 +528,282 @@ namespace SqliteOverlay
       return string{sqlite3_expanded_sql(stmt)};
     }
 
+    /** \brief Catches all calls to `get()` with unsupported
+     * value types at compile time.
+     */
+    template<typename T>
+    void get(int colId, T& result)
+    {
+      // a literal 'false' is not possible here because it would
+      // trigger the static_assert even if the template has never
+      // been instantiated.
+      //
+      // Thus, we construct a "fake false" that depends on `T` and
+      // that is therefore only triggered if we actually instantiate
+      // this template.s
+      static_assert (!is_same<T,T>::value, "SqlStatement: call to get() with a unsupported value type!");
+    }
+
+    /** \brief Retrieves the value of a column in the statement result as an int value (32 bit)
+     *
+     * Uses an out-parameter instead of a direct return. The advantage is that multiple
+     * `get()` variants for int, double, string, ... can have the same signature style
+     * of `get(int, T&)` which allows for templating and overloading.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: yes
+     *
+     */
+    void get(int colId, int& result)
+    {
+      result = getInt(colId);
+    }
+
+    /** \brief Retrieves the value of a column in the statement result as a long value (64 bit)
+     *
+     * Uses an out-parameter instead of a direct return. The advantage is that multiple
+     * `get()` variants for int, double, string, ... can have the same signature style
+     * of `get(int, T&)` which allows for templating and overloading.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: yes
+     *
+     */
+    void get(int colId, long& result)
+    {
+      result = getLong(colId);
+    }
+
+    /** \brief Retrieves the value of a column in the statement result as a double value (32 bit)
+     *
+     * Uses an out-parameter instead of a direct return. The advantage is that multiple
+     * `get()` variants for int, double, string, ... can have the same signature style
+     * of `get(int, T&)` which allows for templating and overloading.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: yes
+     *
+     */
+    void get(int colId, double& result)
+    {
+      result = getDouble(colId);
+    }
+
+    /** \brief Retrieves the value of a column in the statement result as a string
+     *
+     * Uses an out-parameter instead of a direct return. The advantage is that multiple
+     * `get()` variants for int, double, string, ... can have the same signature style
+     * of `get(int, T&)` which allows for templating and overloading.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: yes
+     *
+     */
+    void get(int colId, string& result)
+    {
+      result = getString(colId);
+    }
+
+    /** \brief Retrieves the value of a column in the statement result as a bool value
+     *
+     * Uses an out-parameter instead of a direct return. The advantage is that multiple
+     * `get()` variants for int, double, string, ... can have the same signature style
+     * of `get(int, T&)` which allows for templating and overloading.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: yes
+     *
+     */
+    void get(int colId, bool& result)
+    {
+      result = getBool(colId);
+    }
+
+    /** \brief Retrieves the value of a column in the statement result a a UTC timestamp
+     *
+     * Uses an out-parameter instead of a direct return. The advantage is that multiple
+     * `get()` variants for int, double, string, ... can have the same signature style
+     * of `get(int, T&)` which allows for templating and overloading.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: yes
+     *
+     */
+    void get(int colId, UTCTimestamp& result)
+    {
+      result = getUTCTime(colId);
+    }
+
+    /** \brief Retrieves the value of a column in the statement result
+     * with the possibility to catch and return NULL values.
+     *
+     * This is a specialized version of the other `get(int, T&)` func that is
+     * picked by the compiler in case of `optional<T>&` parameters. In this
+     * specialized version we first check for NULL. If that's not the case,
+     * we call the normal getter.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: yes
+     *
+     */
+    template<typename T>
+    void get(int colId, optional<T>& result)
+    {
+      if (isNull(colId))
+      {
+        result.reset();
+        return;
+      }
+      T tmp;
+      get(colId, tmp);
+      result = tmp;
+    }
+
+    /** \brief Simple wrapper for retrieving two column values with one call.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: yes
+     *
+     */
+    template<typename T1, typename T2>
+    void multiGet(int col1, T1& result1, int col2, T2& result2)
+    {
+      get(col1, result1);
+      get(col2, result2);
+    }
+
+    /** \brief Simple wrapper for retrieving three column values with one call.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: no
+     *
+     */
+    template<typename T1, typename T2, typename T3>
+    void multiGet(int col1, T1& result1, int col2, T2& result2, int col3, T3& result3)
+    {
+      get(col1, result1);
+      get(col2, result2);
+      get(col3, result3);
+    }
+
+    /** \brief Simple wrapper for retrieving four column values with one call.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: yes
+     *
+     */
+    template<typename T1, typename T2, typename T3, typename T4>
+    void multiGet(int col1, T1& result1, int col2, T2& result2, int col3, T3& result3, int col4, T4& result4)
+    {
+      get(col1, result1);
+      get(col2, result2);
+      get(col3, result3);
+      get(col4, result4);
+    }
+
+    /** \brief Simple wrapper for retrieving two column values in a tuple.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: yes
+     *
+     */
+    template<typename T1, typename T2>
+    tuple<T1, T2> tupleGet(int col1, int col2)
+    {
+      T1 r1;
+      get(col1, r1);
+
+      T2 r2;
+      get(col2, r2);
+
+      return make_tuple(r1, r2);
+    }
+
+    /** \brief Simple wrapper for retrieving three column values in a tuple.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: no
+     *
+     */
+    template<typename T1, typename T2, typename T3>
+    tuple<T1, T2, T3> tupleGet(int col1, int col2, int col3)
+    {
+      T1 r1;
+      get(col1, r1);
+
+      T2 r2;
+      get(col2, r2);
+
+      T3 r3;
+      get(col3, r3);
+
+      return make_tuple(r1, r2, r3);
+    }
+
+    /** \brief Simple wrapper for retrieving four column values in a tuple.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: no
+     *
+     */
+    template<typename T1, typename T2, typename T3, typename T4>
+    tuple<T1, T2, T3> tupleGet(int col1, int col2, int col3, int col4)
+    {
+      T1 r1;
+      get(col1, r1);
+
+      T2 r2;
+      get(col2, r2);
+
+      T3 r3;
+      get(col3, r3);
+
+      T4 r4;
+      get(col4, r4);
+
+      return make_tuple(r1, r2, r3, r4);
+    }
+
+
   protected:
     /** \brief "Guard function" that checks preconditions for
      * the getXXX methods and throws exceptions if necessary

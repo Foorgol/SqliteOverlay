@@ -315,3 +315,110 @@ TEST_F(DatabaseTestScenario, StmtBlob)
   // compare both buffers; only succeeds if the buffers have equal size and content
   ASSERT_TRUE(sodium->memcmp(buf.view(), reBuf.view()));
 }
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, TemplateGetter)
+{
+  auto db = getScenario01();
+
+  auto stmt = db.prepStatement("SELECT rowid, i, f, s FROM t1 WHERE rowid=1");
+  ASSERT_TRUE(stmt.step());
+  ASSERT_TRUE(stmt.hasData());
+
+  int i{0};
+  stmt.get(0, i);
+  ASSERT_EQ(1, i);
+
+  long l{0};
+  stmt.get(1, l);
+  ASSERT_EQ(42, l); // i column
+
+  double d{0};
+  stmt.get(2, d);
+  ASSERT_EQ(23.23, d);
+
+  string s;
+  stmt.get(3, s);
+  ASSERT_EQ("Hallo", s);
+
+  //
+  // test the more advanced multi-getters
+  //
+  i = 0;
+  l = 0;
+  stmt.multiGet(0, i, 1, l);
+  ASSERT_EQ(1, i);
+  ASSERT_EQ(42, l);
+
+  d = 0;
+  s.clear();
+  tie (d,s) = stmt.tupleGet<double, string>(2, 3);
+  ASSERT_EQ(23.23, d);
+  ASSERT_EQ("Hallo", s);
+
+  i = 0;
+  l = 0;
+  d = 0;
+  s.clear();
+  stmt.multiGet(0, i, 1, l, 2, d, 3, s);
+  ASSERT_EQ(1, i);
+  ASSERT_EQ(42, l);
+  ASSERT_EQ(23.23, d);
+  ASSERT_EQ("Hallo", s);
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, TemplateGetterOptional)
+{
+  SqliteDatabase db{}; // empty in-memory database
+  db.execNonQuery("CREATE TABLE t1(a, b, c)");
+  db.execNonQuery("INSERT INTO t1(a, b, c) VALUES(NULL, NULL, NULL)");
+  db.execNonQuery("INSERT INTO t1(a, b, c) VALUES(42, \"xxx\", 3.3)");
+
+  optional<int> i;
+  optional<double> d;
+  optional<long> l;
+  optional<string> s;
+
+  auto stmt = db.prepStatement("SELECT rowid, a, b, c FROM t1 WHERE rowid=2");
+  ASSERT_TRUE(stmt.step());
+  ASSERT_TRUE(stmt.hasData());
+
+  stmt.get(0, i);
+  ASSERT_EQ(2, i.value());
+
+  stmt.get(1, l);
+  ASSERT_EQ(42, l.value()); // i column
+
+  stmt.get(2, s);
+  ASSERT_EQ("xxx", s.value());
+
+  stmt.get(3, d);
+  ASSERT_EQ(3.3, d.value());
+
+  stmt = db.prepStatement("SELECT rowid, a, b, c FROM t1 WHERE rowid=1");
+  ASSERT_TRUE(stmt.step());
+  ASSERT_TRUE(stmt.hasData());
+
+  stmt.get(0, i);
+  ASSERT_EQ(1, i.value());
+
+  stmt.get(1, l);
+  ASSERT_FALSE(l.has_value());
+
+  stmt.get(2, s);
+  ASSERT_FALSE(s.has_value());
+
+  stmt.get(3, d);
+  ASSERT_FALSE(d.has_value());
+
+  //
+  // test the more advanced multi-getters
+  //
+  int plainInt{0};
+  stmt.multiGet(0, plainInt, 1, i);
+  ASSERT_EQ(1, plainInt);
+  ASSERT_FALSE(i.has_value());
+}
