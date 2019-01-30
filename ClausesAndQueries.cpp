@@ -5,9 +5,9 @@
 
 namespace SqliteOverlay {
 
-  SqlStatement ColumnValueClause::getInsertStmt(const SqliteDatabase* db, const string& tabName) const
+  SqlStatement ColumnValueClause::getInsertStmt(const SqliteDatabase& db, const string& tabName) const
   {
-    if ((db == nullptr) || tabName.empty())
+    if (tabName.empty())
     {
       throw std::invalid_argument("getInsertStmt(): empty parameters");
     }
@@ -40,9 +40,9 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  SqlStatement ColumnValueClause::getUpdateStmt(const SqliteDatabase* db, const string& tabName, int rowId) const
+  SqlStatement ColumnValueClause::getUpdateStmt(const SqliteDatabase& db, const string& tabName, int rowId) const
   {
-    if ((db == nullptr) || tabName.empty() || colVals.empty())
+    if (tabName.empty() || colVals.empty())
     {
       throw std::invalid_argument("getUpdateStmt(): empty parameters");
     }
@@ -52,17 +52,19 @@ namespace SqliteOverlay {
     {
       if (!(sql.empty()))
       {
-        sql += ", ";
+        sql += ",";
       }
 
       sql += curCol.colName + "=";
       sql += (curCol.type == ColValType::Null) ? "NULL" : "?";
     }
     sql = "UPDATE " + tabName + " SET " + sql;
-    sql += " WHERE id=" + to_string(rowId);
+    sql += " WHERE rowid=" + to_string(rowId);
 
     return createStatementAndBindValuesToPlaceholders(db, sql);
   }
+
+  //----------------------------------------------------------------------------
 
   bool ColumnValueClause::hasColumns() const
   {
@@ -74,6 +76,12 @@ namespace SqliteOverlay {
   //----------------------------------------------------------------------------
 
   void WhereClause::addCol(const string& colName, const string& op, int val)
+  {
+    addCol(colName, val);
+    colVals[colVals.size() - 1].op = op;
+  }
+
+  void WhereClause::addCol(const string& colName, const string& op, long val)
   {
     addCol(colName, val);
     colVals[colVals.size() - 1].op = op;
@@ -105,9 +113,9 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  SqlStatement WhereClause::getSelectStmt(const SqliteDatabase* db, const string& tabName, bool countOnly) const
+  SqlStatement WhereClause::getSelectStmt(const SqliteDatabase& db, const string& tabName, bool countOnly) const
   {
-    if ((db == nullptr) || tabName.empty() || isEmpty())
+    if (tabName.empty() || isEmpty())
     {
       throw std::invalid_argument("getSelectStmt(): empty parameters");
     }
@@ -135,9 +143,9 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  SqlStatement WhereClause::getDeleteStmt(const SqliteDatabase* db, const string& tabName) const
+  SqlStatement WhereClause::getDeleteStmt(const SqliteDatabase& db, const string& tabName) const
   {
-    if ((db == nullptr) || tabName.empty() || isEmpty())
+    if (tabName.empty() || isEmpty())
     {
       throw std::invalid_argument("getDeleteStmt(): empty parameters");
     }
@@ -225,6 +233,7 @@ namespace SqliteOverlay {
   void CommonClause::clear()
   {
     intVals.clear();
+    longVals.clear();
     doubleVals.clear();
     stringVals.clear();
     colVals.clear();
@@ -232,17 +241,15 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  SqlStatement CommonClause::createStatementAndBindValuesToPlaceholders(const SqliteDatabase* db, const string& sql) const
+  SqlStatement CommonClause::createStatementAndBindValuesToPlaceholders(const SqliteDatabase& db, const string& sql) const
   {
-    SqlStatement stmt = db->prepStatement(sql);
+    SqlStatement stmt = db.prepStatement(sql);
 
     // bind the actual column values to the placeholders
     int curPlaceholderIdx = 1;   // leftmost placeholder is at position 1
-    for (size_t i=0; i < colVals.size(); ++i)
+    for (const ColValInfo& curCol : colVals)
     {
-      const ColValInfo& curCol = colVals[i];
-
-      // NULL or NOT NULL has to handled directly as literal value when
+      // NULL or NOT NULL has to be handled directly as literal value when
       // creating the sql statement's text
       if ((curCol.type == ColValType::Null) || (curCol.type == ColValType::NotNull)) continue;
 
@@ -250,6 +257,10 @@ namespace SqliteOverlay {
       {
       case ColValType::Int:
         stmt.bind(curPlaceholderIdx, intVals[curCol.indexInList]);
+        break;
+
+      case ColValType::Long:
+        stmt.bind(curPlaceholderIdx, longVals[curCol.indexInList]);
         break;
 
       case ColValType::Double:

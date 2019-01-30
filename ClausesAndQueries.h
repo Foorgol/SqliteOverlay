@@ -23,7 +23,11 @@ namespace SqliteOverlay {
     virtual ~CommonClause() = default;
 
     /** \brief Adds an integer to the list of column values;
-     * uses the default operation "=" (equals) between column name and value. */
+     * uses the default operation "=" (equals) between column name and value.
+     *
+     * Test case: yes
+     *
+     */
     inline void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         int val   ///< the value itself
@@ -33,8 +37,27 @@ namespace SqliteOverlay {
       colVals.push_back(ColValInfo{colName, ColValType::Int, static_cast<int>(intVals.size()) - 1, ""});
     }
 
+    /** \brief Adds a long int to the list of column values;
+     * uses the default operation "=" (equals) between column name and value.
+     *
+     * Test case: yes
+     *
+     */
+    inline void addCol(
+        const string& colName,   ///< the name of the column that should contain the value
+        long val   ///< the value itself
+        )
+    {
+      longVals.push_back(val);
+      colVals.push_back(ColValInfo{colName, ColValType::Long, static_cast<int>(longVals.size()) - 1, ""});
+    }
+
     /** \brief Adds a double to the list of column values;
-     * uses the default operation "=" (equals) between column name and value. */
+     * uses the default operation "=" (equals) between column name and value.
+     *
+     * Test case: yes
+     *
+     */
     inline void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         double val   ///< the value itself
@@ -45,7 +68,11 @@ namespace SqliteOverlay {
     }
 
     /** \brief Adds a string to the list of column values;
-     * uses the default operation "=" (equals) between column name and value. */
+     * uses the default operation "=" (equals) between column name and value.
+     *
+     * Test case: yes
+     *
+     */
     void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& val   ///< the value itself
@@ -55,7 +82,11 @@ namespace SqliteOverlay {
       colVals.push_back(ColValInfo{colName, ColValType::String, static_cast<int>(stringVals.size()) - 1, ""});
     }
 
-    /** \brief Adds a 'IS NULL' to the list of column values */
+    /** \brief Adds a 'IS NULL' to the list of column values
+     *
+     * Test case: yes
+     *
+     */
     inline void addNullCol(
         const string& colName   ///< the name of the column that should be NULL
         )
@@ -64,7 +95,11 @@ namespace SqliteOverlay {
     }
 
     /** \brief Adds a timestamp to the list of column values;
-     * uses the default operation "=" (equals) between column name and value. */
+     * uses the default operation "=" (equals) between column name and value.
+     *
+     * Test case: yes
+     *
+     */
     inline void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const CommonTimestamp* pTimestamp   ///< the value itself
@@ -74,7 +109,11 @@ namespace SqliteOverlay {
     }
 
     /** \brief Adds a date to the list of column values;
-     * uses the default operation "=" (equals) between column name and value. */
+     * uses the default operation "=" (equals) between column name and value.
+     *
+     * Test case: yes
+     *
+     */
     inline void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const boost::gregorian::date& d   ///< the value itself
@@ -84,7 +123,11 @@ namespace SqliteOverlay {
     }
 
     /** \brief Deletes all column names and values from the internal lists and
-     * thus completey resets the object. */
+     * thus completey resets the object.
+     *
+     * Test case: yes
+     *
+     */
     void clear();
 
     /** \brief Takes a SQL string with placeholders, converts it into a
@@ -92,8 +135,12 @@ namespace SqliteOverlay {
      *
      * The binding to the placeholders takes place in the sequence the column
      * values have been added by calling `addXXXCol()'.
+     *
+     * Test case: yes, as part of `getUpdateStmt()` and `getInsertStmt()`
+     *
      */
-    SqlStatement createStatementAndBindValuesToPlaceholders(const SqliteDatabase* db,  ///< the database on which to construct the statement
+    SqlStatement createStatementAndBindValuesToPlaceholders(
+        const SqliteDatabase& db,  ///< the database on which to construct the statement
         const string& sql   ///< the SQL statement as text with placeholders
         ) const;
 
@@ -101,6 +148,7 @@ namespace SqliteOverlay {
     enum ColValType
     {
       Int,
+      Long,
       Double,
       String,
       Null,
@@ -116,6 +164,7 @@ namespace SqliteOverlay {
     };
 
     vector<int> intVals;
+    vector<long> longVals;
     vector<double> doubleVals;
     vector<string> stringVals;
 
@@ -145,9 +194,12 @@ namespace SqliteOverlay {
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
      * \returns a SqlStatement object with an INSERT statement and all placeholders assigned
+     *
+     * Test case: yes
+     *
      */
     SqlStatement getInsertStmt(
-        const SqliteDatabase* db,   ///< pointer to the database that contains the target table
+        const SqliteDatabase& db,   ///< pointer to the database that contains the target table
         const string& tabName   ///< name of the table in which the new row should be inserted
         ) const;
 
@@ -163,9 +215,12 @@ namespace SqliteOverlay {
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
      * \returns a SqlStatement object with an UPDATE statement and all placeholders assigned
+     *
+     * Test case: yes
+     *
      */
     SqlStatement getUpdateStmt(
-        const SqliteDatabase* db,   ///< pointer to the database that contains the target table
+        const SqliteDatabase& db,   ///< pointer to the database that contains the target table
         const string& tabName,   ///< name of the table in which the row should be updated
         int rowId   ///< the ID of the row that should be updated
         ) const;
@@ -184,7 +239,7 @@ namespace SqliteOverlay {
   {
   public:
     WhereClause()
-      :CommonClause(), limit{0} {}
+      :CommonClause() {}
 
     using CommonClause::addCol;
     using CommonClause::addNullCol;
@@ -196,6 +251,14 @@ namespace SqliteOverlay {
         const string& colName,   ///< the name of the column that should contain the value
         const string& op,   ///< the operator between column name and value
         int val   ///< the value itself
+        );
+
+    /** \brief Adds a long integer to the list of column values with a custom
+     * operator (e.g., "!=") between column name and value. */
+    void addCol(
+        const string& colName,   ///< the name of the column that should contain the value
+        const string& op,   ///< the operator between column name and value
+        long val   ///< the value itself
         );
 
     /** \brief Adds a double to the list of column values with a custom
@@ -255,7 +318,7 @@ namespace SqliteOverlay {
      * \returns a SqlStatement object with a SELECT statement and all placeholders assigned
      */
     SqlStatement getSelectStmt(
-        const SqliteDatabase* db,   ///< the database on which to construct the statement
+        const SqliteDatabase& db,   ///< the database on which to construct the statement
         const string& tabName,   ///< the table on which the SELECT query should be run
         bool countOnly   ///< `true`: retrieve only the number of matchtes ("SELECT COUNT(*) ... ") instead of the actual matches
         ) const;
@@ -274,7 +337,7 @@ namespace SqliteOverlay {
      * \returns a SqlStatement object with a DELETE statement and all placeholders assigned
      */
     SqlStatement getDeleteStmt(
-        const SqliteDatabase* db,   ///< the database on which to construct the statement
+        const SqliteDatabase& db,   ///< the database on which to construct the statement
         const string& tabName   ///< the table on which the DELETE query should be run
         ) const;
 
@@ -312,7 +375,7 @@ namespace SqliteOverlay {
 
   private:
     string orderBy;
-    int limit;
+    int limit{0};
   };
 
 }
