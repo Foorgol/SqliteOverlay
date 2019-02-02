@@ -128,7 +128,14 @@ namespace SqliteOverlay {
      * Test case: yes
      *
      */
-    void clear();
+    virtual void clear();
+
+    /** \returns `true` if this objects does not contain any column definitions at all
+     *
+     * Test case: as part of the WHERE-clause tests
+     *
+     */
+    bool isEmpty() const;
 
     /** \brief Takes a SQL string with placeholders, converts it into a
      * SqlStatement object and binds all values to the placeholders.
@@ -246,7 +253,11 @@ namespace SqliteOverlay {
 
 
     /** \brief Adds an integer to the list of column values with a custom
-     * operator (e.g., "!=") between column name and value. */
+     * operator (e.g., "!=") between column name and value.
+     *
+     * Test case: yes
+     *
+     */
     void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& op,   ///< the operator between column name and value
@@ -254,7 +265,11 @@ namespace SqliteOverlay {
         );
 
     /** \brief Adds a long integer to the list of column values with a custom
-     * operator (e.g., "!=") between column name and value. */
+     * operator (e.g., "!=") between column name and value.
+     *
+     * Test case: yes
+     *
+     */
     void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& op,   ///< the operator between column name and value
@@ -262,7 +277,11 @@ namespace SqliteOverlay {
         );
 
     /** \brief Adds a double to the list of column values with a custom
-     * operator (e.g., "!=") between column name and value. */
+     * operator (e.g., "!=") between column name and value.
+     *
+     * Test case: yes
+     *
+     */
     void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& op,   ///< the operator between column name and value
@@ -270,7 +289,11 @@ namespace SqliteOverlay {
         );
 
     /** \brief Adds a string to the list of column values with a custom
-     * operator (e.g., "!=") between column name and value. */
+     * operator (e.g., "!=") between column name and value.
+     *
+     * Test case: yes
+     *
+     */
     void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& op,   ///< the operator between column name and value
@@ -278,14 +301,22 @@ namespace SqliteOverlay {
         );
 
     /** \brief Adds a timestamp to the list of column values with a custom
-     * operator (e.g., "!=") between column name and value. */
+     * operator (e.g., "!=") between column name and value.
+     *
+     * Test case: not yet
+     *
+     */
     void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& op,   ///< the operator between column name and value
         const CommonTimestamp* pTimestamp   ///< the value itself
         );
 
-    /** \brief Adds a 'IS NOT NULL' to the list of column values */
+    /** \brief Adds a 'IS NOT NULL' to the list of column values
+     *
+     * Test case: yes
+     *
+     */
     inline void addNotNullCol(
         const string& colName
         )
@@ -294,7 +325,11 @@ namespace SqliteOverlay {
     }
 
     /** \brief Adds a date to the list of column values with a custom
-     * operator (e.g., "!=") between column name and value. */
+     * operator (e.g., "!=") between column name and value.
+     *
+     * Test case: yes
+     *
+     */
     inline void addCol(
         const string& colName,   ///< the name of the column that should contain the value
         const string& op,   ///< the operator between column name and value
@@ -308,14 +343,20 @@ namespace SqliteOverlay {
      * database and table name, the statement using a WHERE clause
      * with the previously assigned column-value-pairs.
      *
-     * \throws std::invalid argument if the database pointer is `nullptr`, the table name empty or if no column
-     * values have been defined so far
+     * For the special case of `countOnly = true` and no column values defined, we create
+     * a SELECT clause that counts all rows in the table.
+     *
+     * \throws std::invalid argument if the table name is empty or if no column
+     * values have been defined so far (unless `countOnly` is `true`).
      *
      * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
      * \returns a SqlStatement object with a SELECT statement and all placeholders assigned
+     *
+     * Test case: yes
+     *
      */
     SqlStatement getSelectStmt(
         const SqliteDatabase& db,   ///< the database on which to construct the statement
@@ -327,7 +368,7 @@ namespace SqliteOverlay {
      * database and table name, the statement using a WHERE clause
      * with the previously assigned column-value-pairs.
      *
-     * \throws std::invalid argument if the database pointer is `nullptr`, the table name empty or if no column
+     * \throws std::invalid argument if the table name is empty or if no column
      * values have been defined so far
      *
      * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
@@ -335,40 +376,57 @@ namespace SqliteOverlay {
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
      * \returns a SqlStatement object with a DELETE statement and all placeholders assigned
+     *
+     * Test case: yes
+     *
      */
     SqlStatement getDeleteStmt(
         const SqliteDatabase& db,   ///< the database on which to construct the statement
         const string& tabName   ///< the table on which the DELETE query should be run
         ) const;
 
-    /** \returns `true` if this objects does not contain any column definitions at all */
-    bool isEmpty() const;
-
-    /** \brief For SELECT statements: define a column that will be used
+    /** \brief For SELECT statements only: define a column that will be used
      * for ordering the results in ascending order.
      *
      * \note You can also provide a comma separated list of column values if you
      * want to have second or third order sorting.
+     *
+     * Test case: yes
+     *
      */
     void setOrderColumn_Asc(
         const string& colName   ///< the name of the column(s) that should be used for sorting the SELECT results
         );
 
-    /** \brief For SELECT statements: define a column that will be used
+    /** \brief For SELECT statements only: define a column that will be used
      * for ordering the results in descending order.
      *
      * \note You can also provide a comma separated list of column values if you
      * want to have second or third order sorting.
+     *
+     * Test case: yes
+     *
      */
     void setOrderColumn_Desc(
         const string& colName   ///< the name of the column(s) that should be used for sorting the SELECT results
         );
 
-    /** \brief For SELECT statements: limit the list of results to a maximum number of rows
+    /** \brief For SELECT statements only: limit the list of results to a maximum number of rows
+     *
+     * Test case: yes
+     *
      */
     void setLimit(
         int _limit   ///< the limit for the number of returned rows (ignored if less than 1)
         );
+
+    /** \brief Deletes all column names, values. limits and sort orders from the internal lists and
+     * thus completey resets the object.
+     *
+     * Test case: yes
+     *
+     */
+    void clear() override;
 
   protected:
     string getWherePartWithPlaceholders() const;

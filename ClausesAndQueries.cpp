@@ -72,6 +72,13 @@ namespace SqliteOverlay {
   }
 
   //----------------------------------------------------------------------------
+
+  bool CommonClause::isEmpty() const
+  {
+    return colVals.empty();
+  }
+
+  //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
 
@@ -115,18 +122,28 @@ namespace SqliteOverlay {
 
   SqlStatement WhereClause::getSelectStmt(const SqliteDatabase& db, const string& tabName, bool countOnly) const
   {
-    if (tabName.empty() || isEmpty())
+    if (tabName.empty() || (!countOnly && isEmpty()))
     {
       throw std::invalid_argument("getSelectStmt(): empty parameters");
     }
 
+    // if we have no column values and countOnly is true, we simply
+    // return the number of rows in the table
+    if (isEmpty())
+    {
+      Sloppy::estring sql = "SELECT COUNT(*) FROM " + tabName;
+      return createStatementAndBindValuesToPlaceholders(db, sql);
+    }
+
+    // prepare a select statement for the provided table name
+    // with a specific where clause
     Sloppy::estring sql{"SELECT %1 FROM %2 WHERE %3 %4"};
     if (countOnly)
     {
       sql.arg("COUNT(*)");
     } else
     {
-      sql.arg("id");
+      sql.arg("rowid");
     }
     sql.arg(tabName);
     sql.arg(getWherePartWithPlaceholders());
@@ -159,29 +176,24 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  bool WhereClause::isEmpty() const
-  {
-    return colVals.empty();
-  }
-
-  //----------------------------------------------------------------------------
-
   void WhereClause::setOrderColumn_Asc(const string& colName)
   {
     if (orderBy.empty())
     {
-      orderBy = " ORDER BY ";
+      orderBy = "ORDER BY ";
     } else {
       orderBy += ", ";
     }
     orderBy += colName + " ASC";
   }
 
+  //----------------------------------------------------------------------------
+
   void WhereClause::setOrderColumn_Desc(const string& colName)
   {
     if (orderBy.empty())
     {
-      orderBy = " ORDER BY ";
+      orderBy = "ORDER BY ";
     } else {
       orderBy += ", ";
     }
@@ -193,6 +205,13 @@ namespace SqliteOverlay {
   void WhereClause::setLimit(int _limit)
   {
     if (_limit > 0) limit = _limit;
+  }
+
+  void WhereClause::clear()
+  {
+    CommonClause::clear();
+    limit = 0;
+    orderBy.clear();
   }
 
   //----------------------------------------------------------------------------

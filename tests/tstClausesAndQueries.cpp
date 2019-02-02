@@ -225,218 +225,310 @@ TEST_F(DatabaseTestScenario, ColumnValueClause_MultipleCol)
 }
 
 //----------------------------------------------------------------
-/*
+
 TEST_F(DatabaseTestScenario, WhereClause_Empty)
 {
+  SampleDB db = getScenario01();
   WhereClause w;
   ASSERT_TRUE(w.isEmpty());
 
-  ASSERT_EQ("", w.getSelectStmt("tab", false));
-  ASSERT_EQ("", w.getSelectStmt("tab", true));
-  ASSERT_EQ("", w.getDeleteStmt("tab"));
+  // SELECT without column values
+  ASSERT_THROW(w.getSelectStmt(db, "", false), std::invalid_argument);
+  ASSERT_THROW(w.getSelectStmt(db, "t1", false), std::invalid_argument);
+  auto stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1", stmt.getExpandedSQL());
+  ASSERT_THROW(w.getSelectStmt(db, "wrongname", true), SqlStatementCreationError);
 
-  // invalid tab names
-  ASSERT_EQ("", w.getSelectStmt("", false));
-  ASSERT_EQ("", w.getDeleteStmt(""));
+  // DELETE without column values
+  ASSERT_THROW(w.getDeleteStmt(db, ""), std::invalid_argument);
+  ASSERT_THROW(w.getDeleteStmt(db, "t1"), std::invalid_argument);
+  ASSERT_THROW(w.getDeleteStmt(db, "wrongname"), std::invalid_argument);
+
+  // DELETE with invalid table name
+  w.addCol("i", 99);
+  ASSERT_THROW(w.getDeleteStmt(db, ""), std::invalid_argument);
+  ASSERT_THROW(w.getDeleteStmt(db, "wrongname"), SqlStatementCreationError);
 }
 
 //----------------------------------------------------------------
 
 TEST_F(DatabaseTestScenario, WhereClause_IntCol)
 {
+  SampleDB db = getScenario01();
   WhereClause w;
   ASSERT_TRUE(w.isEmpty());
 
-  w.addIntCol("col", 23);
+  w.addCol("i", 23);
 
   ASSERT_FALSE(w.isEmpty());
-  ASSERT_EQ("SELECT id FROM tab WHERE col=23", w.getSelectStmt("tab", false));
-  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col=23", w.getSelectStmt("tab", true));
-  ASSERT_EQ("DELETE FROM tab WHERE col=23", w.getDeleteStmt("tab"));
+
+  auto stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i=23 ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE i=23 ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE i=23", stmt.getExpandedSQL());
 
   w.clear();
   ASSERT_TRUE(w.isEmpty());
 
 
-  w.addIntCol("col", ">", 23);
+  w.addCol("i", ">", 23);
+  ASSERT_FALSE(w.isEmpty());
+
+  stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i>23 ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE i>23 ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE i>23", stmt.getExpandedSQL());
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, WhereClause_LongCol)
+{
+  SampleDB db = getScenario01();
+  WhereClause w;
+  ASSERT_TRUE(w.isEmpty());
+
+  w.addCol("i", LONG_MIN);
 
   ASSERT_FALSE(w.isEmpty());
-  ASSERT_EQ("SELECT id FROM tab WHERE col>23", w.getSelectStmt("tab", false));
-  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col>23", w.getSelectStmt("tab", true));
-  ASSERT_EQ("DELETE FROM tab WHERE col>23", w.getDeleteStmt("tab"));
 
-  // invalid tab names
-  ASSERT_EQ("", w.getSelectStmt("", false));
-  ASSERT_EQ("", w.getDeleteStmt(""));
+  auto stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i=-9223372036854775808 ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE i=-9223372036854775808 ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE i=-9223372036854775808", stmt.getExpandedSQL());
+
+  w.clear();
+  ASSERT_TRUE(w.isEmpty());
+
+
+  w.addCol("i", ">", LONG_MIN);
+  ASSERT_FALSE(w.isEmpty());
+
+  stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i>-9223372036854775808 ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE i>-9223372036854775808 ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE i>-9223372036854775808", stmt.getExpandedSQL());
 }
 
 //----------------------------------------------------------------
 
 TEST_F(DatabaseTestScenario, WhereClause_DoubleCol)
 {
+  SampleDB db = getScenario01();
   WhereClause w;
   ASSERT_TRUE(w.isEmpty());
 
-  w.addDoubleCol("col", 23.666);
+  w.addCol("f", 23.666);
 
   ASSERT_FALSE(w.isEmpty());
-  ASSERT_EQ("SELECT id FROM tab WHERE col=23.666000", w.getSelectStmt("tab", false));
-  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col=23.666000", w.getSelectStmt("tab", true));
-  ASSERT_EQ("DELETE FROM tab WHERE col=23.666000", w.getDeleteStmt("tab"));
+
+  auto stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE f=23.666 ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE f=23.666 ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE f=23.666", stmt.getExpandedSQL());
 
   w.clear();
   ASSERT_TRUE(w.isEmpty());
 
 
-  w.addDoubleCol("col", "<", 23.666);
-
+  w.addCol("f", ">", 23.666);
   ASSERT_FALSE(w.isEmpty());
-  ASSERT_EQ("SELECT id FROM tab WHERE col<23.666000", w.getSelectStmt("tab", false));
-  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col<23.666000", w.getSelectStmt("tab", true));
-  ASSERT_EQ("DELETE FROM tab WHERE col<23.666000", w.getDeleteStmt("tab"));
 
-  // invalid tab names
-  ASSERT_EQ("", w.getSelectStmt("", false));
-  ASSERT_EQ("", w.getDeleteStmt(""));
+  stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE f>23.666 ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE f>23.666 ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE f>23.666", stmt.getExpandedSQL());
 }
 
 //----------------------------------------------------------------
 
 TEST_F(DatabaseTestScenario, WhereClause_StringCol)
 {
+  SampleDB db = getScenario01();
   WhereClause w;
   ASSERT_TRUE(w.isEmpty());
 
-  w.addStringCol("col", "xyz");
+  w.addCol("s", "xyz");
 
   ASSERT_FALSE(w.isEmpty());
-  ASSERT_EQ("SELECT id FROM tab WHERE col=\"xyz\"", w.getSelectStmt("tab", false));
-  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col=\"xyz\"", w.getSelectStmt("tab", true));
-  ASSERT_EQ("DELETE FROM tab WHERE col=\"xyz\"", w.getDeleteStmt("tab"));
+
+  auto stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE s='xyz' ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE s='xyz' ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE s='xyz'", stmt.getExpandedSQL());
 
   w.clear();
   ASSERT_TRUE(w.isEmpty());
 
 
-  w.addStringCol("col", "<", "xyz");
-
+  w.addCol("s", ">", "xyz");
   ASSERT_FALSE(w.isEmpty());
-  ASSERT_EQ("SELECT id FROM tab WHERE col<\"xyz\"", w.getSelectStmt("tab", false));
-  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col<\"xyz\"", w.getSelectStmt("tab", true));
-  ASSERT_EQ("DELETE FROM tab WHERE col<\"xyz\"", w.getDeleteStmt("tab"));
 
-  // invalid tab names
-  ASSERT_EQ("", w.getSelectStmt("", false));
-  ASSERT_EQ("", w.getDeleteStmt(""));
+  stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE s>'xyz' ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE s>'xyz' ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE s>'xyz'", stmt.getExpandedSQL());
 }
 
 //----------------------------------------------------------------
 
 TEST_F(DatabaseTestScenario, WhereClause_DateCol)
 {
+  SampleDB db = getScenario01();
   WhereClause w;
   boost::gregorian::date d{2016, 8, 7};
 
   ASSERT_TRUE(w.isEmpty());
 
-  w.addDateCol("col", d);
-
+  w.addCol("d", d);
   ASSERT_FALSE(w.isEmpty());
-  ASSERT_EQ("SELECT id FROM tab WHERE col=20160807", w.getSelectStmt("tab", false));
-  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col=20160807", w.getSelectStmt("tab", true));
-  ASSERT_EQ("DELETE FROM tab WHERE col=20160807", w.getDeleteStmt("tab"));
+
+  auto stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE d=20160807 ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE d=20160807 ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE d=20160807", stmt.getExpandedSQL());
 
   w.clear();
   ASSERT_TRUE(w.isEmpty());
 
 
-  w.addDateCol("col", ">", d);
-
+  w.addCol("d", ">", d);
   ASSERT_FALSE(w.isEmpty());
-  ASSERT_EQ("SELECT id FROM tab WHERE col>20160807", w.getSelectStmt("tab", false));
-  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col>20160807", w.getSelectStmt("tab", true));
-  ASSERT_EQ("DELETE FROM tab WHERE col>20160807", w.getDeleteStmt("tab"));
 
-  // invalid tab names
-  ASSERT_EQ("", w.getSelectStmt("", false));
-  ASSERT_EQ("", w.getDeleteStmt(""));
+  stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE d>20160807 ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE d>20160807 ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE d>20160807", stmt.getExpandedSQL());
 }
 
 //----------------------------------------------------------------
 
 TEST_F(DatabaseTestScenario, WhereClause_NullCol)
 {
+  SampleDB db = getScenario01();
   WhereClause w;
   ASSERT_TRUE(w.isEmpty());
 
-  w.addNullCol("col");
-
+  w.addNullCol("i");
   ASSERT_FALSE(w.isEmpty());
-  ASSERT_EQ("SELECT id FROM tab WHERE col IS NULL", w.getSelectStmt("tab", false));
-  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col IS NULL", w.getSelectStmt("tab", true));
-  ASSERT_EQ("DELETE FROM tab WHERE col IS NULL", w.getDeleteStmt("tab"));
+
+  auto stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i IS NULL ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE i IS NULL ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE i IS NULL", stmt.getExpandedSQL());
 
   w.clear();
   ASSERT_TRUE(w.isEmpty());
 
-  // invalid tab names
-  ASSERT_EQ("", w.getSelectStmt("", false));
-  ASSERT_EQ("", w.getDeleteStmt(""));
+  w.addNotNullCol("i");
+  ASSERT_FALSE(w.isEmpty());
+
+  stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i IS NOT NULL ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE i IS NOT NULL ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE i IS NOT NULL", stmt.getExpandedSQL());
 }
 
 //----------------------------------------------------------------
 
 TEST_F(DatabaseTestScenario, WhereClause_MultipleCol)
 {
+  SampleDB db = getScenario01();
   WhereClause w;
   ASSERT_TRUE(w.isEmpty());
 
-  w.addIntCol("col1", 23);
-  w.addDoubleCol("col2", 23.666);
-  w.addStringCol("col3", "xyz");
-  w.addNullCol("col4");
-
+  w.addCol("i", 23);
+  w.addCol("f", 23.666);
+  w.addCol("s", "xyz");
+  w.addNullCol("d");
   ASSERT_FALSE(w.isEmpty());
-  ASSERT_EQ("SELECT id FROM tab WHERE col1=23 AND col2=23.666000 AND col3=\"xyz\" AND col4 IS NULL", w.getSelectStmt("tab", false));
-  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col1=23 AND col2=23.666000 AND col3=\"xyz\" AND col4 IS NULL", w.getSelectStmt("tab", true));
-  ASSERT_EQ("DELETE FROM tab WHERE col1=23 AND col2=23.666000 AND col3=\"xyz\" AND col4 IS NULL", w.getDeleteStmt("tab"));
+
+  auto stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i=23 AND f=23.666 AND s='xyz' AND d IS NULL ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE i=23 AND f=23.666 AND s='xyz' AND d IS NULL ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE i=23 AND f=23.666 AND s='xyz' AND d IS NULL", stmt.getExpandedSQL());
 
   w.clear();
   ASSERT_TRUE(w.isEmpty());
 
-
-  w.addIntCol("col1", ">", 23);
-  w.addDoubleCol("col2", "<", 23.666);
-  w.addStringCol("col3", "<>", "xyz");
-  w.addNullCol("col4");
-
+  w.addCol("i", ">", 23);
+  w.addCol("f", "<", 23.666);
+  w.addCol("s", "<>", "xyz");
+  w.addNotNullCol("d");
   ASSERT_FALSE(w.isEmpty());
-  ASSERT_EQ("SELECT id FROM tab WHERE col1>23 AND col2<23.666000 AND col3<>\"xyz\" AND col4 IS NULL", w.getSelectStmt("tab", false));
-  ASSERT_EQ("SELECT COUNT(*) FROM tab WHERE col1>23 AND col2<23.666000 AND col3<>\"xyz\" AND col4 IS NULL", w.getSelectStmt("tab", true));
-  ASSERT_EQ("DELETE FROM tab WHERE col1>23 AND col2<23.666000 AND col3<>\"xyz\" AND col4 IS NULL", w.getDeleteStmt("tab"));
 
-  // invalid tab names
-  ASSERT_EQ("", w.getSelectStmt("", false));
-  ASSERT_EQ("", w.getDeleteStmt(""));
+  stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i>23 AND f<23.666 AND s<>'xyz' AND d IS NOT NULL ", stmt.getExpandedSQL());
+  stmt = w.getSelectStmt(db, "t1", true);
+  ASSERT_EQ("SELECT COUNT(*) FROM t1 WHERE i>23 AND f<23.666 AND s<>'xyz' AND d IS NOT NULL ", stmt.getExpandedSQL());
+  stmt = w.getDeleteStmt(db, "t1");
+  ASSERT_EQ("DELETE FROM t1 WHERE i>23 AND f<23.666 AND s<>'xyz' AND d IS NOT NULL", stmt.getExpandedSQL());
 }
 
 //----------------------------------------------------------------
 
-TEST_F(DatabaseTestScenario, ScalarQueryResult_Null)
+TEST_F(DatabaseTestScenario, WhereClause_OrderAndLimit)
 {
-  ScalarQueryResult<int> sqr;
+  SampleDB db = getScenario01();
+  WhereClause w;
+  ASSERT_TRUE(w.isEmpty());
 
-  ASSERT_TRUE(sqr.isNull());
-  ASSERT_THROW(sqr.get(), std::invalid_argument);
+  w.addCol("i", 23);
+  w.addCol("f", ">", 23.666);
+  ASSERT_FALSE(w.isEmpty());
+
+  w.setLimit(10);
+
+  auto stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i=23 AND f>23.666  LIMIT 10", stmt.getExpandedSQL());
+
+  w.clear();
+  w.addCol("i", 23);
+  w.addCol("f", ">", 23.666);
+  w.setOrderColumn_Asc("d");
+  stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i=23 AND f>23.666 ORDER BY d ASC", stmt.getExpandedSQL());
+  w.setOrderColumn_Asc("i,f");
+  stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i=23 AND f>23.666 ORDER BY d ASC, i,f ASC", stmt.getExpandedSQL());
+
+  w.clear();
+  w.addCol("i", 23);
+  w.addCol("f", ">", 23.666);
+  w.setOrderColumn_Desc("d");
+  stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i=23 AND f>23.666 ORDER BY d DESC", stmt.getExpandedSQL());
+  w.setOrderColumn_Desc("i,f");
+  stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i=23 AND f>23.666 ORDER BY d DESC, i,f DESC", stmt.getExpandedSQL());
+
+  w.setLimit(42);
+  stmt = w.getSelectStmt(db, "t1", false);
+  ASSERT_EQ("SELECT rowid FROM t1 WHERE i=23 AND f>23.666 ORDER BY d DESC, i,f DESC LIMIT 42", stmt.getExpandedSQL());
 }
-
-//----------------------------------------------------------------
-
-TEST_F(DatabaseTestScenario, ScalarQueryResult_Value)
-{
-  ScalarQueryResult<int> sqr(42);
-
-  ASSERT_FALSE(sqr.isNull());
-  ASSERT_EQ(42, sqr.get());
-}
-*/
