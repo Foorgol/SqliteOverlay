@@ -880,16 +880,50 @@ namespace SqliteOverlay
 
   SqliteDatabase SqliteDatabase::duplicateConnection(bool readOnly)
   {
-    const char* fName = sqlite3_db_filename(dbPtr, "main");
-    if (fName == nullptr)
+    string fn = filename();
+    if (fn.empty())
     {
-      throw std::invalid_argument("cloneConnection(): called on a temporary or in-memory database");
+      throw std::invalid_argument("duplicateConnection(): called on a temporary or in-memory database");
     }
-    string fn{fName};
 
     OpenMode om = readOnly ? OpenMode::OpenExisting_RO : OpenMode::OpenExisting_RW;
 
     return SqliteDatabase{fn, om, false};
+  }
+
+  //----------------------------------------------------------------------------
+
+  string SqliteDatabase::filename() const
+  {
+    const char* fName = sqlite3_db_filename(dbPtr, "main");
+
+    if (fName == nullptr)
+    {
+      return string{};
+    }
+
+    return string{fName};
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::operator==(const SqliteDatabase& other) const
+  {
+    if (other.dbPtr == dbPtr) return true;
+
+    string fn1 = filename();
+    string fn2 = other.filename();
+
+    if (fn1.empty() || fn2.empty()) return false;
+
+    return (fn1 == fn2);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqliteDatabase::operator!=(const SqliteDatabase& other) const
+  {
+    return (!(this->operator==(other)));
   }
 
   //----------------------------------------------------------------------------

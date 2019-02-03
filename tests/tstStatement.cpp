@@ -99,7 +99,7 @@ TEST_F(DatabaseTestScenario, StmtStep)
   ASSERT_TRUE(stmt.step());
   ASSERT_FALSE(stmt.isDone());
   ASSERT_TRUE(stmt.hasData());
-  ASSERT_NO_THROW(stmt.getInt(0));
+  ASSERT_THROW(stmt.getInt(0), NullValueException);  // i is NULL in the second row
   ASSERT_NO_THROW(stmt.getInt(1));
 }
 

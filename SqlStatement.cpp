@@ -14,6 +14,14 @@ using namespace Sloppy::DateTime;
 
 namespace SqliteOverlay
 {
+  SqlStatement::SqlStatement()
+    :stmt(nullptr), _hasData(false), _isDone(true), resultColCount(-1), stepCount(0)
+  {
+
+  }
+
+  //----------------------------------------------------------------------------
+
   SqlStatement::SqlStatement(sqlite3* dbPtr, const string& sqlTxt)
     :stmt(nullptr), _hasData(false), _isDone(false), resultColCount(-1), stepCount(0)
   {
@@ -131,7 +139,10 @@ namespace SqliteOverlay
 
   int SqlStatement::getInt(int colId) const
   {
-    assertColumnDataAccess(colId);
+    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
+    {
+      throw NullValueException();
+    }
 
     return sqlite3_column_int(stmt, colId);
   }
@@ -140,7 +151,10 @@ namespace SqliteOverlay
 
   long SqlStatement::getLong(int colId) const
   {
-    assertColumnDataAccess(colId);
+    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
+    {
+      throw NullValueException();
+    }
 
     return sqlite3_column_int64(stmt, colId);
   }
@@ -149,7 +163,10 @@ namespace SqliteOverlay
 
   double SqlStatement::getDouble(int colId) const
   {
-    assertColumnDataAccess(colId);
+    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
+    {
+      throw NullValueException();
+    }
 
     return sqlite3_column_double(stmt, colId);
   }
@@ -158,7 +175,10 @@ namespace SqliteOverlay
 
   string SqlStatement::getString(int colId) const
   {
-    assertColumnDataAccess(colId);
+    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
+    {
+      throw NullValueException();
+    }
 
     return string{reinterpret_cast<const char*>(sqlite3_column_text(stmt, colId))};
   }
@@ -167,7 +187,10 @@ namespace SqliteOverlay
 
   LocalTimestamp SqlStatement::getLocalTime(int colId, boost::local_time::time_zone_ptr tzp) const
   {
-    assertColumnDataAccess(colId);
+    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
+    {
+      throw NullValueException();
+    }
 
     time_t rawTime = sqlite3_column_int64(stmt, colId);
     return LocalTimestamp(rawTime, tzp);
@@ -177,7 +200,10 @@ namespace SqliteOverlay
 
   UTCTimestamp SqlStatement::getUTCTime(int colId) const
   {
-    assertColumnDataAccess(colId);
+    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
+    {
+      throw NullValueException();
+    }
 
     time_t rawTime = sqlite3_column_int64(stmt, colId);
     return UTCTimestamp(rawTime);
@@ -187,7 +213,10 @@ namespace SqliteOverlay
 
   Sloppy::MemArray SqlStatement::getBlob(int colId) const
   {
-    assertColumnDataAccess(colId);
+    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
+    {
+      throw NullValueException();
+    }
 
     // get the number of bytes in the blob
     size_t nBytes = sqlite3_column_bytes(stmt, colId);

@@ -1013,6 +1013,39 @@ namespace SqliteOverlay
         bool readOnly   ///< `true`: open the new connection in read-only mode; `false`: open in r/w mode
         );
 
+    /** \returns a string containing the path to the database file (empty for in-memory databases)
+     *
+     * \note Only the path for the main database ("main") will be returned! Other attached
+     * databases are ignored!
+     *
+     * Test case: implicitly as part of the `operator==()` and of `duplicateConnection()`
+     */
+    string filename() const;
+
+    /** \brief Overloaded operator for "is equal", compares the path
+     * to the database file and the raw `sqlite3*` handle.
+     *
+     * If the values of the `sqlite3*` handles are identical, we
+     * return `true`. In all other cases, we compare the file paths
+     * of the underlying database files.
+     *
+     * \note The check applies only to the main database ("main"). Attached databases
+     * are ignored for this check.
+     *
+     * Test case: yes
+     */
+    bool operator==(const SqliteDatabase& other) const;
+
+    /** \brief Overloaded operator for "is not equal", compares the path
+     * to the database file and the raw `sqlite3*` handle.
+     *
+     * \note The check applies only to the main database ("main"). Attached databases
+     * are ignored for this check.
+     *
+     * Test case: yes
+     */
+    bool operator!=(const SqliteDatabase& other) const;
+
   protected:
     /** \brief Copies the contents of the source database into the destination database,
      * original documentation of the backup process [here](https://www.sqlite.org/c3ref/backup_finish.html)

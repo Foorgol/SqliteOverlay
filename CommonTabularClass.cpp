@@ -69,7 +69,7 @@ namespace SqliteOverlay
 
     if (forceNameCheck)
     {
-      if (!(db.hasTable(tabName, isView)))
+      if (!(db.get().hasTable(tabName, isView)))
       {
         throw NoSuchTableException("CommonTabularClass ctor for table/view named " + tabName);
       }
@@ -81,7 +81,7 @@ namespace SqliteOverlay
   ColInfoList CommonTabularClass::allColDefs() const
   {
     ColInfoList result;
-    SqlStatement stmt = db.execContentQuery("PRAGMA table_info(" + tabName + ")");
+    SqlStatement stmt = db.get().execContentQuery("PRAGMA table_info(" + tabName + ")");
       
     while (stmt.hasData())
     {
@@ -112,7 +112,7 @@ namespace SqliteOverlay
       throw std::invalid_argument("Invalid column name");
     }
 
-    SqlStatement stmt = db.prepStatement("SELECT type FROM pragma_table_info(?) WHERE name=?");
+    SqlStatement stmt = db.get().prepStatement("SELECT type FROM pragma_table_info(?) WHERE name=?");
     stmt.bind(1, tabName);
     stmt.bind(2, colName);
 
@@ -134,7 +134,7 @@ namespace SqliteOverlay
       throw std::invalid_argument("Invalid column ID");
     }
 
-    SqlStatement stmt = db.prepStatement("SELECT name FROM pragma_table_info(?) WHERE cid=?");
+    SqlStatement stmt = db.get().prepStatement("SELECT name FROM pragma_table_info(?) WHERE cid=?");
     stmt.bind(1, tabName);
     stmt.bind(2, cid);
 
@@ -156,7 +156,7 @@ namespace SqliteOverlay
       throw std::invalid_argument("Invalid column name");
     }
 
-    SqlStatement stmt = db.prepStatement("SELECT cid FROM pragma_table_info(?) WHERE name=?");
+    SqlStatement stmt = db.get().prepStatement("SELECT cid FROM pragma_table_info(?) WHERE name=?");
     stmt.bind(1, tabName);
     stmt.bind(2, colName);
 
@@ -189,11 +189,11 @@ namespace SqliteOverlay
 
   bool CommonTabularClass::hasColumn(int cid) const
   {
-    SqlStatement stmt = db.prepStatement("SELECT count(*) FROM pragma_table_info(?) WHERE cid=?");
+    SqlStatement stmt = db.get().prepStatement("SELECT count(*) FROM pragma_table_info(?) WHERE cid=?");
     stmt.bind(1, tabName);
     stmt.bind(2, cid);
 
-    return (db.execScalarQueryInt(stmt) > 0);
+    return (db.get().execScalarQueryInt(stmt) > 0);
   }
 
 //----------------------------------------------------------------------------
@@ -205,7 +205,7 @@ namespace SqliteOverlay
       throw std::invalid_argument("Match count for empty where clause");
     }
     SqlStatement stmt = w.getSelectStmt(db, tabName, true);
-    return db.execScalarQueryInt(stmt);
+    return db.get().execScalarQueryInt(stmt);
   }
 
 //----------------------------------------------------------------------------
@@ -221,7 +221,7 @@ namespace SqliteOverlay
 
     try
     {
-      SqlStatement stmt = db.prepStatement(sql);
+      SqlStatement stmt = db.get().prepStatement(sql);
       stmt.step();
       return stmt.getInt(0);
     }
@@ -242,7 +242,7 @@ namespace SqliteOverlay
 
     string sql = "SELECT COUNT(*) FROM " + tabName + " WHERE " + where;
 
-    return db.execScalarQueryInt(sql);
+    return db.get().execScalarQueryInt(sql);
   }
 
 
@@ -250,7 +250,7 @@ namespace SqliteOverlay
 
   int CommonTabularClass::length() const
   {
-    return db.execScalarQueryInt("SELECT COUNT(*) FROM " + tabName);
+    return db.get().execScalarQueryInt("SELECT COUNT(*) FROM " + tabName);
   }
 
 //----------------------------------------------------------------------------

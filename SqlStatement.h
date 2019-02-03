@@ -12,6 +12,7 @@
 #include <Sloppy/Logger/Logger.h>
 
 #include "Defs.h"
+#include "SqliteExceptions.h"
 
 using namespace std;
 using namespace Sloppy::DateTime;
@@ -25,6 +26,11 @@ namespace SqliteOverlay
   class SqlStatement
   {
   public:
+    /** \brief Default ctor for an SQL statement; the resulting object is
+     * similar to a finalized statement and shouldn't be used for any operation.
+     */
+    SqlStatement();
+
     /** \brief Standard ctor for a new SQL statement
      *
      * \throws std::invalid_argument if one or both of the provided parameters are empty
@@ -670,13 +676,18 @@ namespace SqliteOverlay
     template<typename T>
     void get(int colId, optional<T>& result)
     {
-      if (isNull(colId))
+      T tmp;
+
+      try
+      {
+        get(colId, tmp);
+      }
+      catch (NullValueException)
       {
         result.reset();
         return;
       }
-      T tmp;
-      get(colId, tmp);
+
       result = tmp;
     }
 
@@ -786,7 +797,7 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2, typename T3, typename T4>
-    tuple<T1, T2, T3> tupleGet(int col1, int col2, int col3, int col4)
+    tuple<T1, T2, T3, T4> tupleGet(int col1, int col2, int col3, int col4)
     {
       T1 r1;
       get(col1, r1);

@@ -171,11 +171,9 @@ void DatabaseTestScenario::SetUp()
 void closeRawSqliteDb(sqlite3* ptr)
 {
   if (ptr != nullptr) sqlite3_close(ptr);
-  cout << "Deleter for raw DB called!" << endl;
 }
 
 void closeRawSqliteStmt(sqlite3_stmt* ptr)
 {
   if (ptr != nullptr) sqlite3_finalize(ptr);
-  cout << "Deleter for raw statement called!" << endl;
 }

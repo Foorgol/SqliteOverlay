@@ -36,16 +36,19 @@ namespace SqliteOverlay
      * that has just been executed), the check can be skiped and thus
      * the penalty for constructing a new TabRow object can be reduced.
      *
-     * \throws std::invalid_argument if the database pointer or the table name
+     * \throws std::invalid_argument if the table name
      * is empty or if the provided row ID was invalid
      *
      * \throws BusyException if the database wasn't available for checking the
      * validity of the rowId
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes
+     *
      */
     TabRow (
-        const SqliteDatabase* db,   ///< the database that contains the table
+        const SqliteDatabase& db,   ///< the database that contains the table
         const string& _tabName,  ///< the table name
         int _rowId,   ///< the ID of the row, has to be in a column named "id"
         bool skipCheck = false   ///< if `true` the validity of the ID (read: the actual existence of the row) will *not* be checked
@@ -61,28 +64,72 @@ namespace SqliteOverlay
      * validity of the rowId
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes
+     *
      */
     TabRow (
-        const SqliteDatabase* db,   ///< the database that contains the table
+        const SqliteDatabase& db,   ///< the database that contains the table
         const string& _tabName,  ///< the table name
         const WhereClause& where   ///< the WHERE clause that identifies the row
         );
 
-    /** \brief Empty default dtor */
+    /** \brief Empty default dtor
+     */
     virtual ~TabRow () {}
 
-    /** \returns the row's ID */
-    int getId() const;
+    /** \brief Copy operator, makes us point to the same row as 'other'
+     *
+     * Test case: yes
+     *
+     */
+    TabRow& operator=(const TabRow& other);
+
+    /** \brief Copy ctor, creates a new object that points to the same row as 'other'
+     *
+     * Test case: yes
+     *
+     */
+    TabRow(const TabRow& other);
+
+    /** \brief Move operator, invalidates the source row
+     *
+     * Test case: yes
+     *
+     */
+    TabRow& operator=(TabRow&& other);
+
+    /** \brief Move ctor, invalidates the source row
+     *
+     * Test case: yes
+     *
+     */
+    TabRow(TabRow&& other);
+
+    /** \returns the row's rowid-value
+     *
+     * Test case: yes
+     *
+     */
+    int id() const;
 
     /** \brief Updates one or more columns of the row to new values
+     *
+     * If the ColumnValueClause doesn't contain any data, we simply
+     * do nothing and return immediately.
      *
      * \throws BusyException if the database wasn't available for
      * updating the columns
      *
+     * \throws std::invalid_argument if the ColumnValueClause contained invalid column names
+     *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes
+     *
      */
     void update(
-        const ColumnValueClause& cvc
+        const ColumnValueClause& cvc   ///< ColumnValueClause with a list of column-value-pairs for the update
         ) const;
 
     /** \brief Updates a given column of the row to a new value; works for
@@ -91,7 +138,12 @@ namespace SqliteOverlay
      * \throws BusyException if the database wasn't available for
      * updating the column
      *
+     * \throws std::invalid_argument if the provided column doesn't exist
+     *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes
+     *
      */
     template<typename T>
     void update(
@@ -99,55 +151,43 @@ namespace SqliteOverlay
         const T& newVal   ///< the new value for that column
         ) const
     {
+      if (colName.empty())
+      {
+        throw std::invalid_argument("Tabrow::update(): empty column name");
+      }
+
       Sloppy::estring sql{cachedUpdateStatementForRow};
       sql.arg(colName);
-      SqlStatement stmt = db->prepStatement(sql);
+
+      SqlStatement stmt;
+      try
+      {
+        stmt = db.get().prepStatement(sql);
+      }
+      catch (SqlStatementCreationError)
+      {
+        throw std::invalid_argument("Tabrow::update(): invalid column name");
+      }
+      catch (...)
+      {
+        throw;
+      }
+
       stmt.bind(1, newVal);
-
-      db->execNonQuery(stmt);
+      db.get().execNonQuery(stmt);
     }
-
-    /** \brief Updates a given column of the row to a new value
-     *
-     * \throws BusyException if the database wasn't available for
-     * updating the column
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     */
-    void update(
-        const string& colName,   ///< the name of the column to modify
-        const LocalTimestamp& newVal   ///< the new value for that column
-        ) const;
-
-    /** \brief Updates a given column of the row to a new value
-     *
-     * \throws BusyException if the database wasn't available for
-     * updating the column
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     */
-    void update(
-        const string& colName,   ///< the name of the column to modify
-        const UTCTimestamp& newVal) const;
-
-    /** \brief Updates a given column of the row to a new value
-     *
-     * \throws BusyException if the database wasn't available for
-     * updating the column
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     */
-    void update(
-        const string& colName,   ///< the name of the column to modify
-        const greg::date& newVal   ///< the new value for that column
-        ) const;
 
     /** \brief Updates a given column of the row to NULL
      *
      * \throws BusyException if the database wasn't available for
      * updating the column
      *
+     * \throws std::invalid_argument if the provided column doesn't exist
+     *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes
+     *
      */
     void updateToNull(
         const string& colName   ///< the name of the column to modify
@@ -164,10 +204,61 @@ namespace SqliteOverlay
      * or row has been deleted in the meantime)
      *
      * \throws NullValueException if the column contained NULL
+     *
+     * Test case: yes
+     *
      */
     string operator[](
         const string& colName   ///< the name of the column to query
         ) const;
+
+    /** \returns the contents of a given column in various types
+     *
+     * \throws std::invalid argument if the column name was empty
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
+     * or row has been deleted in the meantime)
+     *
+     * \throws NullValueException if the column contained NULL and the result type isn't `optional<...>`
+     *
+     * Test case: yes, as part of the getXXX functions
+     *
+     */
+    template<typename T>
+    T get(
+        const string& colName   ///< the name of the column to query
+        ) const
+    {
+      if (colName.empty())
+      {
+        throw std::invalid_argument("Column access: received empty column name");
+      }
+
+      SqlStatement stmt;
+      string sql = "SELECT " + colName + cachedWhereStatementForRow;
+      try
+      {
+        stmt = db.get().prepStatement(sql);
+      }
+      catch (SqlStatementCreationError)
+      {
+        throw std::invalid_argument("Column access: received invalid column name");
+      }
+      catch (...)
+      {
+        throw;
+      }
+
+      stmt.step();
+
+      T outVal;
+      stmt.get(0, outVal);
+
+      return outVal;
+    }
 
     /** \returns the contents of a given column as an integer
      *
@@ -180,6 +271,9 @@ namespace SqliteOverlay
      * or row has been deleted in the meantime)
      *
      * \throws NullValueException if the column contained NULL
+     *
+     * Test case: yes
+     *
      */
     int getInt(
         const string& colName   ///< the name of the column to query
@@ -196,6 +290,28 @@ namespace SqliteOverlay
      * or row has been deleted in the meantime)
      *
      * \throws NullValueException if the column contained NULL
+     *
+     * Test case: yes
+     *
+     */
+    long getLong(
+        const string& colName   ///< the name of the column to query
+        ) const;
+
+    /** \returns the contents of a given column as an integer
+     *
+     * \throws std::invalid argument if the column name was empty
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
+     * or row has been deleted in the meantime)
+     *
+     * \throws NullValueException if the column contained NULL
+     *
+     * Test case: yes
+     *
      */
     double getDouble(
         const string& colName   ///< the name of the column to query
@@ -212,6 +328,9 @@ namespace SqliteOverlay
      * or row has been deleted in the meantime)
      *
      * \throws NullValueException if the column contained NULL
+     *
+     * Test case: not yet
+     *
      */
     LocalTimestamp getLocalTime(
         const string& colName,   ///< the name of the column to query
@@ -229,8 +348,13 @@ namespace SqliteOverlay
      * or row has been deleted in the meantime)
      *
      * \throws NullValueException if the column contained NULL
+     *
+     * Test case: yes
+     *
      */
-    UTCTimestamp getUTCTime(const string& colName) const;
+    UTCTimestamp getUTCTime(
+        const string& colName   ///< the name of the column to query
+        ) const;
 
     /** \returns the contents of a given column as a date
      *
@@ -246,8 +370,13 @@ namespace SqliteOverlay
      * or row has been deleted in the meantime)
      *
      * \throws NullValueException if the column contained NULL
+     *
+     * Test case: yes
+     *
      */
-    greg::date getDate(const string& colName) const;
+    greg::date getDate(
+        const string& colName   ///< the name of the column to query
+        ) const;
 
     /** \returns the contents of a given column as an integer or NULL if the column was empty
      *
@@ -258,8 +387,30 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the query didn't return any data (e.g., invalid column name
      * or row has been deleted in the meantime)
+     *
+     * Test case: yes
+     *
      */
-    optional<int> getInt2(const string& colName) const;
+    optional<int> getInt2(
+        const string& colName   ///< the name of the column to query
+        ) const;
+
+    /** \returns the contents of a given column as a long integer or NULL if the column was empty
+     *
+     * \throws std::invalid argument if the column name was empty
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
+     * or row has been deleted in the meantime)
+     *
+     * Test case: yes
+     *
+     */
+    optional<long> getLong2(
+        const string& colName   ///< the name of the column to query
+        ) const;
 
     /** \returns the contents of a given column as a double or NULL if the column was empty
      *
@@ -270,8 +421,13 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the query didn't return any data (e.g., invalid column name
      * or row has been deleted in the meantime)
+     *
+     * Test case: yes
+     *
      */
-    optional<double> getDouble2(const string& colName) const;
+    optional<double> getDouble2(
+        const string& colName   ///< the name of the column to query
+        ) const;
 
     /** \returns the contents of a given column as a string or NULL if the column was empty
      *
@@ -282,8 +438,13 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the query didn't return any data (e.g., invalid column name
      * or row has been deleted in the meantime)
+     *
+     * Test case: yes
+     *
      */
-    optional<string> getString2(const string& colName) const;
+    optional<string> getString2(
+        const string& colName   ///< the name of the column to query
+        ) const;
 
     /** \returns the contents of a given column as a LocalTimestamp
      * or NULL if the column was empty
@@ -295,8 +456,14 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the query didn't return any data (e.g., invalid column name
      * or row has been deleted in the meantime)
+     *
+     * Test case: not yet
+     *
      */
-    optional<LocalTimestamp> getLocalTime2(const string& colName, boost::local_time::time_zone_ptr tzp) const;
+    optional<LocalTimestamp> getLocalTime2(
+        const string& colName,   ///< the name of the column to query
+        boost::local_time::time_zone_ptr tzp   ///< pointer to the local time zone description
+        ) const;
 
     /** \returns the contents of a given column as a UTCTimestamp
      * or NULL if the column was empty
@@ -309,7 +476,9 @@ namespace SqliteOverlay
      * \throws NoDataException if the query didn't return any data (e.g., invalid column name
      * or row has been deleted in the meantime)
      */
-    optional<UTCTimestamp> getUTCTime2(const string& colName) const;
+    optional<UTCTimestamp> getUTCTime2(
+        const string& colName   ///< the name of the column to query
+        ) const;
 
     /** \returns the contents of a given column as a date
      * or NULL if the column was empty
@@ -321,35 +490,44 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the query didn't return any data (e.g., invalid column name
      * or row has been deleted in the meantime)
+     *
+     * Test case: yes
+     *
      */
-    optional<greg::date> getDate2(const string& colName) const;
+    optional<greg::date> getDate2(
+        const string& colName   ///< the name of the column to query
+        ) const;
 
     /** \brief Overload operator for "is equal", compares table name,
-     * row ID and database pointer.
+     * row ID and path to the database file
      *
-     * Thus, it returns only `true` if both TabRows belong
-     * to the same SqliteDatabase pointer (read: to the same
-     * database connection)!
+     *
+     * Test case: yes
+     *
      */
     inline bool operator== (const TabRow& other) const
     {
-      return ((other.tabName == tabName) && (other.rowId == rowId) && (other.db == db));  // enforce the same db handle!
+      return ((other.tabName == tabName) && (other.rowId == rowId) && (other.db.get() == db.get()));  // enforce the same db file!
     }
 
     /** \brief Overload operator for "is not equal", compares table name,
-     * row ID and database pointer.
+     * and row ID.
      *
-     * Thus, it returns only `false` if both TabRows belong
-     * to the same SqliteDatabase pointer (read: to the same
-     * database connection)!
+     *
+     * Test case: yes
+     *
      */
     inline bool operator!= (const TabRow& other) const
     {
       return (!(this->operator == (other)));
     }
 
-    /** \returns the pointer to the database we're using */
-    const SqliteDatabase* getDb() const;
+    /** \returns the reference to the database we're using
+     *
+     * Test case: not yet
+     *
+     */
+    const SqliteDatabase& getDb() const;
 
     /** \brief Erases the row from the table.
      *
@@ -360,19 +538,213 @@ namespace SqliteOverlay
      * deleting the column
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes
+     *
      */
     void erase() const;
+
+    /** \returns two column values with a single SELECT statement / a single database query
+     *
+     * \throws std::invalid argument if the column name was empty or invalid
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NullValueException if the column contained NULL and the requested type is not `optional<...>`
+     *
+     * Test case: yes
+     *
+     */
+    template<typename T1, typename T2>
+    void multiGetByRef(
+        const string& colName1,   ///< name of the first column to get
+        T1& out1,   ///< reference for storing the value of the first column
+        const string& colName2,   ///< name of the second column to get
+        T2& out2   ///< reference for storing the value of the second column
+        ) const
+    {
+      SqlStatement stmt = getSelectStatementWithColumnChecking(colName1, colName2);
+      stmt.step();
+      stmt.multiGet(0, out1, 1, out2);
+    }
     
+    /** \returns three column values with a single SELECT statement / a single database query
+     *
+     * \throws std::invalid argument if the column name was empty or invalid
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NullValueException if the column contained NULL and the requested type is not `optional<...>`
+     *
+     * Test case: yes
+     *
+     */
+    template<typename T1, typename T2, typename T3>
+    void multiGetByRef(
+        const string& colName1,
+        T1& out1,
+        const string& colName2,
+        T2& out2,
+        const string& colName3,
+        T3& out3
+        ) const
+    {
+      SqlStatement stmt = getSelectStatementWithColumnChecking(colName1, colName2, colName3);
+      stmt.step();
+      stmt.multiGet(0, out1, 1, out2, 2, out3);
+    }
+
+    /** \returns four column values with a single SELECT statement / a single database query
+     *
+     * \throws std::invalid argument if the column name was empty or invalid
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NullValueException if the column contained NULL and the requested type is not `optional<...>`
+     *
+     * Test case: yes
+     *
+     */
+    template<typename T1, typename T2, typename T3, typename T4>
+    void multiGetByRef(
+        const string& colName1,
+        T1& out1,
+        const string& colName2,
+        T2& out2,
+        const string& colName3,
+        T3& out3,
+        const string& colName4,
+        T4& out4
+        ) const
+    {
+      SqlStatement stmt = getSelectStatementWithColumnChecking(colName1, colName2, colName3, colName4);
+      stmt.step();
+      stmt.multiGet(0, out1, 1, out2, 2, out3, 3, out4);
+    }
+
+    /** \returns two column values with a single SELECT statement / a single database query
+     *
+     * \throws std::invalid argument if the column name was empty or invalid
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NullValueException if the column contained NULL and the requested type is not `optional<...>`
+     *
+     * Test case: yes
+     *
+     */
+    template<typename T1, typename T2>
+    tuple<T1,T2> multiGetAsTuple(
+        const string& colName1,
+        const string& colName2
+        ) const
+    {
+      SqlStatement stmt = getSelectStatementWithColumnChecking(colName1, colName2);
+      stmt.step();
+      return stmt.tupleGet<T1, T2>(0, 1);
+    }
+
+    /** \returns three column values with a single SELECT statement / a single database query
+     *
+     * \throws std::invalid argument if the column name was empty or invalid
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NullValueException if the column contained NULL and the requested type is not `optional<...>`
+     *
+     * Test case: yes
+     *
+     */
+    template<typename T1, typename T2, typename T3>
+    tuple<T1,T2, T3> multiGetAsTuple(
+        const string& colName1,
+        const string& colName2,
+        const string& colName3
+        ) const
+    {
+      SqlStatement stmt = getSelectStatementWithColumnChecking(colName1, colName2, colName3);
+      stmt.step();
+      return stmt.tupleGet<T1, T2, T3>(0, 1, 2);
+    }
+
+    /** \returns four column values with a single SELECT statement / a single database query
+     *
+     * \throws std::invalid argument if the column name was empty or invalid
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NullValueException if the column contained NULL and the requested type is not `optional<...>`
+     *
+     * Test case: yes
+     *
+     */
+    template<typename T1, typename T2, typename T3, typename T4>
+    tuple<T1,T2, T3, T4> multiGetAsTuple(
+        const string& colName1,
+        const string& colName2,
+        const string& colName3,
+        const string& colName4
+        ) const
+    {
+      SqlStatement stmt = getSelectStatementWithColumnChecking(colName1, colName2, colName3, colName4);
+      stmt.step();
+      return stmt.tupleGet<T1, T2, T3, T4>(0, 1, 2, 3);
+    }
+
   protected:
+    void genCommaSepString(string& target, const string& element) const
+    {
+      if (element.empty()) return;
+      if (!target.empty()) target += ",";
+      target += element;
+    }
+
+    template<typename T, typename... Targs>
+    void genCommaSepString(string& target, const T& element, Targs... FuncArgs) const
+    {
+      genCommaSepString(target, element);
+      genCommaSepString(target, FuncArgs...);
+    }
+
+    template<typename... Targs>
+    SqlStatement getSelectStatementWithColumnChecking(Targs... FuncArgs) const
+    {
+      string colNames;
+      genCommaSepString(colNames, FuncArgs...);
+      string sql = "SELECT " + colNames + cachedWhereStatementForRow;
+
+      SqlStatement stmt;
+      try
+      {
+        stmt = db.get().prepStatement(sql);
+      }
+      catch (SqlStatementCreationError)
+      {
+        throw std::invalid_argument("Column access: received invalid column name");
+      }
+      catch (...)
+      {
+        throw;
+      }
+
+      return stmt;
+    }
+
     /**
      * the handle to the (parent) database
      */
-    const SqliteDatabase* const db;
+    reference_wrapper<const SqliteDatabase> db;
     
     /**
      * the name of the associated table
      */
-    const string tabName;
+    string tabName;
     
     /**
      * the unique index of the data row
@@ -381,9 +753,6 @@ namespace SqliteOverlay
 
     string cachedWhereStatementForRow;
     Sloppy::estring cachedUpdateStatementForRow;
-    
-  private:
-
   };
 }
 

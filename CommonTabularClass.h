@@ -214,7 +214,7 @@ namespace SqliteOverlay
       string sql = sqlColumnCount + col + "=?";
       try
       {
-        SqlStatement stmt = db.prepStatement(sql);
+        SqlStatement stmt = db.get().prepStatement(sql);
         stmt.bind(1, val);
         stmt.step();
         return stmt.getInt(0);
@@ -253,7 +253,7 @@ namespace SqliteOverlay
     /**
      * the handle to the (parent) database
      */
-    const SqliteDatabase& db;
+    reference_wrapper<const SqliteDatabase> db;
     
     /**
      * the name of the associated table or view

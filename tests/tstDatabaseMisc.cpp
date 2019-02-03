@@ -105,3 +105,25 @@ TEST_F(DatabaseTestScenario, CheckDirty)
   ASSERT_FALSE(db2.hasLocalChanges());
   ASSERT_FALSE(db2.hasExternalChanges());
 }
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, CheckDatabaseComparison)
+{
+  auto db1 = getScenario01();
+  auto db2 = db1.duplicateConnection(false);
+  SqliteDatabase memDb{};
+
+  ASSERT_TRUE(db1 == db2);  // different handles but same file
+  ASSERT_TRUE(db1 == db1);
+  ASSERT_TRUE(memDb == memDb);
+
+  ASSERT_FALSE(memDb == db1);
+
+
+  ASSERT_FALSE(db1 != db2);  // different handles but same file
+  ASSERT_FALSE(db1 != db1);
+  ASSERT_FALSE(memDb != memDb);
+
+  ASSERT_TRUE(memDb != db1);
+}
