@@ -37,24 +37,28 @@ namespace SqliteOverlay
      * of Column Affinity" [here](https://www.sqlite.org/datatype3.html).
      */
     ColInfo (
-        int _cid,   ///< the zero-based column id
-        const string& _name,   ///< the column name
-        const string& _type   ///< the column type as used in the "CREATE TABLE" statement
+        int colId,   ///< the zero-based column id
+        const string& colName,   ///< the column name
+        const string& colType   ///< the column type as used in the "CREATE TABLE" statement
         );
 
     /** \returns the column's zero-based ID */
-    int getId () const;
+    int id () const;
 
     /** \returns the column's name */
-    string getColName () const;
+    string name () const;
+
+    /** \returns the column's declared type, as provided in the CREATE TABLE statement */
+    string declType() const;
 
     /** \returns the column's type (or more precise: the column's type affinity) */
-    ColumnDataType getColType () const;
+    ColumnAffinity affinity () const;
     
   private:
-    const int cid;
-    const string name;
-    const ColumnDataType type;
+    int _id;
+    string _name;
+    string _declType;
+    ColumnAffinity _affinity;
     
   };
   
@@ -69,13 +73,16 @@ namespace SqliteOverlay
   public:
     /** \brief Ctor for a given table/view in a given database
      *
-     * \throws std::invalid_argument if the database pointer or the table name is empty
+     * \throws std::invalid_argument if the table name is empty
      *
      * \throws NoSuchTable if the name check for the provided table name fails
+     *
+     * Test case: yes
+     *
      */
     CommonTabularClass (
-        SqliteDatabase* db,   ///< pointer to the database that contains the table / the view
-        const string& tabName,   ///< the table's / view's name (case sensitive)
+        const SqliteDatabase& _db,   ///< pointer to the database that contains the table / the view
+        const string& _tabName,   ///< the table's / view's name (case sensitive)
         bool _isView,   ///< `true`: the name identifies a view; `false`: the name identifies a table
         bool forceNameCheck   ///< `true`: check whether a table/view of the provided name exists
         );
@@ -85,40 +92,81 @@ namespace SqliteOverlay
     virtual ~CommonTabularClass () {}
     
     /** \returns a list of all column definitions in the table
+     *
+     * Test case: yes
+     *
      */
     ColInfoList allColDefs() const;
 
-    /** \returns the column's type (or more precise: the column's type affinity)
-     * with the special value NULL if the column does not exist */
-    ColumnDataType getColType(
+    /** \returns the column's type affinity
+     *
+     * Test case: yes
+     *
+     */
+    ColumnAffinity colAffinity(
+        const string& colName   ///< the name of the column to get the type for
+        ) const;
+
+    /** \returns the column's declared type as provided in the CREATE TABLE statement
+     *
+     * \throws std::invalid_argument if the provided column name is invalid or empty
+     *
+     * Test case: yes
+     *
+     */
+    string colDeclType(
         const string& colName   ///< the name of the column to get the type for
         ) const;
 
     /** \returns the name for a given zero-based column id or an empty string
-     * if the column does not exist */
+     * if the column does not exist
+     *
+     * \throws std::invalid_argument if the provided column name is invalid or empty
+     *
+     * Test case: yes
+     *
+     */
     string cid2name(
         int cid   ///< the zero-based ID of the column to get the name for
         ) const;
 
     /** \returns the column's zero-based ID
-     * with the special value -1 if the column does not exist */
+     *
+     * \throws std::invalid_argument if the provided column name is invalid or empty
+     *
+     * Test case: yes
+     *
+     */
     int name2cid(
         const string& colName   ///< the name of the column to get the ID for
         ) const;
 
-    /** \returns `true` if the table has a column of the given name (case-sensitive) */
+    /** \returns `true` if the table has a column of the given name (case-sensitive)
+     *
+     * Test case: yes
+     *
+     */
     bool hasColumn(const string& colName) const;
 
-    /** \returns `true` if the table has a column of the given zero-based ID */
+    /** \returns `true` if the table has a column of the given zero-based ID
+     *
+     * Test case: yes
+     *
+     */
     bool hasColumn(int cid) const;
 
     /** \returns the number of rows that match the conditions defined in a WHERE clause
      *
      * \throws std::invalid argument if no column values have been defined in the WHERE clause
      *
+     * \throws SqlStatementCreationError if the WHERE clause contained invalid column names
+     *
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes
+     *
      */
     int getMatchCountForWhereClause(
         const WhereClause& w   ///< the WHERE clause for which the number of matching rows shall be returned
@@ -126,11 +174,16 @@ namespace SqliteOverlay
 
     /** \returns the number of rows that match the conditions defined in a WHERE clause
      *
+     * \throws std::invalid argument if the provided string is empty
+     *
      * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
      *
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes
+     *
      */
     int getMatchCountForWhereClause(
         const string& where   ///< everything after "WHERE ..." in the SELECT statement
@@ -138,16 +191,39 @@ namespace SqliteOverlay
 
     /** \returns the number of rows in which a given column contains a given value
      *
-     * \throws std::invalid argument if the column name is empty
+     * \throws std::invalid argument if the column name is empty or invalid
      *
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * Test case: yes
+     *
      */
+    template<typename T>
     int getMatchCountForColumnValue(
         const string& col,   ///< the column name
-        const string& val   ///< the column value
-        ) const;
+        const T& val   ///< the column value
+        ) const
+    {
+      if (col.empty())
+      {
+        throw std::invalid_argument("getMatchCountForColumnValue(): empty column name");
+      }
+
+      string sql = sqlColumnCount + col + "=?";
+      try
+      {
+        SqlStatement stmt = db.prepStatement(sql);
+        stmt.bind(1, val);
+        stmt.step();
+        return stmt.getInt(0);
+      }
+      catch (SqlStatementCreationError e)
+      {
+        throw std::invalid_argument("getMatchCountForColumnValue(): invalid column name");
+      }
+    }
 
     /** \returns the number of rows in which a given column contains a given value
      *
@@ -156,45 +232,9 @@ namespace SqliteOverlay
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
-     */
-    int getMatchCountForColumnValue(
-        const string& col,   ///< the column name
-        int val   ///< the column value
-        ) const;
-
-    /** \returns the number of rows in which a given column contains a given value
      *
-     * \throws std::invalid argument if the column name is empty
+     * Test case: yes
      *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     */
-    int getMatchCountForColumnValue(
-        const string& col,   ///< the column name
-        double val   ///< the column value
-        ) const;
-
-    /** \returns the number of rows in which a given column contains a given value
-     *
-     * \throws std::invalid argument if the column name is empty
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     */
-    int getMatchCountForColumnValue(
-        const string& col,   ///< the column name
-        const CommonTimestamp* pTimestamp   ///< the column value
-        ) const;
-
-    /** \returns the number of rows in which a given column contains a given value
-     *
-     * \throws std::invalid argument if the column name is empty
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
      */
     int getMatchCountForColumnValueNull(
         const string& col  ///< the column name
@@ -203,6 +243,9 @@ namespace SqliteOverlay
     /** \returns the number of rows in the table
      *
      * \throws BusyException if the statement couldn't be executed because the DB was busy
+     *
+     * Test case: yes
+     *
      */
     int length() const;
 
@@ -210,7 +253,7 @@ namespace SqliteOverlay
     /**
      * the handle to the (parent) database
      */
-    const SqliteDatabase* const db;
+    const SqliteDatabase& db;
     
     /**
      * the name of the associated table or view

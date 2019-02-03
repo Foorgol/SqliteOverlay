@@ -165,19 +165,19 @@ TEST_F(DatabaseTestScenario, StmtColTypeAndName)
   ASSERT_TRUE(stmt.dataStep());
 
   // test all getters
-  ASSERT_EQ(ColumnDataType::Integer, stmt.getColType(0));
-  ASSERT_EQ(ColumnDataType::Integer, stmt.getColType(1));
-  ASSERT_EQ(ColumnDataType::Float, stmt.getColType(2));
-  ASSERT_EQ(ColumnDataType::Text, stmt.getColType(3));
-  ASSERT_EQ(ColumnDataType::Text, stmt.getColType(4));
+  ASSERT_EQ(ColumnDataType::Integer, stmt.getColDataType(0));
+  ASSERT_EQ(ColumnDataType::Integer, stmt.getColDataType(1));
+  ASSERT_EQ(ColumnDataType::Float, stmt.getColDataType(2));
+  ASSERT_EQ(ColumnDataType::Text, stmt.getColDataType(3));
+  ASSERT_EQ(ColumnDataType::Text, stmt.getColDataType(4));
 
   // test invalid columns
-  ASSERT_THROW(stmt.getColType(42), InvalidColumnException);
+  ASSERT_THROW(stmt.getColDataType(42), InvalidColumnException);
 
   // test NULL columns
   stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=2"};
   ASSERT_TRUE(stmt.dataStep());
-  ASSERT_EQ(ColumnDataType::Null, stmt.getColType(0));
+  ASSERT_EQ(ColumnDataType::Null, stmt.getColDataType(0));
   ASSERT_TRUE(stmt.isNull(0));
 }
 

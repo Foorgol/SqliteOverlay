@@ -74,7 +74,7 @@ namespace SqliteOverlay
    * Test case: not yet
    *
    */
-  ColumnDataType string2Affinity(const string& colType);
+  ColumnAffinity string2Affinity(const string& colType);
 
   //----------------------------------------------------------------------------
 

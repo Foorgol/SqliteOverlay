@@ -990,7 +990,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  ColumnDataType string2Affinity(const string& colType)
+  ColumnAffinity string2Affinity(const string& colType)
   {
     Sloppy::estring t{colType};
     t.toUpper();
@@ -1003,7 +1003,7 @@ namespace SqliteOverlay
     // Rule 1, integer affinity
     if (t.contains("INT"))
     {
-      return ColumnDataType::Integer;
+      return ColumnAffinity::Integer;
     }
 
     // Rule 2, text affinity
@@ -1011,14 +1011,14 @@ namespace SqliteOverlay
     {
       if (t.contains(s))
       {
-        return ColumnDataType::Text;
+        return ColumnAffinity::Text;
       }
     }
 
     // Rule 3, blob affinity
     if (colType.empty() || (t.contains("BLOB")))
     {
-      return ColumnDataType::Blob;
+      return ColumnAffinity::Blob;
     }
 
     // Rule 4, real affinity
@@ -1026,12 +1026,12 @@ namespace SqliteOverlay
     {
       if (t.contains(s))
       {
-        return ColumnDataType::Float;
+        return ColumnAffinity::Real;
       }
     }
 
     // Rule 5, numeric affinity is the default
-    return ColumnDataType::NumericAffinity;
+    return ColumnAffinity::Numeric;
   }
 
 

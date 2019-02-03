@@ -42,10 +42,12 @@ set(LIB_SOURCES
     SqliteDatabase.h
     SqlStatement.cpp
     SqlStatement.h
-    #CommonTabularClass.cpp
+    CommonTabularClass.cpp
+    CommonTabularClass.h
     #DbTab.cpp
     #TabRow.cpp
     ClausesAndQueries.cpp
+    ClausesAndQueries.h
     #GenericDatabaseObject.cpp
     #GenericObjectManager.cpp
     #KeyValueTab.cpp
@@ -124,7 +126,7 @@ set(LIB_SOURCES_TST
     tests/tstDatabaseInit.cpp
     tests/tstDatabaseQueries.cpp
     tests/tstDatabaseMisc.cpp
-    #tests/tstCommonTabularClass.cpp
+    tests/tstCommonTabularClass.cpp
     tests/tstClausesAndQueries.cpp
     #tests/tstDbTab.cpp
     #tests/tstTabRow.cpp

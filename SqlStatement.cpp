@@ -209,7 +209,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  ColumnDataType SqlStatement::getColType(int colId) const
+  ColumnDataType SqlStatement::getColDataType(int colId) const
   {
     assertColumnDataAccess(colId);
     return int2ColumnDataType(sqlite3_column_type(stmt, colId));

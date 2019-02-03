@@ -77,8 +77,12 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  /** \brief Fundamental SQLite column types as defined [here](https://www.sqlite.org/c3ref/c_blob.html)
-   * plus an additional value for "NUMERIC type affinity" as explained [here](https://www.sqlite.org/datatype3.html).
+  /** \brief Fundamental data types as defined [here](https://www.sqlite.org/c3ref/c_blob.html);
+   * they are used to determine the initial data type of a result column.
+   *
+   * \note The `ColumnDataType` is relevant for the type of *result columns* in a SELECT
+   * statement while the `ColumnAffinity` is derived from the *declared table column type*
+   * that was used in the CREATE TABLE statement.
    */
   enum class ColumnDataType
   {
@@ -87,8 +91,23 @@ namespace SqliteOverlay
     Text = 3,   ///< plain string
     Blob = 4,   ///< blob of binary data
     Null = 5,   ///< Null
+  };
 
-    NumericAffinity = 999   ///< special value so that we can use this enum for encoding type affinity, too
+  //----------------------------------------------------------------------------
+
+  /** \brief The fundamental type affinity of a table column as explained [here](https://www.sqlite.org/datatype3.html).
+   *
+   * \note The `ColumnAffinity` is derived from the *declared table column type* that was used
+   * in the CREATE TABLE statement while the `ColumnDataType` is relevant for the type
+   * of *result columns* in a SELECT statement.
+   */
+  enum class ColumnAffinity
+  {
+    Integer,
+    Real,
+    Text,
+    Blob,
+    Numeric
   };
 
   //----------------------------------------------------------------------------

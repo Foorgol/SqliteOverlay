@@ -464,7 +464,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    ColumnDataType getColType(
+    ColumnDataType getColDataType(
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
