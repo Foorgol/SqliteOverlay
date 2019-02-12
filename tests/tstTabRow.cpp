@@ -38,6 +38,8 @@ TEST_F(DatabaseTestScenario, TabRow_Ctor)
   ASSERT_THROW(TabRow(db, "t1", w), std::invalid_argument);
   ASSERT_THROW(TabRow(db, "", w), std::invalid_argument);
   ASSERT_THROW(TabRow(db, "sdlkfslf", w), std::invalid_argument);
+  w.clear();
+  ASSERT_THROW(TabRow(db, "t1", w), std::invalid_argument);
 
   // test operator==
   ASSERT_TRUE(r1 == r2);

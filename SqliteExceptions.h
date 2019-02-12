@@ -67,8 +67,8 @@ namespace SqliteOverlay
   class SqlStatementCreationError : public BasicException
   {
   public:
-    SqlStatementCreationError(int errCode, const string& context = "")
-      :BasicException("SqlStatement Creation Error", errCode, context) {}
+    SqlStatementCreationError(int errCode, const string& sqlTxt, const char* sqliteErrMsg)
+      :BasicException("SqlStatement Creation Error", errCode, string{sqliteErrMsg} + "\n  SQL Statement: " + sqlTxt) {}
   };
 
   /** \brief An exception that is thrown if SQL statements couldn't be executed

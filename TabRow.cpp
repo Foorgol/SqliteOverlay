@@ -56,7 +56,7 @@ namespace SqliteOverlay
   TabRow::TabRow(const SqliteDatabase& _db, const string& _tabName, const WhereClause& where)
   : db(_db), tabName(_tabName), rowId(-1)
   {
-    if (tabName.empty())
+    if (tabName.empty() || where.isEmpty())
     {
       throw std::invalid_argument("TabRow ctor: empty or invalid parameters");
     }
@@ -77,8 +77,8 @@ namespace SqliteOverlay
       throw std::invalid_argument("TabRow ctor: invalid WHERE clause or no match for WHERE clause");
     }
 
-    cachedWhereStatementForRow = " FROM " + tabName + " WHERE id = " + to_string(rowId);
-    cachedUpdateStatementForRow = "UPDATE " + tabName + " SET %1=? WHERE id=" + to_string(rowId);
+    cachedWhereStatementForRow = " FROM " + tabName + " WHERE rowid = " + to_string(rowId);
+    cachedUpdateStatementForRow = "UPDATE " + tabName + " SET %1=? WHERE rowid=" + to_string(rowId);
   }
 
   //----------------------------------------------------------------------------

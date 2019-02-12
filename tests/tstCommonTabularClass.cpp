@@ -26,6 +26,8 @@ TEST_F(DatabaseTestScenario, CommonTabularClass_TestConstructor)
   // test invalid table / view name
   ASSERT_THROW(CommonTabularClass t(db, "", true, true), invalid_argument);
   ASSERT_THROW(CommonTabularClass t(db, "", false, true), invalid_argument);
+  ASSERT_THROW(CommonTabularClass t(db, " ", true, true), invalid_argument);
+  ASSERT_THROW(CommonTabularClass t(db, " ", false, true), invalid_argument);
   ASSERT_THROW(CommonTabularClass t(db, "Lala", true, true), NoSuchTableException);
   ASSERT_THROW(CommonTabularClass t(db, "Lala", false, true), NoSuchTableException);
   ASSERT_THROW(CommonTabularClass t(db, "t1", true, true), NoSuchTableException);

@@ -963,7 +963,20 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  string buildColumnConstraint(ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause, optional<string> defaultVal)
+  string buildColumnConstraint(ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause, const string& defaultVal)
+  {
+    string result = buildColumnConstraint(uniqueConflictClause, notNullConflictClause);
+
+    if (!(result.empty())) result += " ";
+
+    result += "DEFAULT '" + defaultVal + "'";
+
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  string buildColumnConstraint(ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause)
   {
     string result;
 
@@ -979,14 +992,14 @@ namespace SqliteOverlay
       result += "NOT NULL ON CONFLICT " + conflictClause2String(notNullConflictClause);
     }
 
-    if (defaultVal.has_value())
-    {
-      if (!(result.empty())) result += " ";
-
-      result += "DEFAULT '" + defaultVal.value() + "'";
-    }
-
     return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  string buildColumnConstraint(ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause, const char* defaulVal)
+  {
+    return buildColumnConstraint(uniqueConflictClause, notNullConflictClause, string{defaulVal});
   }
 
   //----------------------------------------------------------------------------
@@ -1067,6 +1080,7 @@ namespace SqliteOverlay
     // Rule 5, numeric affinity is the default
     return ColumnAffinity::Numeric;
   }
+
 
 
 }

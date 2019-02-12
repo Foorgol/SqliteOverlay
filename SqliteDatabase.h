@@ -40,15 +40,64 @@ namespace SqliteOverlay
   /** \brief Creates a column constraint string for CREATE TABLE statements
    * according to [this description](https://www.sqlite.org/syntax/column-constraint.html).
    *
-   * Test case: not yet
+   * Test case: implicit in `addColumn_foreignKey` of `DbTab`
+   *
+   * \returns a string with a column constraint clause for use in a CREATE TABLE statement.
+   */
+  string buildColumnConstraint(
+      ConflictClause uniqueConflictClause,   ///< unless set to `NotUsed` include a UNIQUE constraint and define what shall happen in violation
+      ConflictClause notNullConflictClause   ///< unless set to `NotUsed` include a NOT NULL constraint and define what shall happen in violation
+      );
+
+  /** \brief Creates a column constraint string for CREATE TABLE statements
+   * according to [this description](https://www.sqlite.org/syntax/column-constraint.html).
+   *
+   * Test case: implicit in `addColumn_foreignKey` of `DbTab`
+   *
+   * \returns a string with a column constraint clause for use in a CREATE TABLE statement.
+   */
+  template <typename T>
+  string buildColumnConstraint(
+      ConflictClause uniqueConflictClause,   ///< unless set to `NotUsed` include a UNIQUE constraint and define what shall happen in violation
+      ConflictClause notNullConflictClause,   ///< unless set to `NotUsed` include a NOT NULL constraint and define what shall happen in violation
+      const T& defaultVal   ///< if `true`, we add a placeholder "?" for the default column value
+      )
+  {
+    string result = buildColumnConstraint(uniqueConflictClause, notNullConflictClause);
+
+    if (!(result.empty())) result += " ";
+
+    result += "DEFAULT " + to_string(defaultVal);
+
+    return result;
+  }
+
+  /** \brief Creates a column constraint string for CREATE TABLE statements
+   * according to [this description](https://www.sqlite.org/syntax/column-constraint.html).
+   *
+   * Test case: implicit in `addColumn_foreignKey` of `DbTab`
    *
    * \returns a string with a column constraint clause for use in a CREATE TABLE statement.
    */
   string buildColumnConstraint(
       ConflictClause uniqueConflictClause,   ///< unless set to `NotUsed` include a UNIQUE constraint and define what shall happen in violation
       ConflictClause notNullConflictClause,   ///< unless set to `NotUsed` include a NOT NULL constraint and define what shall happen in violation
-      optional<string> defaultVal = optional<string>{}   ///< an optional default value for the column
+      const string& defaulVal   ///< if `true`, we add a placeholder "?" for the default column value
       );
+
+  /** \brief Creates a column constraint string for CREATE TABLE statements
+   * according to [this description](https://www.sqlite.org/syntax/column-constraint.html).
+   *
+   * Test case: implicit in `addColumn_foreignKey` of `DbTab`
+   *
+   * \returns a string with a column constraint clause for use in a CREATE TABLE statement.
+   */
+  string buildColumnConstraint(
+      ConflictClause uniqueConflictClause,   ///< unless set to `NotUsed` include a UNIQUE constraint and define what shall happen in violation
+      ConflictClause notNullConflictClause,   ///< unless set to `NotUsed` include a NOT NULL constraint and define what shall happen in violation
+      const char* defaulVal   ///< if `true`, we add a placeholder "?" for the default column value
+      );
+
 
   //----------------------------------------------------------------------------
 
@@ -63,7 +112,7 @@ namespace SqliteOverlay
       const string& referedTable,   ///< the name of the table that this column refers to
       ConsistencyAction onDelete,   ///< the action to be taken if the refered row is being deleted
       ConsistencyAction onUpdate,   ///< the action to be taken if the refered row is updated
-      string referedColumn="id"   ///< the name of the column we're pointing to in the refered table
+      string referedColumn="rowid"   ///< the name of the column we're pointing to in the refered table
       );
 
   //----------------------------------------------------------------------------

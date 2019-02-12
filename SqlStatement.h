@@ -193,9 +193,10 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void bind(int argPos,   ///< the placeholder to bind to
-              const LocalTimestamp& val   ///< the value to bind to the placeholder
-              ) const
+    void bind(
+        int argPos,   ///< the placeholder to bind to
+        const LocalTimestamp& val   ///< the value to bind to the placeholder
+        ) const
     {
       bind(argPos, val.getRawTime());  // forwards the call to a int64-bind
     }
@@ -210,9 +211,10 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void bind(int argPos,   ///< the placeholder to bind to
-              const UTCTimestamp& val   ///< the value to bind to the placeholder
-              ) const
+    void bind(
+        int argPos,   ///< the placeholder to bind to
+        const UTCTimestamp& val   ///< the value to bind to the placeholder
+        ) const
     {
       bind(argPos, val.getRawTime());  // forwards the call to a int64-bind
     }
@@ -230,10 +232,11 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void bind(int argPos,   ///< the placeholder to bind to
-              const void* ptr,   ///< a pointer to blob data
-              size_t nBytes   ///< number of bytes in the blob data
-              ) const;
+    void bind(
+        int argPos,   ///< the placeholder to bind to
+        const void* ptr,   ///< a pointer to blob data
+        size_t nBytes   ///< number of bytes in the blob data
+        ) const;
 
     /** \brief Binds a blob of data to a placeholder in the statement
      *
@@ -248,9 +251,10 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void bind(int argPos,   ///< the placeholder to bind to
-              const Sloppy::MemView& v   ///< the buffer that shall be stored
-              ) const
+    void bind(
+        int argPos,   ///< the placeholder to bind to
+        const Sloppy::MemView& v   ///< the buffer that shall be stored
+        ) const
     {
       bind(argPos, v.to_voidPtr(), v.byteSize());  // forward the call to the generic bindBlob
     }

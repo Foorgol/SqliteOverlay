@@ -44,8 +44,8 @@ set(LIB_SOURCES
     SqlStatement.h
     CommonTabularClass.cpp
     CommonTabularClass.h
-    #DbTab.cpp
-    #DbTab.h
+    DbTab.cpp
+    DbTab.h
     TabRow.cpp
     TabRow.h
     ClausesAndQueries.cpp
@@ -130,7 +130,7 @@ set(LIB_SOURCES_TST
     tests/tstDatabaseMisc.cpp
     tests/tstCommonTabularClass.cpp
     tests/tstClausesAndQueries.cpp
-    #tests/tstDbTab.cpp
+    tests/tstDbTab.cpp
     tests/tstTabRow.cpp
     #tests/tstTimestamps.cpp
     #tests/tstDateTime.cpp

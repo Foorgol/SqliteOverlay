@@ -38,7 +38,7 @@ namespace SqliteOverlay
     int err = sqlite3_prepare_v2(dbPtr, sqlTxt.c_str(), -1, &stmt, nullptr);
     if (err != SQLITE_OK)
     {
-      throw SqlStatementCreationError(err, "SqlStatement ctor");
+      throw SqlStatementCreationError(err, sqlTxt, sqlite3_errmsg(dbPtr));
     }
   }
 

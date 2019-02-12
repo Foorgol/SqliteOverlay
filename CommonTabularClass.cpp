@@ -62,7 +62,9 @@ namespace SqliteOverlay
   : db(_db), tabName(_tabName), isView(_isView),
     sqlColumnCount{"SELECT COUNT(*) FROM " + tabName + " WHERE "}
   {
-    if (tabName.empty())
+    Sloppy::estring tn{tabName};
+    tn.trim();
+    if (tn.empty())
     {
       throw invalid_argument("Received emtpty table or view name");
     }

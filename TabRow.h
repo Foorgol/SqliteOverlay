@@ -57,8 +57,8 @@ namespace SqliteOverlay
     /**
      * \brief Constructor for the first row in the table that matches a custom WHERE clause.
      *
-     * \throws std::invalid_argument if the database pointer or the table name
-     * is empty or if the provided WHERE didn't produce any results
+     * \throws std::invalid_argument if the table name or the WHERE clause is empty
+     * or if the provided WHERE didn't produce any results
      *
      * \throws BusyException if the database wasn't available for checking the
      * validity of the rowId

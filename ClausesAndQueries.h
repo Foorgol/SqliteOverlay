@@ -339,7 +339,7 @@ namespace SqliteOverlay {
       addCol(colName, op, boost::gregorian::to_int(d));
     }
 
-    /** \brief Constructs a "`SELECT id`" or "`SELECT COUNT(*)`" statement for a given
+    /** \brief Constructs a "`SELECT rowid`" or "`SELECT COUNT(*)`" statement for a given
      * database and table name, the statement using a WHERE clause
      * with the previously assigned column-value-pairs.
      *
