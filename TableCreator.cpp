@@ -37,9 +37,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void TableCreator::addVarchar(const string& colName, int len, bool isUnique, CONFLICT_CLAUSE uniqueConflictClause, bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool hasDefault, const string& defaultValue)
+  void TableCreator::addVarchar(const string& colName, ColumnDataType t, ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause, bool hasDefault, const string& defaultValue)
   {
-    string tName = "VARCHAR(" + to_string(len) + ")";
+    string tName = "VARCHAR(" + to_string(t) + ")";
 
     addCol(colName, tName, isUnique, uniqueConflictClause, notNull, notNullConflictClause, hasDefault, defaultValue);
   }

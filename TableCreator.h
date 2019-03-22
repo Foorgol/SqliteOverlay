@@ -35,19 +35,20 @@ namespace SqliteOverlay
     TableCreator(SqliteDatabase* _db);
 
     // adding columns
-    void addVarchar(const string& colName, int len, bool isUnique=false, CONFLICT_CLAUSE uniqueConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                    bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                    bool hasDefault=false, const string& defaultValue="");
-    void addInt(const string& colName, bool isUnique=false, CONFLICT_CLAUSE uniqueConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                bool hasDefault=false, const string& defaultValue="");
-    void addText(const string& colName, bool isUnique=false, CONFLICT_CLAUSE uniqueConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                 bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                 bool hasDefault=false, const string& defaultValue="");
+    template<typename T>
+    void addCol(const string& colName, ColumnDataType t, const T& defaultValue,
+                ConflictClause uniqueConflictClause=ConflictClause::NotUsed,
+                ConflictClause notNullConflictClause=ConflictClause::NotUsed)
+    {
+      if (colName.empty())
+      {
+        throw std::invalid_argument("TableCreator: addCol called with empty column name!");
+      }
+
+      string colDef = buildColumnConstraint(uniqueConflictClause, notNullConflictClause, defaultValue);
+
+    }
     void addCol(const string& colDef);
-    void addCol(const string& colName, const string& typeName, bool isUnique=false, CONFLICT_CLAUSE uniqueConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                 bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                 bool hasDefault=false, const string& defaultValue="");
 
     // add foreign keys
     void addForeignKey(const string& keyName, const string& referedTable,

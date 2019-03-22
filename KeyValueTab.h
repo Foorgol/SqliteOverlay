@@ -22,8 +22,9 @@
 #include <memory>
 
 #include "SqliteDatabase.h"
-//#include "DbTab.h"
+#include "DbTab.h"
 #include "ClausesAndQueries.h"
+#include "SqlStatement.h"
 
 namespace SqliteOverlay
 {
@@ -31,35 +32,58 @@ namespace SqliteOverlay
   class KeyValueTab
   {
   public:
-    // getter for a key-value-table
-    static unique_ptr<KeyValueTab> getTab(SqliteDatabase* _db, const string& _tabName, bool createNewIfMissing=true, int* errCodeOut=nullptr);
+    KeyValueTab (const SqliteDatabase& _db, const string& _tabName);
 
     // setting of values
-    void set(const string& key, const string& val, int* errCodeOut=nullptr) const;
-    void set(const string& key, int val, int* errCodeOut=nullptr) const;
-    void set(const string& key, double val, int* errCodeOut=nullptr) const;
+    template<typename T>
+    void set(const string& key, const T& val)
+    {
+      if (hasKey(key))
+      {
+        valUpdateStatement.bind(1, val);
+        valUpdateStatement.bind(2, key);
+        valUpdateStatement.step();
+        valUpdateStatement.reset(true);
+      } else {
+        valInsertStatement.bind(1, key);
+        valInsertStatement.bind(2, key);
+        valInsertStatement.step();
+        valInsertStatement.reset(true);
+      }
+    }
 
-    // getters, type 1 (throws exception if key is not existing or empty)
-    string operator[](const string& key) const;
-    int getInt(const string& key) const;
-    double getDouble(const string& key) const;
-    bool getBool(const string& key) const;
+    template<typename T>
+    void get(const string& key, T& outVal)
+    {
+      valSelectStatement.bind(1, key);
+      valSelectStatement.step();
+      valSelectStatement.get(0, outVal);
+      valSelectStatement.reset(true);
+    }
+
+    string operator[](const string& key);
+    int getInt(const string& key);
+    long getLong(const string& key);
+    double getDouble(const string& key);
+    UTCTimestamp getUTCTimestamp(const string& key);
 
     // getters, type 2 (not throwing)
-    unique_ptr<ScalarQueryResult<int>> getInt2(const string& key) const;
-    unique_ptr<ScalarQueryResult<double>> getDouble2(const string& key) const;
-    unique_ptr<ScalarQueryResult<string>> getString2(const string& key) const;
+    optional<string> getString2(const string& key);
+    optional<int> getInt2(const string& key);
+    optional<long> getLong2(const string& key);
+    optional<double> getDouble2(const string& key);
+    optional<UTCTimestamp> getUTCTimestamp2(const string& key);
 
     // boolean queries
     bool hasKey(const string& key) const;
 
   private:
-    KeyValueTab (SqliteDatabase* _db, const string& _tabName);
-    SqliteDatabase* db;
+    reference_wrapper<const SqliteDatabase> db;
     string tabName;
-    DbTab* tab;
-    upSqlStatement prepInsertUpdateStatementForKey(const string& key, int* errCodeOut) const;
-    string valSelectStatement;
+    const DbTab tab;
+    SqlStatement valSelectStatement;
+    SqlStatement valUpdateStatement;
+    SqlStatement valInsertStatement;
 
     static constexpr char KEY_COL_NAME[] = "K";
     static constexpr char VAL_COL_NAME[] = "V";

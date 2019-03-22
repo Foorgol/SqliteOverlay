@@ -22,7 +22,6 @@
 #include <boost/date_time/local_time/local_time.hpp>
 
 #include "KeyValueTab.h"
-#include "TableCreator.h"
 
 namespace SqliteOverlay
 {
@@ -30,198 +29,138 @@ namespace SqliteOverlay
   constexpr char KeyValueTab::VAL_COL_NAME[];
     
     
-//----------------------------------------------------------------------------
-
-  unique_ptr<KeyValueTab> KeyValueTab::getTab(SqliteDatabase* _db, const string& _tabName, bool createNewIfMissing, int* errCodeOut)
-  {
-    if (_db == nullptr) return nullptr;
-    if (_tabName.empty()) return nullptr;
-
-    // check if the table exists
-    if (!(_db->hasTable(_tabName)))
-    {
-      if (!createNewIfMissing) return nullptr;
-
-      // create a new table
-      TableCreator tc{_db};
-      tc.addVarchar(KEY_COL_NAME, MAX_KEY_LEN, true, CONFLICT_CLAUSE::ROLLBACK, true, CONFLICT_CLAUSE::ROLLBACK);
-      tc.addText(VAL_COL_NAME);
-      tc.createTableAndResetCreator(_tabName, errCodeOut);
-    }
-
-    // return a new instance of KeyValueTab
-    return unique_ptr<KeyValueTab>(new KeyValueTab(_db, _tabName));
-  }
-
   //----------------------------------------------------------------------------
 
-  void KeyValueTab::set(const string& key, const string& val, int* errCodeOut) const
+  KeyValueTab::KeyValueTab(const SqliteDatabase& _db, const string& _tabName)
+    :db(_db), tabName(_tabName), tab(DbTab{db, tabName, true})
   {
-    auto stmt = prepInsertUpdateStatementForKey(key, errCodeOut);
-    if (stmt != nullptr)
-    {
-      stmt->bindString(1, val);
-      db->execNonQuery(stmt, errCodeOut);
-    }
-  }
-
-  //----------------------------------------------------------------------------
-
-  void KeyValueTab::set(const string& key, int val, int* errCodeOut) const
-  {
-    auto stmt = prepInsertUpdateStatementForKey(key, errCodeOut);
-    if (stmt != nullptr)
-    {
-      stmt->bindInt(1, val);
-      db->execNonQuery(stmt, errCodeOut);
-    }
-  }
-
-  //----------------------------------------------------------------------------
-
-  void KeyValueTab::set(const string& key, double val, int* errCodeOut) const
-  {
-    auto stmt = prepInsertUpdateStatementForKey(key, errCodeOut);
-    if (stmt != nullptr)
-    {
-      stmt->bindDouble(1, val);
-      db->execNonQuery(stmt, errCodeOut);
-    }
-  }
-
-  //----------------------------------------------------------------------------
-
-  KeyValueTab::KeyValueTab(SqliteDatabase* _db, const string& _tabName)
-    :db(_db), tabName(_tabName), tab(db->getTab(tabName))
-  {
-    // does the requeted tab exist?
-    if (tab == nullptr)
-    {
-      throw std::invalid_argument("KeyValueTab ctor: table " + tabName + " does not exist.");
-    }
     // make sure that the table has the columns for keys and values
-    if (!(tab->hasColumn(KEY_COL_NAME)))
+    if (!(tab.hasColumn(KEY_COL_NAME)))
     {
       throw std::invalid_argument("KeyValueTab ctor: table " + tabName + " has no valid key column");
     }
-    if (!(tab->hasColumn(VAL_COL_NAME)))
+    if (!(tab.hasColumn(VAL_COL_NAME)))
     {
       throw std::invalid_argument("KeyValueTab ctor: table " + tabName + " has no valid value column");
     }
 
     // prepare the sql-text for looking up values once and for all
-    valSelectStatement = "SELECT " + string(VAL_COL_NAME) + " FROM " + tabName + " WHERE ";
-    valSelectStatement += string(KEY_COL_NAME) + " = ?";
+    string sql = "SELECT " + string(VAL_COL_NAME) + " FROM " + tabName + " WHERE ";
+    sql += string(KEY_COL_NAME) + " = ?";
+    valSelectStatement = db.get().prepStatement(sql);
 
+    // prepare the sql-text for updating values once and for all
+    Sloppy::estring cmd{"UPDATE %1 SET %2=? WHERE %3=?"};
+    cmd.arg(tabName);
+    cmd.arg(VAL_COL_NAME);
+    cmd.arg(KEY_COL_NAME);
+    valUpdateStatement = db.get().prepStatement(cmd);
+
+    // prepare the sql-text for inserting values once and for all
+    cmd = string{"INSERT INTO %1 (%2,%3) VALUES (?,?)"};
+    cmd.arg(tabName);
+    cmd.arg(KEY_COL_NAME);
+    cmd.arg(VAL_COL_NAME);
+    valInsertStatement = db.get().prepStatement(cmd);
   }
 
   //----------------------------------------------------------------------------
 
-  string KeyValueTab::operator [](const string& key) const
+  string KeyValueTab::operator [](const string& key)
   {
-    auto result = getString2(key);
-    if (result == nullptr) return string();  // key doesn't exist
-    if (result->isNull()) return string();  // value is empty
-
-    return result->get();
-  }
-
-  //----------------------------------------------------------------------------
-
-  int KeyValueTab::getInt(const string& key) const
-  {
-    auto result = getInt2(key);
-    if (result == nullptr) return INT_MIN;  // key doesn't exist
-    if (result->isNull()) return INT_MIN;  // value is empty
-
-    return result->get();
-  }
-
-  //----------------------------------------------------------------------------
-
-  double KeyValueTab::getDouble(const string& key) const
-  {
-    auto result = getDouble2(key);
-    if (result == nullptr) return NAN;  // key doesn't exist
-    if (result->isNull()) return NAN;  // value is empty
-
-    return result->get();
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool KeyValueTab::getBool(const string& key) const
-  {
-    int v = getInt(key);
-    return (v != 0);
-  }
-
-  //----------------------------------------------------------------------------
-
-  unique_ptr<ScalarQueryResult<int> > KeyValueTab::getInt2(const string& key) const
-  {
-    auto qry = db->prepStatement(valSelectStatement, nullptr);
-    qry->bindString(1, key);
-
-    return db->execScalarQueryInt(qry, nullptr);
-  }
-
-  //----------------------------------------------------------------------------
-
-  unique_ptr<ScalarQueryResult<double> > KeyValueTab::getDouble2(const string& key) const
-  {
-    auto qry = db->prepStatement(valSelectStatement, nullptr);
-    qry->bindString(1, key);
-
-    return db->execScalarQueryDouble(qry, nullptr);
-  }
-
-  //----------------------------------------------------------------------------
-
-  unique_ptr<ScalarQueryResult<string> > KeyValueTab::getString2(const string& key) const
-  {
-    auto qry = db->prepStatement(valSelectStatement, nullptr);
-    qry->bindString(1, key);
-
-    return db->execScalarQueryString(qry, nullptr);
-  }
-
-  //----------------------------------------------------------------------------
-
-  upSqlStatement KeyValueTab::prepInsertUpdateStatementForKey(const string& key, int* errCodeOut) const
-  {
-    if (key.empty()) return nullptr;
-    if (key.length() > MAX_KEY_LEN) return nullptr;
-
-    upSqlStatement result;
-    if (hasKey(key))
-    {
-      string sql;
-      sql = "UPDATE " + tabName + " SET " + string(VAL_COL_NAME) + " = ?1 ";
-      sql += "WHERE " + string(KEY_COL_NAME) + "=?2";
-      result = db->prepStatement(sql, errCodeOut);
-      result->bindString(2, key);
-    } else {
-      string sql;
-      sql = "INSERT INTO " + tabName + " (" + string(KEY_COL_NAME) + ", " + string(VAL_COL_NAME) + ") ";
-      sql += "VALUES (?2, ?1)";
-      result = db->prepStatement(sql, errCodeOut);
-      result->bindString(2, key);
-    }
-
-    // the "value" is the only remaining parameter in the prepared statement
-    // and can thus be accessed with index 1 from any subsequent, value-type
-    // specific bind function
+    string result;
+    get(key, result);
     return result;
   }
-    
-//----------------------------------------------------------------------------
-    
+
+  //----------------------------------------------------------------------------
+
+  int KeyValueTab::getInt(const string& key)
+  {
+    int result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  long KeyValueTab::getLong(const string& key)
+  {
+    long result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  double KeyValueTab::getDouble(const string& key)
+  {
+    double result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  UTCTimestamp KeyValueTab::getUTCTimestamp(const string& key)
+  {
+    UTCTimestamp result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  optional<string> KeyValueTab::getString2(const string& key)
+  {
+    optional<string> result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  optional<int> KeyValueTab::getInt2(const string& key)
+  {
+    optional<int> result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  optional<long> KeyValueTab::getLong2(const string& key)
+  {
+    optional<long> result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  optional<double> KeyValueTab::getDouble2(const string& key)
+  {
+    optional<double> result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  optional<UTCTimestamp> KeyValueTab::getUTCTimestamp2(const string& key)
+  {
+    optional<UTCTimestamp> result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
   bool KeyValueTab::hasKey(const string& key) const
   {
     if (key.empty()) return false;
 
-    return (tab->getMatchCountForColumnValue(KEY_COL_NAME, key) > 0);
+    return (tab.getMatchCountForColumnValue(KEY_COL_NAME, key) > 0);
   }
     
 //----------------------------------------------------------------------------

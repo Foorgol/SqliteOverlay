@@ -53,7 +53,9 @@ set(LIB_SOURCES
     #GenericDatabaseObject.cpp
     #GenericObjectManager.cpp
     #KeyValueTab.cpp
-    #TableCreator.cpp
+    #KeyValueTab.h
+    TableCreator.cpp
+    TableCreator.h
     Transaction.cpp
     Transaction.h
     #UserMngr.cpp
@@ -134,7 +136,7 @@ set(LIB_SOURCES_TST
     tests/tstTabRow.cpp
     #tests/tstTimestamps.cpp
     #tests/tstDateTime.cpp
-    #tests/tstKeyValueTab.cpp
+    tests/tstKeyValueTab.cpp
     tests/tstTransaction.cpp
     #tests/tstCopyAndBackup.cpp
     #tests/tstUserManager.cpp
