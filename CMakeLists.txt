@@ -136,11 +136,12 @@ set(LIB_SOURCES_TST
     tests/tstTabRow.cpp
     #tests/tstTimestamps.cpp
     #tests/tstDateTime.cpp
-    tests/tstKeyValueTab.cpp
+    #tests/tstKeyValueTab.cpp
     tests/tstTransaction.cpp
     #tests/tstCopyAndBackup.cpp
     #tests/tstUserManager.cpp
     #tests/tstActionManager.cpp
+    tests/tstTableCreator.cpp
 )
 
 find_package(GTest)

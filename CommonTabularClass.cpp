@@ -62,21 +62,63 @@ namespace SqliteOverlay
   : db(_db), tabName(_tabName), isView(_isView),
     sqlColumnCount{"SELECT COUNT(*) FROM " + tabName + " WHERE "}
   {
-    Sloppy::estring tn{tabName};
-    tn.trim();
-    if (tn.empty())
-    {
-      throw invalid_argument("Received emtpty table or view name");
-    }
-
     if (forceNameCheck)
     {
-      if (!(db.get().hasTable(tabName, isView)))
+      Sloppy::estring tn{tabName};
+      tn.trim();
+      if (tn.empty())
+      {
+        throw invalid_argument("Received emtpty table or view name");
+      }
+
+      if (!(db.get().hasTable(tn, isView)))
       {
         throw NoSuchTableException("CommonTabularClass ctor for table/view named " + tabName);
       }
+
+      tabName = tn;
     }
   }
+
+  //----------------------------------------------------------------------------
+/*
+  CommonTabularClass::CommonTabularClass(const CommonTabularClass& other)
+    :db{other.db}, tabName{other.tabName}, isView{other.isView}, sqlColumnCount{other.sqlColumnCount}
+  {
+  }
+
+  //----------------------------------------------------------------------------
+
+  CommonTabularClass::CommonTabularClass(CommonTabularClass&& other)
+    :db{other.db},
+     tabName{std::move(other.tabName)}, isView{other.isView}, sqlColumnCount{std::move(other.sqlColumnCount)}
+  {
+  }
+
+  //----------------------------------------------------------------------------
+
+  CommonTabularClass& CommonTabularClass::operator=(const CommonTabularClass& other)
+  {
+    db = other.db;
+    tabName = other.tabName;
+    isView = other.isView;
+    sqlColumnCount = other.sqlColumnCount;
+
+    return *this;
+  }
+
+  //----------------------------------------------------------------------------
+
+  CommonTabularClass&CommonTabularClass::operator=(CommonTabularClass&& other)
+  {
+    db = other.db;
+    tabName = std::move(other.tabName);
+    isView = other.isView;
+    sqlColumnCount = std::move(other.sqlColumnCount);
+
+    return *this;
+  }
+*/
 
 //----------------------------------------------------------------------------
 

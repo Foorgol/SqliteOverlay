@@ -158,4 +158,39 @@ namespace SqliteOverlay
 
 }
 
+namespace std
+{
+  /** \brief Converts a ColumnDataType enum into a string that can be used
+   * for constructing a SQL statement.
+   *
+   * Example: `ColumnDataType::Integer' --> "INTEGER"
+   *
+   * \returns a string representing the provided ColumnDataType enum value or "" for ColumnDataType::Null
+   */
+  std::string to_string(SqliteOverlay::ColumnDataType cdt);
+
+  //----------------------------------------------------------------------------
+
+  /** \brief Converts a ConsistencyAction enum into a string that can be used
+   * for constructing a SQL statement.
+   *
+   * Example: `ConsistencyAction::SetNull' --> "SET NULL"
+   *
+   * \returns a string representing the provided ConsistencyAction enum value
+   */
+  std::string to_string(SqliteOverlay::ConsistencyAction ca);
+
+  //----------------------------------------------------------------------------
+
+  /** \brief Converts a ConflictClause enum into a string that can be used
+   * for constructing a SQL statement.
+   *
+   * Example: `ConflictClause::Abort' --> "ABORT"
+   *
+   * \returns a string representing the provided ConflictClause enum value or "" for `ConflictClause::NotUsed` or `ConflictClause::NoAction`
+   */
+  std::string to_string(SqliteOverlay::ConflictClause cc);
+
+}
+
 #endif

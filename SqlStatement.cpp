@@ -95,6 +95,10 @@ namespace SqliteOverlay
     {
       throw BusyException("call to step() in a SQL statement");
     }
+    if (err == SQLITE_CONSTRAINT)
+    {
+      throw ConstraintFailedException("call to step() in a SQL statement");
+    }
     if ((err != SQLITE_ROW) && (err != SQLITE_DONE) && (err != SQLITE_OK))
     {
       throw GenericSqliteException(err, "call to step() in a SQL statement");

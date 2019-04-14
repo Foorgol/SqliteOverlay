@@ -90,7 +90,15 @@ namespace SqliteOverlay
     /** \brief (Empty) Dtor
      */
     virtual ~CommonTabularClass () {}
+
+    CommonTabularClass(const CommonTabularClass& other) = default;
     
+    CommonTabularClass(CommonTabularClass&& other) = default;
+
+    CommonTabularClass& operator=(const CommonTabularClass& other) = default;
+
+    CommonTabularClass& operator=(CommonTabularClass&& other) = default;
+
     /** \returns a list of all column definitions in the table
      *
      * Test case: yes
@@ -258,14 +266,14 @@ namespace SqliteOverlay
     /**
      * the name of the associated table or view
      */
-    const string tabName;
+    string tabName;
     
     /**
      * a tag whether we are a view or a tab
      */
-    const bool isView;
+    bool isView;
 
-    const string sqlColumnCount;
+    string sqlColumnCount;
 
   private:
 

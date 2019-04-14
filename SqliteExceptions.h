@@ -30,7 +30,7 @@ namespace SqliteOverlay
       {
         int e = static_cast<int>(err.value());
         string sErr{sqlite3_errstr(e)};
-        msg += "  SQLite error: " + sErr + "(" + to_string(e) + ")\n";
+        msg += "  SQLite error: " + sErr + "(" + std::to_string(e) + ")\n";
       }
 
       cerr << msg << "\n" << endl;
@@ -87,7 +87,7 @@ namespace SqliteOverlay
   {
   public:
     InvalidColumnException(const string& context = "")
-      :BasicException("Invalid column exception", context) {}
+      :BasicException("Invalid column", context) {}
   };
 
   /** \brief An exception that is thrown upon trying to access SQL statement
@@ -107,7 +107,7 @@ namespace SqliteOverlay
   {
   public:
     NullValueException(const string& context = "")
-      :BasicException("Null Value Exception", context) {}
+      :BasicException("Null Value", context) {}
   };
 
   /** \brief An exception that is thrown if an invalid,
@@ -117,7 +117,16 @@ namespace SqliteOverlay
   {
   public:
     NoSuchTableException(const string& context = "")
-      :BasicException("No Such Table Exception (e.g., invalid table name", context) {}
+      :BasicException("No Such Table (e.g., invalid table name", context) {}
+  };
+
+  /** \brief An exception that is thrown if a table constraint (e.g., foreign key) would be violated
+   */
+  class ConstraintFailedException : public BasicException
+  {
+  public:
+    ConstraintFailedException(const string& context = "")
+      :BasicException("Constraint Failed (e.g., foreign key violation)", context) {}
   };
 }
 #endif

@@ -170,9 +170,6 @@ namespace SqliteOverlay
 
   SqliteDatabase::~SqliteDatabase()
   {
-    // clear all cached DbTab objects
-    resetTabCache();
-
     // close the database, if not already done so
     // no need to react to errors here because we're in
     // the dtor anyway....
@@ -185,9 +182,6 @@ namespace SqliteOverlay
   {
     dbPtr = other.dbPtr;
     other.dbPtr = nullptr;
-
-    // move, not copy the table cache
-    tabCache = std::move(other.tabCache);
 
     // transfer the dirty counters; we don't need to
     // reset them in 'other` because it becomes unusual
@@ -222,21 +216,7 @@ namespace SqliteOverlay
       throw GenericSqliteException(result, "close()");
     }
 
-    resetTabCache();
     dbPtr = nullptr;
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqliteDatabase::resetTabCache()
-  {
-    /*auto it = tabCache.begin();
-    while (it != tabCache.end())
-    {
-      delete it->second;
-      ++it;
-    }*/
-    tabCache.clear();
   }
 
   //----------------------------------------------------------------------------
@@ -803,9 +783,8 @@ namespace SqliteOverlay
       throw GenericSqliteException(SQLITE_ERROR, "restoreFromFile(): sqlite3_open() for destination database returned nullptr");
     }
 
-    // copy the contents and clear all cached DbTab pointers
+    // copy the contents
     bool isOkay = copyDatabaseContents(srcDb, dbPtr);
-    resetTabCache();
 
     // close the source database
     //
@@ -935,34 +914,6 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  string conflictClause2String(ConflictClause cc)
-  {
-    switch (cc)
-    {
-    case ConflictClause::Abort:
-      return "ABORT";
-
-    case ConflictClause::Fail:
-      return "FAIL";
-
-    case ConflictClause::Ignore:
-      return "IGNORE";
-
-    case ConflictClause::Replace:
-      return "REPLACE";
-
-    case ConflictClause::Rollback:
-      return "ROLLBACK";
-
-    default:
-      return "";
-    }
-
-    return "";  // includes NoAction
-  }
-
-  //----------------------------------------------------------------------------
-
   string buildColumnConstraint(ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause, const string& defaultVal)
   {
     string result = buildColumnConstraint(uniqueConflictClause, notNullConflictClause);
@@ -982,14 +933,14 @@ namespace SqliteOverlay
 
     if (uniqueConflictClause != ConflictClause::NotUsed)
     {
-      result += "UNIQUE ON CONFLICT " + conflictClause2String(uniqueConflictClause);
+      result += "UNIQUE ON CONFLICT " + to_string(uniqueConflictClause);
     }
 
     if (notNullConflictClause != ConflictClause::NotUsed)
     {
       if (!(result.empty())) result += " ";
 
-      result += "NOT NULL ON CONFLICT " + conflictClause2String(notNullConflictClause);
+      result += "NOT NULL ON CONFLICT " + to_string(notNullConflictClause);
     }
 
     return result;
@@ -1006,31 +957,11 @@ namespace SqliteOverlay
 
   string buildForeignKeyClause(const string& referedTable, ConsistencyAction onDelete, ConsistencyAction onUpdate, string referedColumn)
   {
-    // a little helper to translate a CONSISTENCY_ACTION value into a string
-    auto ca2string = [](ConsistencyAction ca) -> string {
-      switch (ca)
-      {
-        case ConsistencyAction::NoAction:
-          return "NO ACTION";
-        case ConsistencyAction::SetNull:
-          return "SET NULL";
-        case ConsistencyAction::SetDefault:
-          return "SET DEFAULT";
-        case ConsistencyAction::Cascade:
-          return "CASCADE";
-        case ConsistencyAction::Restrict:
-          return "RESTRICT";
-        default:
-          return "";
-      }
-      return "";
-    };
-
     string result = "REFERENCES " + referedTable + "(" + referedColumn + ")";
 
-    result += " ON DELETE " + ca2string(onDelete);
+    result += " ON DELETE " + to_string(onDelete);
 
-    result += " ON UPDATE " + ca2string(onUpdate);
+    result += " ON UPDATE " + to_string(onUpdate);
 
     return result;
   }

@@ -30,12 +30,6 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  DbTab::~DbTab()
-  {
-  }
-
-  //----------------------------------------------------------------------------
-
   int DbTab::insertRow(const ColumnValueClause& ic) const
   {
     SqlStatement stmt = ic.getInsertStmt(db, tabName);

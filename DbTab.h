@@ -47,7 +47,15 @@ namespace SqliteOverlay
         );
 
     /** \brief Empty dtor */
-    virtual ~DbTab ();
+    virtual ~DbTab () {}
+
+    DbTab(const DbTab& other) = default;
+
+    DbTab(DbTab&& other) = default;
+
+    DbTab& operator=(const DbTab& other) = default;
+
+    DbTab& operator=(DbTab&& other) = default;
 
     /** \brief Appends a new row with given column values to the table
      *
@@ -558,7 +566,7 @@ namespace SqliteOverlay
     bool addColumn_foreignKey(
         const string& colName,   ///< the name of the new column
         const string& referedTabName,   ///< the name of the referred table
-        const string& referedColName,   ///< the name of the refered to column (we use 'rowid' if empty)
+        const string& referedColName,   ///< the name of the refered to column (we use 'id' if empty)
         ConsistencyAction onDelete,   ///< what to do if the refered row is deleted
         ConsistencyAction onUpdate,   ///< what to do if the refered data is updated
         ConflictClause notNullConflictClause,   ///< NotUsed = column may contain NULL values
@@ -571,12 +579,17 @@ namespace SqliteOverlay
         return false;
       }
 
-      // use 'rowid' as the default for the target column
-      const string refCol{referedColName.empty() ? "rowid" : referedColName};
+      // use 'id' as the default for the target column
+      //
+      // note: you can't use "rowid" for this purpose
+      // if the table has been created with the TableCreator, a referable
+      // column named "id" which is an alias for "rowid" has automatically
+      // been created.
+      const string refCol{referedColName.empty() ? "id" : referedColName};
 
-      // determine the type of the referenced column, unless it's `rowid`
+      // determine the type of the referenced column, unless it's `id`
       ColumnDataType colType{ColumnDataType::Integer};
-      if (refCol != "rowid")
+      if (refCol != "id")
       {
         DbTab otherTab{db, referedTabName, true};
         ColumnAffinity a = otherTab.colAffinity(refCol);
@@ -630,7 +643,7 @@ namespace SqliteOverlay
     bool addColumn_foreignKey(
         const string& colName,   ///< the name of the new column
         const string& referedTabName,   ///< the name of the referred table
-        const string& referedColName,   ///< the name of the refered to column (we use 'rowid' if empty)
+        const string& referedColName,   ///< the name of the refered to column (we use 'id' if empty)
         ConsistencyAction onDelete,   ///< what to do if the refered row is deleted
         ConsistencyAction onUpdate,   ///< what to do if the refered data is updated
         ConflictClause notNullConflictClause,   ///< NotUsed = column may contain NULL values
@@ -647,7 +660,7 @@ namespace SqliteOverlay
     bool addColumn_foreignKey(
         const string& colName,   ///< the name of the new column
         const string& referedTabName,   ///< the name of the referred table
-        const string& referedColName,   ///< the name of the refered to column (we use 'rowid' if empty)
+        const string& referedColName,   ///< the name of the refered to column (we use 'id' if empty)
         ConsistencyAction onDelete,   ///< what to do if the refered row is deleted
         ConsistencyAction onUpdate,   ///< what to do if the refered data is updated
         ConflictClause notNullConflictClause,   ///< NotUsed = column may contain NULL values
@@ -675,7 +688,7 @@ namespace SqliteOverlay
     bool addColumn_foreignKey(
         const string& colName,   ///< the name of the new column
         const string& referedTabName,   ///< the name of the referred table
-        const string& referedColName,   ///< the name of the refered to column (we use 'rowid' if empty)
+        const string& referedColName,   ///< the name of the refered to column (we use 'id' if empty)
         ConsistencyAction onDelete,   ///< what to do if the refered row is deleted
         ConsistencyAction onUpdate   ///< what to do if the refered data is updated
         ) const
@@ -710,7 +723,7 @@ namespace SqliteOverlay
     vector<TabRow> statementResultsToVector(SqlStatement& stmt) const;
 
   private:
-    const string cachedSelectSql;
+    string cachedSelectSql;
   };
 
 }

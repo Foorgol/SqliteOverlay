@@ -16,46 +16,25 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <boost/date_time/local_time/local_time.hpp>
-
-#include <Sloppy/libSloppy.h>
+#include <Sloppy/Utils.h>
 
 #include "TableCreator.h"
 
 namespace SqliteOverlay
 {
 
-  TableCreator::TableCreator(SqliteDatabase* _db)
-    :db(_db)
+  void TableCreator::addCol(const string& colName, ColumnDataType t, ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause)
   {
-    if (db == nullptr)
+    if (colName.empty())
     {
-      throw invalid_argument("Received null handle for database in ctor of TableCreator");
+      throw std::invalid_argument("TableCreator: addCol called with empty column name!");
     }
 
-  }
+    string colDef = buildColumnConstraint(uniqueConflictClause, notNullConflictClause);
 
-  //----------------------------------------------------------------------------
+    colDef = colName + " " + to_string(t) + " " + colDef;
 
-  void TableCreator::addVarchar(const string& colName, ColumnDataType t, ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause, bool hasDefault, const string& defaultValue)
-  {
-    string tName = "VARCHAR(" + to_string(t) + ")";
-
-    addCol(colName, tName, isUnique, uniqueConflictClause, notNull, notNullConflictClause, hasDefault, defaultValue);
-  }
-
-  //----------------------------------------------------------------------------
-
-  void TableCreator::addInt(const string& colName, bool isUnique, CONFLICT_CLAUSE uniqueConflictClause, bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool hasDefault, const string& defaultValue)
-  {
-    addCol(colName, "INTEGER", isUnique, uniqueConflictClause, notNull, notNullConflictClause, hasDefault, defaultValue);
-  }
-
-  //----------------------------------------------------------------------------
-
-  void TableCreator::addText(const string& colName, bool isUnique, CONFLICT_CLAUSE uniqueConflictClause, bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool hasDefault, const string& defaultValue)
-  {
-    addCol(colName, "TEXT", isUnique, uniqueConflictClause, notNull, notNullConflictClause, hasDefault, defaultValue);
+    colDefs.push_back(colDef);
   }
 
   //----------------------------------------------------------------------------
@@ -67,41 +46,24 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void TableCreator::addCol(const string& colName, const string& colTypeName, bool isUnique, CONFLICT_CLAUSE uniqueConflictClause,
-                            bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool hasDefault, const string& defaultValue)
-  {
-    if (colName.empty()) return;
-    if (colTypeName.empty()) return;
-
-    string colDef = colName + " " + colTypeName + " ";
-
-    colDef += buildColumnConstraint(isUnique, uniqueConflictClause, notNull, notNullConflictClause,
-                                    hasDefault, defaultValue);
-
-    addCol(colDef);
-  }
-
-  //----------------------------------------------------------------------------
-
-  void TableCreator::addForeignKey(const string& keyName, const string& referedTable, CONSISTENCY_ACTION onDelete, CONSISTENCY_ACTION onUpdate,
-                                   bool notNull, CONFLICT_CLAUSE notNullConflictClause)
+  void TableCreator::addForeignKey(const string& keyName, const string& referedTable, ConsistencyAction onDelete, ConsistencyAction onUpdate, ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause, const string& referedColumn)
   {
     string ref = "FOREIGN KEY (" + keyName + ") ";
-    ref += buildForeignKeyClause(referedTable, onDelete, onUpdate);
+    ref += buildForeignKeyClause(referedTable, onDelete, onUpdate, referedColumn);
 
     constraintCache.push_back(ref);
-    addInt(keyName, false, CONFLICT_CLAUSE::__NOT_SET, notNull, notNullConflictClause);
+    addCol(keyName, ColumnDataType::Integer, uniqueConflictClause, notNullConflictClause);
   }
 
   //----------------------------------------------------------------------------
 
-  bool TableCreator::addUniqueColumnCombination(initializer_list<string> colNames, CONFLICT_CLAUSE notUniqueConflictClause)
+  bool TableCreator::addUniqueColumnCombination(initializer_list<string> colNames, ConflictClause notUniqueConflictClause)
   {
     if (colNames.size() < 2) return false;
 
-    string constraint = "UNIQUE(%1) ON CONFLICT %2";
-    Sloppy::strArg(constraint, Sloppy::commaSepStringFromStringList(colNames));
-    Sloppy::strArg(constraint, conflictClause2String(notUniqueConflictClause));
+    Sloppy::estring constraint = "UNIQUE(%1) ON CONFLICT %2";
+    constraint.arg(Sloppy::commaSepStringFromValues(colNames));
+    constraint.arg(to_string(notUniqueConflictClause));
     constraintCache.push_back(constraint);
 
     return true;
@@ -113,7 +75,6 @@ namespace SqliteOverlay
   {
     colDefs.clear();
     constraintCache.clear();
-    defaultValues.clear();
   }
 
   //----------------------------------------------------------------------------
@@ -123,14 +84,21 @@ namespace SqliteOverlay
     // assemble a "create table" statement from the column definitions and the
     // stored foreign key clauses
     string sql = "CREATE TABLE IF NOT EXISTS " + tabName + " (";
-    sql += "id INTEGER NOT NULL PRIMARY KEY ";
 
-    sql += "AUTOINCREMENT";
+    // we always define a column "id" that becomes an alias for "rowid"
+    // but can be referenced by a foreign key constraint
+    //
+    // for this to work, the declared type has to be exactly "INTEGER PRIMARY KEY"
+    //
+    sql += "id INTEGER PRIMARY KEY";  //
 
-    sql += ", " + Sloppy::commaSepStringFromStringList(colDefs);
+    if (!colDefs.empty())
+    {
+      sql += ", " + Sloppy::commaSepStringFromValues(colDefs);
+    }
 
-    if (constraintCache.size() != 0) {
-      sql += ", " + Sloppy::commaSepStringFromStringList(constraintCache);
+    if (!constraintCache.empty()) {
+      sql += ", " + Sloppy::commaSepStringFromValues(constraintCache);
     }
 
     sql += ")";
@@ -140,18 +108,15 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  DbTab* TableCreator::createTableAndResetCreator(const string& tabName, int* errCodeOut)
+  DbTab TableCreator::createTableAndResetCreator(SqliteDatabase& db, const string& tabName)
   {
     // get the SQL statement
     string sql = getSqlStatement(tabName);
-
-    // execute the statement
-    bool isOk = db->execNonQuery(sql, errCodeOut);
-    if (!isOk) return nullptr;
+    db.execNonQuery(sql);
 
     reset();
 
-    return db->getTab(tabName);
+    return DbTab(db, tabName, false);
   }
 
   //----------------------------------------------------------------------------

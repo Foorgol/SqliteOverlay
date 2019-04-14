@@ -22,21 +22,6 @@ namespace SqliteOverlay
 {
   // some free functions, mostly for creating SQL strings
 
-  /** \brief Converts a ConflictClause enum into a string that can be used
-   * for constructing a SQL statement.
-   *
-   * Example: `ConflictClause::Abort' --> "ABORT"
-   *
-   * Test case: not yet
-   *
-   * \returns a string representing the provided ConflictClause enum value or "" for `ConflictClause::NotUsed`
-   */
-  string conflictClause2String(
-      ConflictClause cc   ///< the enum to convert to a string
-      );
-
-  //----------------------------------------------------------------------------
-
   /** \brief Creates a column constraint string for CREATE TABLE statements
    * according to [this description](https://www.sqlite.org/syntax/column-constraint.html).
    *
@@ -112,7 +97,7 @@ namespace SqliteOverlay
       const string& referedTable,   ///< the name of the table that this column refers to
       ConsistencyAction onDelete,   ///< the action to be taken if the refered row is being deleted
       ConsistencyAction onUpdate,   ///< the action to be taken if the refered row is updated
-      string referedColumn="rowid"   ///< the name of the column we're pointing to in the refered table
+      string referedColumn="id"   ///< the name of the column we're pointing to in the refered table
       );
 
   //----------------------------------------------------------------------------
@@ -868,29 +853,6 @@ namespace SqliteOverlay
         TransactionDtorAction _dtorAct = TransactionDtorAction::Rollback   ///< what to do when the dtor is called
         ) const;
 
-    /** \brief Retrieves a (shared!) pointer for a `DbTab` object that represents a table
-     * with a given name.
-     *
-     * Multiple call with same name parameter will always return the same pointer. Users
-     * should not use the pointer anymore after the database has been closed.
-     *
-     * \warning Sharing the same pointer among different callers is inherently *not*
-     * thread safe. If you need your own `DbTab` object, construct it directly. Construction
-     * of a `DbTab` object comes with a little penalty for checking the table name's correctness.
-     *
-     * \warning Calling `resetTabCache()` deletes all cached `DbTab` instances and voids all pointers
-     * ever returned by `getTab()`. Don't use stored pointers anymore after calling `resetTabCache()`.
-     * This, again, is inherently *not* thread-safe.
-     *
-     * \returns a (shared) pointer to a `DbTab` object for a table or `nullptr` if the table name is invalid
-     *
-     * Test case: not yet
-     *
-     */
-    /*DbTab* getTab (
-        const string& tabName   ///< name of the requested table
-        );*/
-
     /** \brief Copies structure and, optionally, content of an exising table
      * into a newly created table.
      *
@@ -1126,10 +1088,6 @@ namespace SqliteOverlay
      * \brief the internal database handle
      */
     sqlite3* dbPtr{nullptr};
-
-    /** \brief Cached DbTab-instances for tables, accessible by table name
-     */
-    unordered_map<string, DbTab*> tabCache{};
 
     // handling of a "dirty flag" that indicates whether the database has changed
     // after a certain point in time

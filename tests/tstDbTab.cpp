@@ -20,8 +20,10 @@ TEST_F(DatabaseTestScenario, DbTab_Ctor)
   ASSERT_NO_THROW(DbTab(db, "dsdfsdf", false));
   ASSERT_THROW(DbTab(db, "", true), std::invalid_argument);
   ASSERT_THROW(DbTab(db, " ", true), std::invalid_argument);
-  ASSERT_THROW(DbTab(db, "", false), std::invalid_argument);
-  ASSERT_THROW(DbTab(db, " ", false), std::invalid_argument);
+
+  // no name check implies no for empty values
+  ASSERT_NO_THROW(DbTab(db, "", false));
+  ASSERT_NO_THROW(DbTab(db, " ", false));
 
   DbTab t1{db, "t1", true};
   ASSERT_TRUE(t1.length() > 0);
@@ -440,7 +442,7 @@ TEST_F(DatabaseTestScenario, DbTab_AddColumn)
   isOkay = t1.addColumn_foreignKey("iRef", "t2", "", ConsistencyAction::Cascade, ConsistencyAction::SetNull);
   ASSERT_TRUE(isOkay);
   ASSERT_EQ(oldColCount+4, t1.allColDefs().size());
-  ASSERT_TRUE(hasColDef("iRef INTEGER  REFERENCES t2(rowid) ON DELETE CASCADE ON UPDATE SET NULL"));
+  ASSERT_TRUE(hasColDef("iRef INTEGER  REFERENCES t2(id) ON DELETE CASCADE ON UPDATE SET NULL"));
 
   isOkay = t1.addColumn_foreignKey("sRef", "t2", "s", ConsistencyAction::Restrict, ConsistencyAction::SetNull);
   ASSERT_TRUE(isOkay);
