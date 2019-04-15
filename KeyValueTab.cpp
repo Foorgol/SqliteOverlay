@@ -18,10 +18,14 @@
 
 #include <climits>
 #include <cmath>
+#include <regex>
 
-#include <boost/date_time/local_time/local_time.hpp>
+#include <Sloppy/ConfigFileParser/ConstraintChecker.h>
 
 #include "KeyValueTab.h"
+#include "TableCreator.h"
+
+namespace bfs = boost::filesystem;
 
 namespace SqliteOverlay
 {
@@ -102,6 +106,15 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  double KeyValueTab::getBool(const string& key)
+  {
+    bool result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
   UTCTimestamp KeyValueTab::getUTCTimestamp(const string& key)
   {
     UTCTimestamp result;
@@ -147,6 +160,15 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  optional<bool> KeyValueTab::getBool2(const string& key)
+  {
+    optional<bool> result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
   optional<UTCTimestamp> KeyValueTab::getUTCTimestamp2(const string& key)
   {
     optional<UTCTimestamp> result;
@@ -162,6 +184,141 @@ namespace SqliteOverlay
 
     return (tab.getMatchCountForColumnValue(KEY_COL_NAME, key) > 0);
   }
+
+  //----------------------------------------------------------------------------
+
+  bool KeyValueTab::checkConstraint(const string& keyName, Sloppy::ValueConstraint c, string* errMsg)
+  {
+    if (keyName.empty())
+    {
+      throw std::invalid_argument("KeyValueTab constraint check: received empty key name!");
+    }
+
+    // prepare a helper functions that puts the keyname
+    // into the first two part of an error message
+    auto prepErrMsg = [&keyName]() {
+      Sloppy::estring msg{"The key %1 "};
+      msg.arg(keyName);
+      return msg;
+    };
+
+    // first basic check: does the key-value pair exist at all?
+    if (!hasKey(keyName))
+    {
+      if (errMsg != nullptr)
+      {
+        auto e = prepErrMsg();
+        e += "does not exist!";
+        *errMsg = e;
+      }
+
+      return false;
+    }
+
+    // if the key exists but the optional value is empty
+    // then somehow we stumbled across a NULL entry.
+    //
+    // such an entry must have been created by something else
+    // than a KeyValueTab instance because we don't work with "NULL" here
+    optional<Sloppy::estring> v = getString2(keyName);
+    if (!(v.has_value()))
+    {
+      if (errMsg != nullptr)
+      {
+        auto e = prepErrMsg();
+        e += "contains a NULL value!";
+        *errMsg = e;
+      }
+
+      return false;
+    }
+
+    // enough to satisfy "Exists"
+    if (c == Sloppy::ValueConstraint::Exist)
+    {
+      return true;
+    }
+
+    // leave all further checks to the constraint checker
+    if (!Sloppy::checkConstraint(v, c, errMsg))
+    {
+      if (errMsg != nullptr)
+      {
+        auto e = prepErrMsg();
+        *errMsg = e + *errMsg;
+      }
+
+      return false;
+    }
+
+    return true;
+
+  }
+
+  //----------------------------------------------------------------------------
+
+  void KeyValueTab::remove(const string& key)
+  {
+    Sloppy::estring sql = "DELETE FROM %1 WHERE %2=?";
+    sql.arg(tabName);
+    sql.arg(KEY_COL_NAME);
+    auto stmt = db.get().prepStatement(sql);
+    stmt.bind(1, key);
+    stmt.step();
+  }
+
+  //----------------------------------------------------------------------------
+
+  vector<string> KeyValueTab::allKeys() const
+  {
+    vector<string> result;
+
+    Sloppy::estring sql = "SELECT %1 FROM %2";
+    sql.arg(KEY_COL_NAME);
+    sql.arg(tabName);
+    auto stmt = db.get().prepStatement(sql);
+
+    for (stmt.step() ; stmt.hasData() ; stmt.step())
+    {
+      result.push_back(stmt.getString(0));
+    }
+
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
+  KeyValueTab createNewKeyValueTab(const SqliteDatabase& db, const string& tabName)
+  {
+    Sloppy::estring tn{tabName};
+    tn.trim();
+
+    if (tn.empty())
+    {
+      throw std::invalid_argument("The table name is empty");
+    }
+
+    if (db.hasTable(tn))
+    {
+      throw std::invalid_argument("A table of that name already exists");
+    }
+
+    TableCreator tc;
+    tc.addCol(KeyValueTab::KEY_COL_NAME, ColumnDataType::Text, ConflictClause::Rollback, ConflictClause::Rollback);
+    tc.addCol(KeyValueTab::VAL_COL_NAME, ColumnDataType::Null, ConflictClause::Rollback, ConflictClause::Rollback);
+    tc.createTableAndResetCreator(db, tabName);
+
+    // create an index on the "key"-column for faster lookups
+    Sloppy::estring sql = "CREATE INDEX KeyIndex ON %1(%2)";
+    sql.arg(tabName);
+    sql.arg(KeyValueTab::KEY_COL_NAME);
+    db.execNonQuery(sql);
+
+    return KeyValueTab(db, tabName);
+  }
+
     
 //----------------------------------------------------------------------------
 

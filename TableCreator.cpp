@@ -108,7 +108,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  DbTab TableCreator::createTableAndResetCreator(SqliteDatabase& db, const string& tabName)
+  DbTab TableCreator::createTableAndResetCreator(const SqliteDatabase& db, const string& tabName)
   {
     // get the SQL statement
     string sql = getSqlStatement(tabName);

@@ -118,7 +118,7 @@ namespace SqliteOverlay
      * \returns a `DbTab` instance for the new table
      */
     DbTab createTableAndResetCreator(
-        SqliteDatabase& db,   ///< the database in which the table shall be created
+        const SqliteDatabase& db,   ///< the database in which the table shall be created
         const string& tabName   ///< the name of the to-be-created table
         );
 

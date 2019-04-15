@@ -266,7 +266,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqlStatement::reset(bool clearBindings) const
+  void SqlStatement::reset(bool clearBindings)
   {
     int err = sqlite3_reset(stmt);
     if (err != SQLITE_OK)
@@ -280,6 +280,11 @@ namespace SqliteOverlay
       // it's SQLITE_OK
       sqlite3_clear_bindings(stmt);
     }
+
+    _hasData = false;
+    _isDone = false;
+    resultColCount = -1;
+    stepCount = 0;
   }
 
   //----------------------------------------------------------------------------

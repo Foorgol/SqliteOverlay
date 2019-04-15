@@ -390,7 +390,7 @@ namespace SqliteOverlay
      * Test case: yes, but without implicit conversion and only with partial exception testing
      *
      */
-    double getBool(
+    bool getBool(
         int colId   ///< the zero-based column ID in the result row
         ) const
     {
@@ -515,7 +515,7 @@ namespace SqliteOverlay
      */
     void reset(
         bool clearBindings   ///< `true`: clear existing placeholder bindings; `false`: bindings keep their values
-        ) const;
+        );
 
     /** \brief Forcefully finalized the statement, no matter what its current status is; this is similar
      * to calling the dtor on the statement.
