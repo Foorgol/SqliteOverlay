@@ -86,6 +86,20 @@ TEST_F(DatabaseTestScenario, KeyValueTab_SettersAndGetters)
   ASSERT_THROW(kvt["kfdj"], NoDataException);
 
   //
+  // set and get JSON
+  //
+  nlohmann::json jsonIn = nlohmann::json::parse(R"({"a": "abc", "b": 42})");
+  kvt.set("json", jsonIn);
+  WhereClause wc;
+  wc.addCol("K", "json");
+  TabRow r{db, "kvt", wc};
+  ASSERT_EQ("{\"a\":\"abc\",\"b\":42}", r["V"]);
+  ASSERT_EQ("{\"a\":\"abc\",\"b\":42}", kvt.getJson("json").dump());
+  auto oj = kvt.getJson2("json");
+  ASSERT_TRUE(oj.has_value());
+  ASSERT_EQ("{\"a\":\"abc\",\"b\":42}", oj.value().dump());
+
+  //
   // getters type 2, not throwing
   //
   auto oi2 = kvt.getInt2("sfsdf");

@@ -356,6 +356,27 @@ namespace SqliteOverlay
         const string& colName   ///< the name of the column to query
         ) const;
 
+    /** \returns the contents of a given column as a JSON object
+     *
+     * \throws std::invalid argument if the column name was empty
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
+     * or row has been deleted in the meantime)
+     *
+     * \throws NullValueException if the column contained NULL
+     *
+     * \throws nlohmann::json::parse_error if the column didn't contain valid JSON data
+     *
+     * Test case: yes
+     *
+     */
+    nlohmann::json getJson(
+        const string& colName   ///< the name of the column to query
+        ) const;
+
     /** \returns the contents of a given column as a date
      *
      * \note The date has to be stored as an integer value, e.g.,
@@ -477,6 +498,21 @@ namespace SqliteOverlay
      * or row has been deleted in the meantime)
      */
     optional<UTCTimestamp> getUTCTime2(
+        const string& colName   ///< the name of the column to query
+        ) const;
+
+    /** \returns the contents of a given column as a JSON object
+     * or NULL if the column was empty
+     *
+     * \throws std::invalid argument if the column name was empty
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
+     * or row has been deleted in the meantime)
+     */
+    optional<nlohmann::json> getJson2(
         const string& colName   ///< the name of the column to query
         ) const;
 

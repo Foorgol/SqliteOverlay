@@ -20,6 +20,7 @@
 #define	SQLITE_OVERLAY_KEYVALUETAB_H
 
 #include <Sloppy/ConfigFileParser/ConstraintChecker.h>
+#include <Sloppy/json_fwd.hpp>
 
 #include "SqliteDatabase.h"
 #include "DbTab.h"
@@ -160,11 +161,20 @@ namespace SqliteOverlay
      */
     double getBool(const string& key);
 
-    /** \returns the value of a key as a UtCTimestamp
+    /** \returns the value of a key as a UTCTimestamp
      *
      * \throws NoDataException if the key doesn't exist
      */
     UTCTimestamp getUTCTimestamp(const string& key);
+
+    /** \returns the value of a key as a JSON object
+     *
+     * \throws NoDataException if the key doesn't exist
+     *
+     * \throws nlohmann::json::parse_error if the key didn't contain valid JSON data
+     *
+     */
+    nlohmann::json getJson(const string& key);
 
     /** \returns the value of a key as an optional string that
      * is empty ("empty optional", not "empty string"!) if the key doesn't exist
@@ -198,6 +208,11 @@ namespace SqliteOverlay
      * is empty if the key doesn't exist
      */
     optional<UTCTimestamp> getUTCTimestamp2(const string& key);
+
+    /** \returns the value of a key as an optional JSON object that
+     * is empty if the key doesn't exist
+     */
+    optional<nlohmann::json> getJson2(const string& key);
 
     // boolean queries
     bool hasKey(const string& key) const;

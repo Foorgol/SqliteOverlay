@@ -21,6 +21,7 @@
 #include <regex>
 
 #include <Sloppy/ConfigFileParser/ConstraintChecker.h>
+#include <Sloppy/json.hpp>
 
 #include "KeyValueTab.h"
 #include "TableCreator.h"
@@ -124,6 +125,15 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  nlohmann::json KeyValueTab::getJson(const string& key)
+  {
+    nlohmann::json result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
   optional<string> KeyValueTab::getString2(const string& key)
   {
     optional<string> result;
@@ -172,6 +182,15 @@ namespace SqliteOverlay
   optional<UTCTimestamp> KeyValueTab::getUTCTimestamp2(const string& key)
   {
     optional<UTCTimestamp> result;
+    get(key, result);
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  optional<nlohmann::json> KeyValueTab::getJson2(const string& key)
+  {
+    optional<nlohmann::json> result;
     get(key, result);
     return result;
   }

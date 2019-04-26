@@ -89,6 +89,32 @@ TEST_F(DatabaseTestScenario, TabRow_getters)
   ASSERT_TRUE(dt.has_value());
   ASSERT_EQ(dExpected, dt.value());
 
+  // test JSON functions
+  nlohmann::json jsonIn = nlohmann::json::parse(R"({"a": "abc", "b": 42})");
+  r.update("s", jsonIn);
+  nlohmann::json jsonOut1 = r.getJson("s");
+  ASSERT_EQ("abc", jsonOut1["a"]);
+  ASSERT_EQ(42, jsonOut1["b"]);
+  auto jsonOut2 = r.getJson2("s");
+  ASSERT_TRUE(jsonOut2.has_value());
+  ASSERT_EQ("abc", jsonOut2->at("a"));
+  ASSERT_EQ(42, jsonOut2->at("b"));
+  r.update("s", "invalid JSON data");
+  ASSERT_THROW(r.getJson("s"), nlohmann::json::parse_error);
+  r.updateToNull("s");
+  ASSERT_THROW(r.getJson("s"), NullValueException);
+  auto oj = r.getJson2("s");
+  ASSERT_FALSE(oj.has_value());
+  r.update("s", "null");
+  jsonOut1 = r.getJson("s");
+  ASSERT_TRUE(jsonOut1.empty());
+  ASSERT_EQ(nlohmann::json::value_t::null, jsonOut1.type());
+  r.update("s", "{}");
+  jsonOut1 = r.getJson("s");
+  ASSERT_TRUE(jsonOut1.empty());
+  ASSERT_EQ(nlohmann::json::value_t::object, jsonOut1.type());
+
+
   // test NULL columns; if it works for one type, it
   // works for all types... thanks to templating
   r = TabRow(db, "t1", 2);

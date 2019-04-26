@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <Sloppy/DateTime/DateAndTime.h>
+#include <Sloppy/json_fwd.hpp>
 
 #include "SqliteDatabase.h"
 
@@ -67,6 +68,21 @@ namespace SqliteOverlay {
       colVals.push_back(ColValInfo{colName, ColValType::Double, static_cast<int>(doubleVals.size()) - 1, ""});
     }
 
+    /** \brief Adds a C-string or string literal to the list of column values;
+     * uses the default operation "=" (equals) between column name and value.
+     *
+     * Test case: yes
+     *
+     */
+    void addCol(
+        const string& colName,   ///< the name of the column that should contain the value
+        const char* val   ///< the value itself
+        )
+    {
+      stringVals.push_back(string{val});
+      colVals.push_back(ColValInfo{colName, ColValType::String, static_cast<int>(stringVals.size()) - 1, ""});
+    }
+
     /** \brief Adds a string to the list of column values;
      * uses the default operation "=" (equals) between column name and value.
      *
@@ -81,6 +97,17 @@ namespace SqliteOverlay {
       stringVals.push_back(val);
       colVals.push_back(ColValInfo{colName, ColValType::String, static_cast<int>(stringVals.size()) - 1, ""});
     }
+
+    /** \brief Adds a JSON object to the list of column values;
+     * uses the default operation "=" (equals) between column name and value.
+     *
+     * Test case: yes
+     *
+     */
+    void addCol(
+        const string& colName,   ///< the name of the column that should contain the value
+        const nlohmann::json& val   ///< the value itself
+        );
 
     /** \brief Adds a 'IS NULL' to the list of column values
      *
@@ -236,6 +263,7 @@ namespace SqliteOverlay {
     bool hasColumns() const;
 
   private:
+
   };
 
   //----------------------------------------------------------------------------

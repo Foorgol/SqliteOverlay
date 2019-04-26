@@ -5,6 +5,7 @@
 
 #include <Sloppy/DateTime/DateAndTime.h>
 #include <Sloppy/String.h>
+#include <Sloppy/json.hpp>
 
 #include "SqlStatement.h"
 #include "SqliteExceptions.h"
@@ -242,6 +243,15 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  nlohmann::json SqlStatement::getJson(int colId) const
+  {
+    const string jsonData = getString(colId);
+
+    return nlohmann::json::parse(jsonData);
+  }
+
+  //----------------------------------------------------------------------------
+
   ColumnDataType SqlStatement::getColDataType(int colId) const
   {
     assertColumnDataAccess(colId);
@@ -296,6 +306,13 @@ namespace SqliteOverlay
       sqlite3_finalize(stmt);
       stmt = nullptr;
     }
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqlStatement::get(int colId, nlohmann::json& result)
+  {
+    result = getJson(colId);
   }
 
   //----------------------------------------------------------------------------
@@ -381,6 +398,14 @@ namespace SqliteOverlay
       throw GenericSqliteException{e, "call to bindBlob64() of a SqlStatement"};
     }
 
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqlStatement::bind(int argPos, const nlohmann::json& v) const
+  {
+    const string jsonData = v.dump();
+    bind(argPos, jsonData);  // the actual data binding is handled as a string value
   }
 
   //----------------------------------------------------------------------------

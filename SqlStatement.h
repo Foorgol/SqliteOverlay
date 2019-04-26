@@ -10,6 +10,7 @@
 #include <Sloppy/DateTime/DateAndTime.h>
 #include <Sloppy/Memory.h>
 #include <Sloppy/Logger/Logger.h>
+#include <Sloppy/json_fwd.hpp>
 
 #include "Defs.h"
 #include "SqliteExceptions.h"
@@ -259,6 +260,25 @@ namespace SqliteOverlay
       bind(argPos, v.to_voidPtr(), v.byteSize());  // forward the call to the generic bindBlob
     }
 
+    /** \brief Binds a JSON object to a placeholder in the statement; the JSON data is
+     * stored as plain text using JSON's dump() method.
+     *
+     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
+     * a specification how placeholders are defined in the SQLite language.
+     *
+     * \note SQLite makes an internal copy of the provided buffer; this is safer but
+     * also more memory consuming. Bear this in mind when dealing with very large blobs.
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
+     */
+    void bind(
+        int argPos,   ///< the placeholder to bind to
+        const nlohmann::json& v   ///< the JSON object that shall be stored
+        ) const;
+
     /** \brief Binds a NULL value to a placeholder in the statement
      *
      * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
@@ -463,6 +483,24 @@ namespace SqliteOverlay
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
+    /** \brief Retrieves the value of a column in the statement result as a JSON object, assuming
+     * that the JSON data has been serialized as a normal string.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \throws nlohmann::json::parse_error if the column didn't contain valid JSON data
+     *
+     * \returns the value in the requested result column as a JSON object
+     *
+     * Test case: yes
+     *
+     */
+    nlohmann::json getJson(
+        int colId   ///< the zero-based column ID in the result row
+        ) const;
+
     /** \brief Retrieves the fundamental SQLite data type for a column in the result row
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
@@ -644,7 +682,7 @@ namespace SqliteOverlay
       result = getBool(colId);
     }
 
-    /** \brief Retrieves the value of a column in the statement result a a UTC timestamp
+    /** \brief Retrieves the value of a column in the statement result as a UTC timestamp
      *
      * Uses an out-parameter instead of a direct return. The advantage is that multiple
      * `get()` variants for int, double, string, ... can have the same signature style
@@ -661,6 +699,23 @@ namespace SqliteOverlay
     {
       result = getUTCTime(colId);
     }
+
+    /** \brief Retrieves the value of a column in the statement result as a JSON object
+     *
+     * Uses an out-parameter instead of a direct return. The advantage is that multiple
+     * `get()` variants for int, double, string, ... can have the same signature style
+     * of `get(int, T&)` which allows for templating and overloading.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \throws nlohmann::json::parse_error if the column didn't contain valid JSON data
+     *
+     * Test case: yes
+     *
+     */
+    void get(int colId, nlohmann::json& result);
 
     /** \brief Retrieves the value of a column in the statement result
      * with the possibility to catch and return NULL values.

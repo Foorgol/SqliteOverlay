@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <Sloppy/Crypto/Sodium.h>
+#include <Sloppy/Crypto/Crypto.h>
 
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"
@@ -51,6 +52,43 @@ TEST_F(DatabaseTestScenario, StmtBind)
   stmt.reset(true);
   stmt.bindNull(1);
   ASSERT_EQ("SELECT * FROM t1 WHERE s=NULL", stmt.getExpandedSQL());
+
+  // try JSON binds and gets
+  stmt = SqlStatement{db.get(), "INSERT INTO t1(s) VALUES (?)"};
+  nlohmann::json jsonIn = nlohmann::json::parse(R"({"a": "abc", "b": 42})");
+  stmt.bind(1, jsonIn);
+  stmt.step();
+  stmt = SqlStatement{db.get(), "SELECT s FROM t1 WHERE rowid=6"};
+  stmt.step();
+  nlohmann::json jsonOut1 = stmt.getJson(0);
+  ASSERT_EQ("abc", jsonOut1["a"]);
+  ASSERT_EQ(42, jsonOut1["b"]);
+  nlohmann::json jsonOut2;
+  stmt.get(0, jsonOut2);
+  ASSERT_EQ("abc", jsonOut2["a"]);
+  ASSERT_EQ(42, jsonOut2["b"]);
+
+  nlohmann::json jsonNull;
+  ASSERT_EQ("null", jsonNull.dump());
+  stmt = SqlStatement{db.get(), "INSERT INTO t1(s) VALUES (?)"};
+  stmt.bind(1, jsonNull);
+  stmt.step();
+  stmt = SqlStatement{db.get(), "SELECT s FROM t1 WHERE rowid=7"};
+  stmt.step();
+  jsonOut1 = stmt.getJson(0);
+  ASSERT_EQ("null", jsonOut1.dump());
+  ASSERT_TRUE(jsonOut1.empty());
+
+  nlohmann::json jsonEmpty = nlohmann::json::object();
+  ASSERT_EQ("{}", jsonEmpty.dump());
+  stmt = SqlStatement{db.get(), "INSERT INTO t1(s) VALUES (?)"};
+  stmt.bind(1, jsonEmpty);
+  stmt.step();
+  stmt = SqlStatement{db.get(), "SELECT s FROM t1 WHERE rowid=8"};
+  stmt.step();
+  jsonOut1 = stmt.getJson(0);
+  ASSERT_EQ("{}", jsonOut1.dump());
+  ASSERT_TRUE(jsonOut1.empty());
 }
 
 //----------------------------------------------------------------
@@ -153,6 +191,49 @@ TEST_F(DatabaseTestScenario, StmtGetters)
 
   // test invalid columns
   ASSERT_THROW(stmt.getBool(42), InvalidColumnException);
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, HugeJsonObjs)
+{
+  prepScenario01();
+  auto db = getRawDbHandle();
+
+  // create a huge JSON object
+  static constexpr int keyLen = 20;
+  static constexpr int valLen = 100;
+  static constexpr int minByteCount = 1e7;
+  static constexpr int nEntries = 1 + (minByteCount / (keyLen + valLen + 6));  // 6 = 4 quotes, 1 colon, 1 comma per entry
+  nlohmann::json jsonIn = nlohmann::json::object();
+  for (int i=0; i < nEntries; ++i)
+  {
+    string key = Sloppy::Crypto::getRandomAlphanumString(keyLen);
+    string val = Sloppy::Crypto::getRandomAlphanumString(valLen);
+    jsonIn[key] = val;
+  }
+
+  const string serialized = jsonIn.dump();
+  ASSERT_TRUE(serialized.size() >= minByteCount);
+
+  // store and retrieve that large JSON object
+  SqlStatement stmt{db.get(), "INSERT INTO t1(s) VALUES (?)"};
+  stmt.bind(1, jsonIn);
+  stmt.step();
+  stmt = SqlStatement{db.get(), "SELECT s FROM t1 WHERE rowid=6"};
+  stmt.step();
+  nlohmann::json jsonOut = stmt.getJson(0);
+
+  // compare the stored and the retrieved object
+  ASSERT_EQ(jsonIn.size(), jsonOut.size());
+  for (auto it = jsonIn.begin(); it != jsonIn.end(); ++it)
+  {
+    const string& key = it.key();
+    const string& refVal = it.value();
+    const string& realVal = jsonOut.at(key);
+
+    ASSERT_EQ(refVal, realVal);
+  }
 }
 
 //----------------------------------------------------------------

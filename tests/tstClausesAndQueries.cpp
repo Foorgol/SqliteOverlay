@@ -125,6 +125,30 @@ TEST_F(DatabaseTestScenario, ColumnValueClause_StringCol)
   ASSERT_THROW(cvc.getUpdateStmt(db, "NonExistingTable", 42), SqlStatementCreationError);  // wrong table name
 }
 
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, ColumnValueClause_JsonCol)
+{
+  SampleDB db = getScenario01();
+  ColumnValueClause cvc;
+  nlohmann::json jsonIn = nlohmann::json::parse(R"({"a": "abc", "b": 42})");
+
+  cvc.addCol("s", jsonIn);
+
+  ASSERT_TRUE(cvc.hasColumns());
+
+  auto stmt = cvc.getInsertStmt(db, "t1");
+  ASSERT_EQ("INSERT INTO t1 (s) VALUES ('{\"a\":\"abc\",\"b\":42}')", stmt.getExpandedSQL());
+
+  stmt = cvc.getUpdateStmt(db, "t1", 42);
+  ASSERT_EQ("UPDATE t1 SET s='{\"a\":\"abc\",\"b\":42}' WHERE rowid=42", stmt.getExpandedSQL());
+
+  // invalid table names
+  ASSERT_THROW(cvc.getInsertStmt(db, ""), std::invalid_argument);  // empty table name
+  ASSERT_THROW(cvc.getInsertStmt(db, "NonExistingTable"), SqlStatementCreationError);  // wrong table name
+  ASSERT_THROW(cvc.getUpdateStmt(db, "", 42), std::invalid_argument);  // empty table name
+  ASSERT_THROW(cvc.getUpdateStmt(db, "NonExistingTable", 42), SqlStatementCreationError);  // wrong table name
+}
 
 //----------------------------------------------------------------
 

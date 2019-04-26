@@ -196,6 +196,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  nlohmann::json TabRow::getJson(const string& colName) const
+  {
+    return get<nlohmann::json>(colName);
+  }
+
+  //----------------------------------------------------------------------------
+
   boost::gregorian::date TabRow::getDate(const string& colName) const
   {
     int ymd = getInt(colName);
@@ -249,6 +256,13 @@ namespace SqliteOverlay
   optional<UTCTimestamp> TabRow::getUTCTime2(const string& colName) const
   {
     return get<optional<UTCTimestamp>>(colName);
+  }
+
+  //----------------------------------------------------------------------------
+
+  optional<nlohmann::json> TabRow::getJson2(const string& colName) const
+  {
+    return get<optional<nlohmann::json>>(colName);
   }
 
   //----------------------------------------------------------------------------

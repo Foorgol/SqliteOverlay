@@ -1,5 +1,7 @@
 #include <boost/date_time/local_time/local_time.hpp>
 
+#include <Sloppy/json.hpp>
+
 #include "ClausesAndQueries.h"
 #include "SqlStatement.h"
 
@@ -247,6 +249,14 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
+  void CommonClause::addCol(const string& colName, const nlohmann::json& val)
+  {
+    const string jsonData = val.dump();
+    addCol(colName, jsonData);
+  }
+
   //----------------------------------------------------------------------------
 
   void CommonClause::clear()
