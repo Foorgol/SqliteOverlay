@@ -18,16 +18,16 @@ TEST_F(DatabaseTestScenario, KeyValueTab_Creation)
 {
   auto db = getScenario01();
 
-  ASSERT_THROW(createNewKeyValueTab(db, ""), std::invalid_argument);
-  ASSERT_THROW(createNewKeyValueTab(db, " "), std::invalid_argument);
+  ASSERT_THROW(db.createNewKeyValueTab(""), std::invalid_argument);
+  ASSERT_THROW(db.createNewKeyValueTab(" "), std::invalid_argument);
 
-  auto kvt = createNewKeyValueTab(db, " kvt\t ");
+  auto kvt = db.createNewKeyValueTab(" kvt\t ");
   ASSERT_TRUE(db.hasTable("kvt"));
   DbTab t{db, "kvt", false};
   ASSERT_TRUE(t.hasColumn("K"));
   ASSERT_TRUE(t.hasColumn("V"));
 
-  ASSERT_THROW(createNewKeyValueTab(db, "kvt"), std::invalid_argument);
+  ASSERT_THROW(db.createNewKeyValueTab("kvt"), std::invalid_argument);
 }
 
 //----------------------------------------------------------------
@@ -35,7 +35,7 @@ TEST_F(DatabaseTestScenario, KeyValueTab_Creation)
 TEST_F(DatabaseTestScenario, KeyValueTab_Ctor)
 {
   auto db = getScenario01();
-  createNewKeyValueTab(db, "kvt");
+  db.createNewKeyValueTab("kvt");
 
   // try to get a non-existing table
   ASSERT_THROW(KeyValueTab(db, "sfjklsdf"), NoSuchTableException);
@@ -49,7 +49,7 @@ TEST_F(DatabaseTestScenario, KeyValueTab_Ctor)
 TEST_F(DatabaseTestScenario, KeyValueTab_SettersAndGetters)
 {
   auto db = getScenario01();
-  auto kvt = createNewKeyValueTab(db, "kvt");
+  auto kvt = db.createNewKeyValueTab("kvt");
   DbTab rawTab{db, "kvt", false};
 
   // set value for new key
@@ -118,7 +118,7 @@ TEST_F(DatabaseTestScenario, KeyValueTab_SettersAndGetters)
 TEST_F(DatabaseTestScenario, KeyValueTab_KeyQuery)
 {
   auto db = getScenario01();
-  auto kvt = createNewKeyValueTab(db, "kvt");
+  auto kvt = db.createNewKeyValueTab("kvt");
 
   kvt.set("i", 42);
   ASSERT_TRUE(kvt.hasKey("i"));
@@ -130,7 +130,7 @@ TEST_F(DatabaseTestScenario, KeyValueTab_KeyQuery)
 TEST_F(DatabaseTestScenario, KeyValueTab_Constraints)
 {
   SqliteDatabase db;
-  auto kvt = createNewKeyValueTab(db, "kvt");
+  auto kvt = db.createNewKeyValueTab("kvt");
   ASSERT_EQ(0, kvt.size());
 
   const vector<string> refVals{"", " ", "abc", "123", "a12b", "#+.", "12.3", "-5", "on", "0", "Europe/Berlin", "2019-04-15"};
@@ -174,7 +174,7 @@ TEST_F(DatabaseTestScenario, KeyValueTab_Constraints)
 TEST_F(DatabaseTestScenario, KeyValueTab_Remove)
 {
   auto db = getScenario01();
-  auto kvt = createNewKeyValueTab(db, "kvt");
+  auto kvt = db.createNewKeyValueTab("kvt");
 
   ASSERT_EQ(0, kvt.size());
 
@@ -197,7 +197,7 @@ TEST_F(DatabaseTestScenario, KeyValueTab_Remove)
 TEST_F(DatabaseTestScenario, KeyValueTab_AllKeys)
 {
   auto db = getScenario01();
-  auto kvt = createNewKeyValueTab(db, "kvt");
+  auto kvt = db.createNewKeyValueTab("kvt");
 
   auto ak = kvt.allKeys();
   ASSERT_TRUE(ak.empty());

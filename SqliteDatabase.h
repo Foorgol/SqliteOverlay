@@ -20,6 +20,9 @@ using namespace std;
 
 namespace SqliteOverlay
 {
+  // a forward definition
+  class KeyValueTab;
+
   // some free functions, mostly for creating SQL strings
 
   /** \brief Creates a column constraint string for CREATE TABLE statements
@@ -1022,6 +1025,16 @@ namespace SqliteOverlay
      */
     SqliteDatabase duplicateConnection(
         bool readOnly   ///< `true`: open the new connection in read-only mode; `false`: open in r/w mode
+        );
+
+    /** \brief Function for creating a new, empty key-value-table in the database
+     *
+     * \throws std::invalid_argument if the provided table name is empty or already in use
+     *
+     * \returns a KeyValueTab instance for the newly created table
+     */
+    KeyValueTab createNewKeyValueTab(
+        const string& tabName   ///< the table name
         );
 
     /** \returns a string containing the path to the database file (empty for in-memory databases)

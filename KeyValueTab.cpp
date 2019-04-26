@@ -290,35 +290,6 @@ namespace SqliteOverlay
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
 
-  KeyValueTab createNewKeyValueTab(const SqliteDatabase& db, const string& tabName)
-  {
-    Sloppy::estring tn{tabName};
-    tn.trim();
-
-    if (tn.empty())
-    {
-      throw std::invalid_argument("The table name is empty");
-    }
-
-    if (db.hasTable(tn))
-    {
-      throw std::invalid_argument("A table of that name already exists");
-    }
-
-    TableCreator tc;
-    tc.addCol(KeyValueTab::KEY_COL_NAME, ColumnDataType::Text, ConflictClause::Rollback, ConflictClause::Rollback);
-    tc.addCol(KeyValueTab::VAL_COL_NAME, ColumnDataType::Null, ConflictClause::Rollback, ConflictClause::Rollback);
-    tc.createTableAndResetCreator(db, tabName);
-
-    // create an index on the "key"-column for faster lookups
-    Sloppy::estring sql = "CREATE INDEX KeyIndex ON %1(%2)";
-    sql.arg(tabName);
-    sql.arg(KeyValueTab::KEY_COL_NAME);
-    db.execNonQuery(sql);
-
-    return KeyValueTab(db, tabName);
-  }
-
     
 //----------------------------------------------------------------------------
 

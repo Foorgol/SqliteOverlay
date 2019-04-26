@@ -4,10 +4,13 @@
 
 #include <Sloppy/String.h>
 #include <Sloppy/Utils.h>
+#include <Sloppy/Crypto/Crypto.h>
 
 #include "SqliteDatabase.h"
 //#include "DbTab.h"
 #include "Transaction.h"
+#include "KeyValueTab.h"
+#include "TableCreator.h"
 
 using namespace std;
 
@@ -868,6 +871,41 @@ namespace SqliteOverlay
     OpenMode om = readOnly ? OpenMode::OpenExisting_RO : OpenMode::OpenExisting_RW;
 
     return SqliteDatabase{fn, om, false};
+  }
+
+  //----------------------------------------------------------------------------
+
+  KeyValueTab SqliteDatabase::createNewKeyValueTab(const string& tabName)
+  {
+    Sloppy::estring tn{tabName};
+    tn.trim();
+
+    if (tn.empty())
+    {
+      throw std::invalid_argument("The table name is empty");
+    }
+
+    if (hasTable(tn))
+    {
+      throw std::invalid_argument("A table of that name already exists");
+    }
+
+    TableCreator tc;
+    tc.addCol(KeyValueTab::KEY_COL_NAME, ColumnDataType::Text, ConflictClause::Rollback, ConflictClause::Rollback);
+    tc.addCol(KeyValueTab::VAL_COL_NAME, ColumnDataType::Null, ConflictClause::Rollback, ConflictClause::Rollback);
+    tc.createTableAndResetCreator(*this, tabName);
+
+    // create an index with a unique name on the "key"-column
+    // for faster lookups
+    string idxName{"KeyIndex_"};
+    idxName += Sloppy::Crypto::getRandomAlphanumString(20);
+    Sloppy::estring sql = "CREATE INDEX %1 ON %2(%3)";
+    sql.arg(idxName);
+    sql.arg(tabName);
+    sql.arg(KeyValueTab::KEY_COL_NAME);
+    execNonQuery(sql);
+
+    return KeyValueTab(*this, tabName);
   }
 
   //----------------------------------------------------------------------------

@@ -245,14 +245,6 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  /** \brief Free function for creating a new, empty key-value-table
-   *
-   * \returns a KeyValueTab instance for the newly created table
-   */
-  KeyValueTab createNewKeyValueTab(
-      const SqliteDatabase& db,   ///< the database for which the table shall be created
-      const string& tabName   ///< the table name
-      );
 }
 #endif	/* KEYVALUETAB_H */
 
