@@ -713,6 +713,24 @@ namespace SqliteOverlay
         int id   ///< the `rowid` in question
         ) const;
 
+    /** \brief Checks whether all rows of a column satisfy a given constraint, e.g. "alphanumeric".
+     *
+     * \note Consider calling this function from within a transaction in order to avoid that the
+     * constraint is violated by another database connection after the check.
+     *
+     * \throws std::invalid argument if the column name was empty or invalid
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \returns a list of rowid that violate the constraint; if empty, all rows comply with the constraint
+     */
+    vector<int> checkConstraint(
+          const string& colName,   ///< the name of the column to check
+          Sloppy::ValueConstraint c,  ///< the constraint to check the column content against
+          int firstRowId = -1
+        ) const;
+
   protected:
     void addColumn_exec(
         const string& colName,

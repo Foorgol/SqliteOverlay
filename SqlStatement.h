@@ -354,6 +354,8 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
+     * \throws NullValueException if the column contains NULL
+     *
      * \throws InvalidColumnException if the requested column does not exist
      *
      * \returns the value in the requested result column as int
@@ -369,6 +371,8 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
+     * \throws NullValueException if the column contains NULL
+     *
      * \throws InvalidColumnException if the requested column does not exist
      *
      * \returns the value in the requested result column as int
@@ -383,6 +387,8 @@ namespace SqliteOverlay
     /** \brief Retrieves the value of a column in the statement result as double value
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws NullValueException if the column contains NULL
      *
      * \throws InvalidColumnException if the requested column does not exist
      *
@@ -400,6 +406,8 @@ namespace SqliteOverlay
      * \warning This function assumes that the column content can be converted to an
      * integer value! This is only a wrapper around `getInt()` that compares the
      * result with `0`.
+     *
+     * \throws NullValueException if the column contains NULL
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
@@ -422,6 +430,8 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
+     * \throws NullValueException if the column contains NULL
+     *
      * \throws InvalidColumnException if the requested column does not exist
      *
      * \returns the value in the requested result column as string
@@ -437,6 +447,8 @@ namespace SqliteOverlay
      * requires the cell content to be an integer with "seconds since epoch".
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws NullValueException if the column contains NULL
      *
      * \throws InvalidColumnException if the requested column does not exist
      *
@@ -455,6 +467,8 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
+     * \throws NullValueException if the column contains NULL
+     *
      * \throws InvalidColumnException if the requested column does not exist
      *
      * \returns the value in the requested result column as UTCTimestamp
@@ -469,6 +483,8 @@ namespace SqliteOverlay
     /** \brief Retrieves the value of a column in the statement result as a data blob.
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws NullValueException if the column contains NULL
      *
      * \throws InvalidColumnException if the requested column does not exist
      *
@@ -487,6 +503,8 @@ namespace SqliteOverlay
      * that the JSON data has been serialized as a normal string.
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws NullValueException if the column contains NULL
      *
      * \throws InvalidColumnException if the requested column does not exist
      *

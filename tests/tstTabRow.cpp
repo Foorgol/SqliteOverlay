@@ -6,6 +6,7 @@
 #include "ClausesAndQueries.h"
 #include "TabRow.h"
 #include "CommonTabularClass.h"
+//#include "DbTab.h"
 
 using namespace SqliteOverlay;
 
@@ -323,4 +324,41 @@ TEST_F(DatabaseTestScenario, TabRow_MultiGet)
   ASSERT_NO_THROW(r.multiGetByRef("i", oi, "f", f));
   ASSERT_FALSE(oi.has_value());
   ASSERT_EQ(666.66, f);
+}
+
+//----------------------------------------------------------------
+
+TEST(TabRowTests, ConstraintChecks)
+{
+  auto db = SqliteDatabase();
+
+  db.execNonQuery("CREATE TABLE t(x)");
+  db.execNonQuery("INSERT INTO t(x) VALUES(NULL)");
+  SqlStatement stmt = db.prepStatement("INSERT INTO t(x) VALUES(?)");
+  for (const string& v : {"42", "abc", "1234", "123abc", ""})
+  {
+    stmt.bind(1, v);
+    stmt.step();
+    stmt.reset(true);
+  }
+
+  TabRow r1{db, "t", 1, true};
+  TabRow r2{db, "t", 2, true};
+  TabRow r6{db, "t", 6, true};
+
+  ASSERT_FALSE(r1.checkConstraint("x", Sloppy::ValueConstraint::Exist));
+  ASSERT_TRUE(r2.checkConstraint("x", Sloppy::ValueConstraint::Exist));
+  ASSERT_TRUE(r6.checkConstraint("x", Sloppy::ValueConstraint::Exist));
+
+  ASSERT_FALSE(r1.checkConstraint("x", Sloppy::ValueConstraint::NotEmpty));
+  ASSERT_TRUE(r2.checkConstraint("x", Sloppy::ValueConstraint::NotEmpty));
+  ASSERT_FALSE(r6.checkConstraint("x", Sloppy::ValueConstraint::NotEmpty));
+
+  ASSERT_FALSE(r1.checkConstraint("x", Sloppy::ValueConstraint::Numeric));
+  ASSERT_TRUE(r2.checkConstraint("x", Sloppy::ValueConstraint::Numeric));
+  ASSERT_FALSE(r6.checkConstraint("x", Sloppy::ValueConstraint::Numeric));
+
+  ASSERT_FALSE(r1.checkConstraint("x", Sloppy::ValueConstraint::Alpha));
+  ASSERT_FALSE(r2.checkConstraint("x", Sloppy::ValueConstraint::Alpha));
+  ASSERT_FALSE(r6.checkConstraint("x", Sloppy::ValueConstraint::Alpha));
 }

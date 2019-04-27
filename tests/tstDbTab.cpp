@@ -449,3 +449,48 @@ TEST_F(DatabaseTestScenario, DbTab_AddColumn)
   ASSERT_EQ(oldColCount+5, t1.allColDefs().size());
   ASSERT_TRUE(hasColDef("sRef TEXT  REFERENCES t2(s) ON DELETE RESTRICT ON UPDATE SET NULL"));
 }
+
+//----------------------------------------------------------------
+
+TEST(DbTabTests, ConstraintChecks)
+{
+  auto db = SqliteDatabase();
+
+  db.execNonQuery("CREATE TABLE t(x)");
+  db.execNonQuery("INSERT INTO t(x) VALUES(NULL)");
+  SqlStatement stmt = db.prepStatement("INSERT INTO t(x) VALUES(?)");
+  for (const string& v : {"42", "abc", "1234", "123abc", ""})
+  {
+    stmt.bind(1, v);
+    stmt.step();
+    stmt.reset(true);
+  }
+
+  DbTab tab{db, "t", false};
+  ASSERT_EQ(6, tab.length());
+
+  // check "exists" constraint
+  auto badId = tab.checkConstraint("x", Sloppy::ValueConstraint::Exist);
+  ASSERT_EQ(1, badId.size());
+  ASSERT_EQ(1, badId[0]);
+
+  // check "not empty" constraint
+  badId = tab.checkConstraint("x", Sloppy::ValueConstraint::NotEmpty);
+  ASSERT_EQ(2, badId.size());
+  ASSERT_EQ(1, badId[0]);
+  ASSERT_EQ(6, badId[1]);
+
+  // check "numeric" constraint
+  badId = tab.checkConstraint("x", Sloppy::ValueConstraint::Numeric);
+  ASSERT_EQ(4, badId.size());
+  ASSERT_EQ(1, badId[0]);
+  ASSERT_EQ(3, badId[1]);
+  ASSERT_EQ(5, badId[2]);
+  ASSERT_EQ(6, badId[3]);
+
+  // run checks on an empty table
+  db.execNonQuery("CREATE TABLE t2(x)");
+  DbTab t2{db, "t2", false};
+  badId = t2.checkConstraint("x", Sloppy::ValueConstraint::Numeric);
+  ASSERT_TRUE(badId.empty());
+}

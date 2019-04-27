@@ -302,6 +302,13 @@ namespace SqliteOverlay
     db.get().execNonQuery(sql);
   }
 
+  //----------------------------------------------------------------------------
+
+  bool TabRow::checkConstraint(const string& colName, Sloppy::ValueConstraint c, string* errMsg) const
+  {
+    return Sloppy::checkConstraint(getString2(colName), c, errMsg);
+  }
+
 //----------------------------------------------------------------------------
 
 

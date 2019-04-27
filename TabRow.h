@@ -14,6 +14,7 @@
 #define	SQLITE_OVERLAY_TABROW_H
 
 #include <Sloppy/String.h>
+#include <Sloppy/ConfigFileParser/ConstraintChecker.h>
 
 #include "SqliteDatabase.h"
 #include "ClausesAndQueries.h"
@@ -732,6 +733,24 @@ namespace SqliteOverlay
       stmt.step();
       return stmt.tupleGet<T1, T2, T3, T4>(0, 1, 2, 3);
     }
+
+    /** \brief Checks whether a cell's content satisfies a given constraint, e.g. "alphanumeric".
+     *
+     * \note Consider calling this function from within a transaction in order to avoid that the
+     * constraint is violated by another database connection after the check.
+     *
+     * \throws std::invalid argument if the column name was empty or invalid
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \returns `true` if the constraint is satisfied, 'false' otherwise.
+     */
+    bool checkConstraint(
+        const string& colName,   ///< the name of the column to check
+        Sloppy::ValueConstraint c,   ///< the constraint to check the column content against
+        string* errMsg = nullptr   ///< optional pointer to a string in which an english error message in case of a constraint violation is stored
+        ) const;
 
   protected:
     void genCommaSepString(string& target, const string& element) const

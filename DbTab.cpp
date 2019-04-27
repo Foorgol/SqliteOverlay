@@ -268,6 +268,40 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  vector<int> DbTab::checkConstraint(const string& colName, Sloppy::ValueConstraint c, int firstRowId) const
+  {
+    vector<int> result;
+    Sloppy::estring sql = "SELECT rowid,%1 FROM %2 WHERE rowid >= %3 ORDER BY rowid ASC";
+    sql.arg(colName);
+    sql.arg(tabName);
+    sql.arg(firstRowId);
+
+    SqlStatement stmt = db.get().prepStatement(sql);
+
+    for (stmt.step() ; stmt.hasData() ; stmt.step())
+    {
+      optional<string> val;
+      try
+      {
+        val = stmt.getString(1);
+      }
+      catch (NullValueException)
+      {
+        val.reset();
+      }
+
+      bool isOkay = Sloppy::checkConstraint(val, c);
+      if (!isOkay)
+      {
+        result.push_back(stmt.getInt(0));
+      }
+    }
+
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
   void DbTab::addColumn_exec(const string& colName, ColumnDataType colType, const string& constraints) const
   {
     string cn{colName};
