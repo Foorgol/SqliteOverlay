@@ -314,6 +314,20 @@ namespace SqliteOverlay
 
     /** \brief Executes the next step of the SQL statement
      *
+     * This is just a an alias for `step()`.
+     *
+     * \returns after the first step: always `true` because we either have result rows
+     * or we successfully executed a no-data-query
+     *
+     * \returns after any subsequent step: `true` if the step produced more data rows; `false` if we're done
+     */
+    bool operator++()
+    {
+      return step();
+    }
+
+    /** \brief Executes the next step of the SQL statement
+     *
      * This is nothing but a wrapper around `step()` with a modified return value.
      * Unlike `step()`, `dataStep()` returns `false` even after the first step if this
      * first step didn't produce any data rows.

@@ -121,11 +121,13 @@ TEST_F(DatabaseTestScenario, StmtStep)
   // prep and execute a SQL query that could return
   // data but doesn't in this case
   stmt = SqlStatement{db.get(), "SELECT * FROM t1 WHERE i=123456"};
-  ASSERT_TRUE(stmt.step());
+  //ASSERT_TRUE(stmt.step());
+  ASSERT_TRUE(++stmt);   // try the prefix increment operator instead of `step()`
   ASSERT_TRUE(stmt.isDone());
   ASSERT_FALSE(stmt.hasData());
   ASSERT_THROW(stmt.getInt(0), NoDataException);
-  ASSERT_FALSE(stmt.step());   // "no more data"
+  //ASSERT_FALSE(stmt.step());
+  ASSERT_FALSE(++stmt);   // "no more data"
 
   // prep and execute a SQL query that returns multiple rows and columns
   stmt = SqlStatement{db.get(), "SELECT * FROM t1"};
