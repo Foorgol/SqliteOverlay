@@ -24,6 +24,10 @@
 namespace SqliteOverlay
 {
 
+  // forward
+  template<typename T>
+  class SingleColumnIterator;
+
   /** \brief A class that represents a table in a database
    */
   class DbTab : public CommonTabularClass
@@ -56,6 +60,13 @@ namespace SqliteOverlay
     DbTab& operator=(const DbTab& other) = default;
 
     DbTab& operator=(DbTab&& other) = default;
+
+    /** \returns the name of the table we're linked to
+     */
+    const string& name() const
+    {
+      return tabName;
+    }
 
     /** \brief Appends a new row with given column values to the table
      *
@@ -731,6 +742,31 @@ namespace SqliteOverlay
           int firstRowId = -1
         ) const;
 
+    /** \returns a SingleColumnIterator that iterates over all values / rows of a column,
+     * if not restricted by an optional row range
+     */
+    template<typename T>
+    SingleColumnIterator<T> singleColumnIterator(
+          const string& colName,   ///< the column that shall be iterated over
+          int minRowId = -1,   ///< return only rows with a rowid greater or equal to this values
+          int maxRowId = -1   ///< return only rows with a rowid less or equal to this values
+          )
+    {
+      return SingleColumnIterator<T>{db.get(), tabName, colName, minRowId, maxRowId};
+    }
+
+    /** \returns a SingleColumnIterator that iterates over all values / rows of a column,
+     * if not restricted by an optional WHERE clause
+     */
+    template<typename T>
+    SingleColumnIterator<T> singleColumnIterator(
+          const string& colName,   ///< the column that shall be iterated over
+          const WhereClause& w   ///< a WHERE clause that narrows down the number of returned rows; the WHERE can include conditions on other columns than just 'colName', of course
+          )
+    {
+      return SingleColumnIterator<T>{db.get(), tabName, colName, w};
+    }
+
   protected:
     void addColumn_exec(
         const string& colName,
@@ -744,7 +780,225 @@ namespace SqliteOverlay
     string cachedSelectSql;
   };
 
-}
+  /** \brief An iterator-like class that allows for easy iteration over
+   * all values / all rows in a dedicated column.
+   *
+   * This is essentially a wrapper around an underlying SqlStatement that
+   * selects the given range of rows and the specified column. Rows are always
+   * iterated in ascending rowid order.
+   *
+   * Typical usage could look like this:
+   * \code
+   * for (auto it = tab.singleColumnIterator<int>("MyCol"); it.hasData(); ++it)
+   * {
+   *   doSomething();
+   * }
+   * \endcode
+   *
+   * \note That this class' interface does not comply with the interface
+   * of a "usual" iterator. Such a "usual" iterator would, among other things,
+   * require to be `copy-constructible` and `copy-assignable` which is
+   * difficult due to our underlying SqlStatement.
+   *
+   * \note As long as the iterator has not finished, we have a running statement
+   * open on the database and on our connection. Keep this in mind when mixing this
+   * iterator with transactions and/or concurrent database connections.
+   *
+   * I'm not sure what happens if you add or remove rows while this iterator and
+   * its underlying SqlStatement are active.
+   *
+   */
+  template<typename T>
+  class SingleColumnIterator
+  {
+  public:
+    /** \brief Ctor with most basic parameters (all strings and ints, except
+     * for the database.
+     *
+     * Directly after construction, the iterator points already at the first
+     * result row. There is no need for an inital "++()" in order to yield the
+     * first row.
+     */
+    SingleColumnIterator(
+        const SqliteDatabase& db,   ///< the database that contains the table
+        const string& tabName,   ///< the table that contains the column
+        const string& colName,   ///< the column that shall be iterated over
+        int minRowId = -1,   ///< return only rows with a rowid greater or equal to this values
+        int maxRowId = -1   ///< return only rows with a rowid less or equal to this values
+        )
+    {
+      WhereClause w;
+      if (minRowId > 0)
+      {
+        w.addCol("rowid", ">=", minRowId);
+      }
+      if (maxRowId > 0)
+      {
+        w.addCol("rowid", "<=", maxRowId);
+      }
+      init(db, tabName, colName, w);
+    }
 
+    /** \brief Ctor with a `DbTab` for identifying the database and the table
+     *
+     * Directly after construction, the iterator points already at the first
+     * result row. There is no need for an inital "++()" in order to yield the
+     * first row.
+     */
+    SingleColumnIterator(
+        const DbTab& tab,   ///< the table that contains the column
+        const string& colName,   ///< the column that shall be iterated over
+        int minRowId = -1,   ///< return only rows with a rowid greater or equal to this values
+        int maxRowId = -1   ///< return only rows with a rowid less or equal to this values
+        )
+      :SingleColumnIterator(tab.dbRef(), tab.name(), colName, minRowId, maxRowId) {}
+
+    /** \brief Ctor with a `DbTab` for identifying the database and the table
+     *
+     * Directly after construction, the iterator points already at the first
+     * result row. There is no need for an inital "++()" in order to yield the
+     * first row.
+     *
+     * \note Rows are always iterated in ascending rowid order regardless of
+     * any order setting in the WhereClause.
+     */
+    SingleColumnIterator(
+        const DbTab& tab,   ///< the table that contains the column
+        const string& colName,   ///< the column that shall be iterated over
+        const WhereClause& w   ///< a WHERE clause that narrows down the number of returned rows; the WHERE can include conditions on other columns than just 'colName', of course
+        )
+      :SingleColumnIterator(tab.dbRef(), tab.name(), colName, w) {}
+
+    /** \brief Ctor with most basic parameters (all strings and ints, except
+     * for the database.
+     *
+     * Directly after construction, the iterator points already at the first
+     * result row. There is no need for an inital "++()" in order to yield the
+     * first row.
+     *
+     * \note Rows are always iterated in ascending rowid order regardless of
+     * any order setting in the WhereClause.
+     */
+    SingleColumnIterator(
+        const SqliteDatabase& db,   ///< the database that contains the table
+        const string& tabName,   ///< the table that contains the column
+        const string& colName,   ///< the column that shall be iterated over
+        const WhereClause& w   ///< a WHERE clause that narrows down the number of returned rows; the WHERE can include conditions on other columns than just 'colName', of course
+        )
+    {
+      init(db, tabName, colName, w);
+    }
+
+    /** \brief Empty dtor */
+    ~SingleColumnIterator() {}
+
+    /** \brief Default move ctor, boils down to the move ctor
+     * of the underlying SqlStatement
+     */
+    SingleColumnIterator(SingleColumnIterator&& other) = default;
+
+    /** \brief Deleted copy ctor because we can't copy
+     * of the underlying SqlStatement
+     */
+    SingleColumnIterator(const SingleColumnIterator& other) = delete;
+
+    /** \brief Default move assignment, boils down to the move assignment
+     * of the underlying SqlStatement
+     */
+    SingleColumnIterator& operator=(SingleColumnIterator&& other) = default;
+
+    /** \brief Deleted copy assignment because we can't copy
+     * of the underlying SqlStatement
+     */
+    SingleColumnIterator& operator=(const SingleColumnIterator& other) = delete;
+
+    /** \brief Advances to the next row
+     *
+     * \returns `true` if we found another data row and 'false' if we are beyond the last row
+     */
+    bool operator++()
+    {
+      return stmt.step();
+    }
+
+    /** \returns 'true' if the iterator points to a data row, 'false' otherwise
+     */
+    bool hasData() const
+    {
+      return stmt.hasData();
+    }
+
+    /** \returns the column value at the current iterator position
+     *
+     * \throws NullValueException if the column contains NULL at the current position
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     */
+    T operator*() const
+    {
+      T result;
+      stmt.get(1, result);
+      return result;
+    }
+
+    /** Access to the column value; saves one copy operation compared to
+     * `operator*()`.
+     *
+     * \throws NullValueException if the column contains NULL at the current position
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \returns the column value at the current iterator position
+     *
+     */
+    void get(T& result) const
+    {
+      stmt.get(1, result);
+    }
+
+    /** \returns the column value at the current iterator position as an `optional` in
+     * order to nicely handle NULL values
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     */
+    optional<T> get2() const
+    {
+      optional<T> result;
+      stmt.get(1, result);
+      return result;
+    }
+
+    /** \returns the rowid at the current iterator position
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     */
+    int rowid() const
+    {
+      return stmt.getInt(0);
+    }
+
+  protected:
+    void init(
+        const SqliteDatabase& db,   ///< the database that contains the table
+        const string& tabName,   ///< the table that contains the column
+        const string& colName,   ///< the column that shall be iterated over
+        const WhereClause& w   ///< any applicable row filter
+        )
+    {
+      string sql = "SELECT rowid," + colName + " FROM " +  tabName;
+      if (!w.isEmpty())
+      {
+        sql += " WHERE " + w.getWherePartWithPlaceholders();
+      }
+      sql += " ORDER BY rowid ASC";
+
+      stmt = w.createStatementAndBindValuesToPlaceholders(db, sql);
+      stmt.step();
+    }
+
+  private:
+    SqlStatement stmt;
+  };
+}
 #endif	/* DBTAB_H */
 

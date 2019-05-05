@@ -257,6 +257,13 @@ namespace SqliteOverlay
      */
     int length() const;
 
+    /** \returns a reference to the underlying database instance
+     */
+    const SqliteDatabase& dbRef() const
+    {
+      return db.get();
+    }
+
   protected:
     /**
      * the handle to the (parent) database

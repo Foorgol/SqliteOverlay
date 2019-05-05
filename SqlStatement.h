@@ -612,7 +612,7 @@ namespace SqliteOverlay
      * value types at compile time.
      */
     template<typename T>
-    void get(int colId, T& result)
+    void get(int colId, T& result) const
     {
       // a literal 'false' is not possible here because it would
       // trigger the static_assert even if the template has never
@@ -637,7 +637,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void get(int colId, int& result)
+    void get(int colId, int& result) const
     {
       result = getInt(colId);
     }
@@ -655,7 +655,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void get(int colId, long& result)
+    void get(int colId, long& result) const
     {
       result = getLong(colId);
     }
@@ -673,7 +673,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void get(int colId, double& result)
+    void get(int colId, double& result) const
     {
       result = getDouble(colId);
     }
@@ -691,7 +691,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void get(int colId, string& result)
+    void get(int colId, string& result) const
     {
       result = getString(colId);
     }
@@ -709,7 +709,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void get(int colId, bool& result)
+    void get(int colId, bool& result) const
     {
       result = getBool(colId);
     }
@@ -727,7 +727,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void get(int colId, UTCTimestamp& result)
+    void get(int colId, UTCTimestamp& result) const
     {
       result = getUTCTime(colId);
     }
@@ -747,7 +747,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void get(int colId, nlohmann::json& result);
+    void get(int colId, nlohmann::json& result) const;
 
     /** \brief Retrieves the value of a column in the statement result
      * with the possibility to catch and return NULL values.
@@ -765,7 +765,7 @@ namespace SqliteOverlay
      *
      */
     template<typename T>
-    void get(int colId, optional<T>& result)
+    void get(int colId, optional<T>& result) const
     {
       T tmp;
 
@@ -792,7 +792,7 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2>
-    void multiGet(int col1, T1& result1, int col2, T2& result2)
+    void multiGet(int col1, T1& result1, int col2, T2& result2) const
     {
       get(col1, result1);
       get(col2, result2);
@@ -808,7 +808,7 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2, typename T3>
-    void multiGet(int col1, T1& result1, int col2, T2& result2, int col3, T3& result3)
+    void multiGet(int col1, T1& result1, int col2, T2& result2, int col3, T3& result3) const
     {
       get(col1, result1);
       get(col2, result2);
@@ -825,7 +825,7 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2, typename T3, typename T4>
-    void multiGet(int col1, T1& result1, int col2, T2& result2, int col3, T3& result3, int col4, T4& result4)
+    void multiGet(int col1, T1& result1, int col2, T2& result2, int col3, T3& result3, int col4, T4& result4) const
     {
       get(col1, result1);
       get(col2, result2);
@@ -843,7 +843,7 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2>
-    tuple<T1, T2> tupleGet(int col1, int col2)
+    tuple<T1, T2> tupleGet(int col1, int col2) const
     {
       T1 r1;
       get(col1, r1);
@@ -864,7 +864,7 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2, typename T3>
-    tuple<T1, T2, T3> tupleGet(int col1, int col2, int col3)
+    tuple<T1, T2, T3> tupleGet(int col1, int col2, int col3) const
     {
       T1 r1;
       get(col1, r1);
@@ -888,7 +888,7 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2, typename T3, typename T4>
-    tuple<T1, T2, T3, T4> tupleGet(int col1, int col2, int col3, int col4)
+    tuple<T1, T2, T3, T4> tupleGet(int col1, int col2, int col3, int col4) const
     {
       T1 r1;
       get(col1, r1);

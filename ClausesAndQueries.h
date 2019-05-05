@@ -456,7 +456,9 @@ namespace SqliteOverlay {
      */
     void clear() override;
 
-  protected:
+    /** \returns a string that contains the SQL text that you would expect after the `WHERE` in
+     * a SELECT statement, for instance; all column values are represented by `?`-placeholders.
+     */
     string getWherePartWithPlaceholders() const;
 
   private:

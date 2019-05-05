@@ -310,7 +310,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqlStatement::get(int colId, nlohmann::json& result)
+  void SqlStatement::get(int colId, nlohmann::json& result) const
   {
     result = getJson(colId);
   }

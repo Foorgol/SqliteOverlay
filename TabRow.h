@@ -809,6 +809,7 @@ namespace SqliteOverlay
     string cachedWhereStatementForRow;
     Sloppy::estring cachedUpdateStatementForRow;
   };
+
 }
 
 #endif	/* TABROW_H */
