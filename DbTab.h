@@ -28,6 +28,9 @@ namespace SqliteOverlay
   template<typename T>
   class SingleColumnIterator;
 
+  // forward
+  class TabRowIterator;
+
   /** \brief A class that represents a table in a database
    */
   class DbTab : public CommonTabularClass
@@ -755,8 +758,8 @@ namespace SqliteOverlay
       return SingleColumnIterator<T>{db.get(), tabName, colName, minRowId, maxRowId};
     }
 
-    /** \returns a SingleColumnIterator that iterates over all values / rows of a column,
-     * if not restricted by an optional WHERE clause
+    /** \returns a SingleColumnIterator that iterates over all values / rows of a column
+     * that match a WHERE clause
      */
     template<typename T>
     SingleColumnIterator<T> singleColumnIterator(
@@ -766,6 +769,22 @@ namespace SqliteOverlay
     {
       return SingleColumnIterator<T>{db.get(), tabName, colName, w};
     }
+
+    /** \returns a TabRowIterator that iterates over all rows
+     * if not restricted by an optional row range
+     */
+    TabRowIterator tabRowIterator(
+          int minRowId = -1,   ///< return only rows with a rowid greater or equal to this values
+          int maxRowId = -1   ///< return only rows with a rowid less or equal to this values
+          );
+
+
+    /** \returns a TabRowIterator that iterates over all rows
+     * that match a WHERE clause
+     */
+    TabRowIterator tabRowIterator(
+          const WhereClause& w   ///< a WHERE clause that narrows down the number of returned rows; the WHERE can include conditions on other columns than just 'colName', of course
+          );
 
   protected:
     void addColumn_exec(
@@ -998,6 +1017,172 @@ namespace SqliteOverlay
 
   private:
     SqlStatement stmt;
+  };
+
+
+  /** \brief An iterator-like class that allows for easy iteration over
+   * all rows of a table
+   *
+   * This is essentially a wrapper around an underlying SqlStatement that
+   * selects the given range of rows. Rows are always
+   * iterated in ascending rowid order.
+   *
+   * Typical usage could look like this:
+   * \code
+   * for (auto it = tab.rowIterator(); it.hasData(); ++it)
+   * {
+   *   doSomething();
+   * }
+   * \endcode
+   *
+   * \note That this class' interface does not comply with the interface
+   * of a "usual" iterator. Such a "usual" iterator would, among other things,
+   * require to be `copy-constructible` and `copy-assignable` which is
+   * difficult due to our underlying SqlStatement.
+   *
+   * \note As long as the iterator has not finished, we have a running statement
+   * open on the database and on our connection. Keep this in mind when mixing this
+   * iterator with transactions and/or concurrent database connections.
+   *
+   * I'm not sure what happens if you add or remove rows while this iterator and
+   * its underlying SqlStatement are active.
+   *
+   */
+  class TabRowIterator
+  {
+  public:
+    /** \brief Ctor with most basic parameters (all strings and ints, except
+     * for the database.
+     *
+     * Directly after construction, the iterator points already at the first
+     * result row. There is no need for an inital "++()" in order to yield the
+     * first row.
+     */
+    TabRowIterator(
+        const SqliteDatabase& _db,   ///< the database that contains the table
+        const string& _tabName,   ///< the table that contains the column
+        int minRowId = -1,   ///< return only rows with a rowid greater or equal to this values
+        int maxRowId = -1   ///< return only rows with a rowid less or equal to this values
+        );
+
+    /** \brief Ctor with a `DbTab` for identifying the database and the table
+     *
+     * Directly after construction, the iterator points already at the first
+     * result row. There is no need for an inital "++()" in order to yield the
+     * first row.
+     */
+    TabRowIterator(
+        const DbTab& tab,   ///< the table that contains the column
+        int minRowId = -1,   ///< return only rows with a rowid greater or equal to this values
+        int maxRowId = -1   ///< return only rows with a rowid less or equal to this values
+        )
+      :TabRowIterator(tab.dbRef(), tab.name(), minRowId, maxRowId) {}
+
+    /** \brief Ctor with a `DbTab` for identifying the database and the table
+     *
+     * Directly after construction, the iterator points already at the first
+     * result row. There is no need for an inital "++()" in order to yield the
+     * first row.
+     *
+     * \note Rows are always iterated in ascending rowid order regardless of
+     * any order setting in the WhereClause.
+     */
+    TabRowIterator(
+        const DbTab& tab,   ///< the table that contains the column
+        const WhereClause& w   ///< a WHERE clause that narrows down the number of returned rows; the WHERE can include conditions on other columns than just 'colName', of course
+        )
+      :TabRowIterator(tab.dbRef(), tab.name(), w) {}
+
+    /** \brief Ctor with most basic parameters (all strings and ints, except
+     * for the database.
+     *
+     * Directly after construction, the iterator points already at the first
+     * result row. There is no need for an inital "++()" in order to yield the
+     * first row.
+     *
+     * \note Rows are always iterated in ascending rowid order regardless of
+     * any order setting in the WhereClause.
+     */
+    TabRowIterator(
+        const SqliteDatabase& _db,   ///< the database that contains the table
+        const string& _tabName,   ///< the table that contains the column
+        const WhereClause& w   ///< a WHERE clause that narrows down the number of returned rows; the WHERE can include conditions on other columns than just 'colName', of course
+        );
+
+    /** \brief Empty, unspecific dtor; we rely on the dtors of our members */
+    ~TabRowIterator() {}
+
+    /** \brief Default move ctor, boils down to the move ctor
+     * of the underlying SqlStatement
+     */
+    TabRowIterator(TabRowIterator&& other) = default;
+
+    /** \brief Deleted copy ctor because we can't copy
+     * of the underlying SqlStatement
+     */
+    TabRowIterator(const TabRowIterator& other) = delete;
+
+    /** \brief Default move assignment, boils down to the move assignment
+     * of the underlying SqlStatement
+     */
+    TabRowIterator& operator=(TabRowIterator&& other) = default;
+
+    /** \brief Deleted copy assignment because we can't copy
+     * of the underlying SqlStatement
+     */
+    TabRowIterator& operator=(const TabRowIterator& other) = delete;
+
+    /** \brief Advances to the next row and prepares a new TabRow instance
+     * for that row.
+     *
+     * \returns `true` if we found another data row and 'false' if we are beyond the last row
+     */
+    bool operator++();
+
+    /** \returns 'true' if the iterator points to a data row, 'false' otherwise
+     */
+    bool hasData() const
+    {
+      return stmt.hasData();
+    }
+
+    /** \returns the TabRow at the current iterator position
+     *
+     * The returned reference is only valid as long as the the iterator is not
+     * incremented. And, of course, as long as the iterator itself is alive.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     */
+    TabRow& operator*() const;
+
+    /** \returns the a pointer to a TabRow instance for the current iterator position
+     *
+     * The returned pointer is only valid as long as the the iterator is not
+     * incremented. And, of course, as long as the iterator itself is alive.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     */
+    TabRow* operator->() const;
+
+    /** \returns the rowid at the current iterator position
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     */
+    int rowid() const
+    {
+      return stmt.getInt(0);
+    }
+
+  protected:
+    void init(
+        const WhereClause& w   ///< any applicable row filter
+        );
+
+  private:
+    SqlStatement stmt;
+    unique_ptr<TabRow> curRow;
+    reference_wrapper<const SqliteDatabase> db;
+    string tabName;
   };
 }
 #endif	/* DBTAB_H */

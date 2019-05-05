@@ -302,6 +302,20 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  TabRowIterator DbTab::tabRowIterator(int minRowId, int maxRowId)
+  {
+    return TabRowIterator(db.get(), tabName, minRowId, maxRowId);
+  }
+
+  //----------------------------------------------------------------------------
+
+  TabRowIterator DbTab::tabRowIterator(const WhereClause& w)
+  {
+    return TabRowIterator(db.get(), tabName, w);
+  }
+
+  //----------------------------------------------------------------------------
+
   void DbTab::addColumn_exec(const string& colName, ColumnDataType colType, const string& constraints) const
   {
     string cn{colName};
@@ -364,6 +378,87 @@ namespace SqliteOverlay
     }
 
     return result;
+  }
+
+  //----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
+  TabRowIterator::TabRowIterator(const SqliteDatabase& _db, const string& _tabName, int minRowId, int maxRowId)
+    :db{_db}, tabName{_tabName}
+  {
+    WhereClause w;
+    if (minRowId > 0)
+    {
+      w.addCol("rowid", ">=", minRowId);
+    }
+    if (maxRowId > 0)
+    {
+      w.addCol("rowid", "<=", maxRowId);
+    }
+    init(w);
+  }
+
+  //----------------------------------------------------------------------------
+
+  TabRowIterator::TabRowIterator(const SqliteDatabase& _db, const string& _tabName, const WhereClause& w)
+    :db{_db}, tabName{_tabName}
+  {
+    init(w);
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool TabRowIterator::operator++()
+  {
+    curRow.reset(); // delete the old TabRow object
+
+    stmt.step();
+    if (stmt.hasData())
+    {
+      curRow = make_unique<TabRow>(db.get(), tabName, rowid(), true);
+    }
+
+    return stmt.hasData();
+  }
+
+  //----------------------------------------------------------------------------
+
+  TabRow& TabRowIterator::operator*() const
+  {
+    if (!stmt.hasData())
+    {
+      throw NoDataException("TabRowIterator: trying to de-reference empty / exhausted SQL statement");
+    }
+
+    return *curRow;
+  }
+
+  //----------------------------------------------------------------------------
+
+  TabRow* TabRowIterator::operator->() const
+  {
+    if (!stmt.hasData())
+    {
+      throw NoDataException("TabRowIterator: trying to de-reference empty / exhausted SQL statement");
+    }
+
+    return curRow.get();
+  }
+
+  //----------------------------------------------------------------------------
+
+  void TabRowIterator::init(const WhereClause& w)
+  {
+    if (w.isEmpty())
+    {
+      stmt = db.get().prepStatement("SELECT rowid FROM " + tabName);
+    } else {
+      stmt = w.getSelectStmt(db, tabName, false);
+    }
+
+    // call `step()` and creates a new TabRow instance, if necessary
+    operator++();
   }
 
   //----------------------------------------------------------------------------
