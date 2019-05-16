@@ -211,13 +211,6 @@ namespace SqliteOverlay
      */
     void close();
 
-    /** \brief Deletes all cached `DbTab` instances.
-     *
-     * Test case: not yet
-     *
-     */
-    void resetTabCache();
-
     /** \returns `true` if the database connection is still open and `false` otherwise
      *
      * Test case: partially, as part of the ctor tests

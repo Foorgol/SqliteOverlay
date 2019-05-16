@@ -50,8 +50,8 @@ set(LIB_SOURCES
     TabRow.h
     ClausesAndQueries.cpp
     ClausesAndQueries.h
-    #GenericDatabaseObject.cpp
-    #GenericObjectManager.cpp
+    GenericDatabaseObject.cpp
+    GenericObjectManager.cpp
     KeyValueTab.cpp
     KeyValueTab.h
     TableCreator.cpp
@@ -103,6 +103,7 @@ set(INSTALLATION_HEADERS
     SqlStatement.h
     CommonTabularClass.h
     DbTab.h
+    Defs.h
     TabRow.h
     ClausesAndQueries.h
     GenericDatabaseObject.h
@@ -110,8 +111,9 @@ set(INSTALLATION_HEADERS
     KeyValueTab.h
     TableCreator.h
     Transaction.h
-    UserMngr.h
-    ActionMngr.h
+    SqliteExceptions.h
+    #UserMngr.h
+    #ActionMngr.h
     )
 install(FILES ${INSTALLATION_HEADERS} DESTINATION include/SqliteOverlay)
 
@@ -134,8 +136,6 @@ set(LIB_SOURCES_TST
     tests/tstClausesAndQueries.cpp
     tests/tstDbTab.cpp
     tests/tstTabRow.cpp
-    #tests/tstTimestamps.cpp
-    #tests/tstDateTime.cpp
     tests/tstKeyValueTab.cpp
     tests/tstTransaction.cpp
     tests/tstCopyAndBackup.cpp

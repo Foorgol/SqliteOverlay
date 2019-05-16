@@ -319,6 +319,42 @@ namespace SqliteOverlay
         const string& w   /// a string that should be appended after the keyword "WHERE" in the SQL statement
         ) const;
 
+    /**
+     * \brief Provides access to the first row in the table that matches a custom WHERE clause.
+     *
+     * \throws BusyException if the database wasn't available for checking the
+     * validity of the rowId
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * \returns an optional TabRow instance representing the requested row; the optional is
+     * empty if the WHERE clause didn't produce any results.
+     *
+     */
+    optional<TabRow> getSingleRowByWhereClause2(
+        const WhereClause& w   ///< the WHERE clause that identifies the row
+        ) const;
+
+    /**
+     * \brief Provides access to the first row in the table that matches a custom WHERE clause.
+     *
+     * \throws BusyException if the database wasn't available for checking the
+     * validity of the rowId
+     *
+     * \throws SqliteStatementCreationError if the provided WHERE clause contained invalid SQL
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * \returns an optional TabRow instance representing the requested row; the optional is
+     * empty if the WHERE clause didn't produce any results.
+     *
+     * Test case: yes
+     *
+     */
+    optional<TabRow> getSingleRowByWhereClause2(
+        const string& w   /// a string that should be appended after the keyword "WHERE" in the SQL statement
+        ) const;
+
     /** \brief Retrieves a (potentially empty) list of all `TabRow` instances that match a given WHERE clause
      *
      * If any column name in the WHERE clause is invalid, no exception is thrown. Instead,

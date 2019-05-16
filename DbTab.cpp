@@ -230,6 +230,32 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  optional<TabRow> DbTab::getSingleRowByWhereClause2(const WhereClause& w) const
+  {
+    try
+    {
+      return getSingleRowByWhereClause(w);
+    } catch (NoDataException)
+    {
+      return optional<TabRow>{};
+    }
+  }
+
+  //----------------------------------------------------------------------------
+
+  optional<TabRow> DbTab::getSingleRowByWhereClause2(const string& w) const
+  {
+    try
+    {
+      return getSingleRowByWhereClause(w);
+    } catch (NoDataException)
+    {
+      return optional<TabRow>{};
+    }
+  }
+
+  //----------------------------------------------------------------------------
+
   int DbTab::deleteRowsByWhereClause(const WhereClause& where) const
   {
     if (where.isEmpty())

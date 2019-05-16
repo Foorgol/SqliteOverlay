@@ -14,39 +14,46 @@
 
 namespace SqliteOverlay
 {
-
-  template <class DB_CLASS_TYPE>
+  template<class DB_CLASS>
   class GenericDatabaseObject
   {
   public:
-    GenericDatabaseObject (DB_CLASS_TYPE* _db, const string& _tabName, int _id)
-      : db(_db), row(TabRow(_db, _tabName, _id)) {}
+    using DatabaseClass = DB_CLASS;
 
-    GenericDatabaseObject (DB_CLASS_TYPE* _db, const TabRow& _row)
-      :db(_db), row(_row) {}
+    GenericDatabaseObject (const DB_CLASS& _db, const string& _tabName, int _id)
+      : db(_db), row(TabRow(_db, _tabName, _id))
+    {
+      static_assert (std::is_base_of_v<SqliteDatabase, DB_CLASS>, "DB classes must be derived from SqliteDatabase");
+    }
+
+    GenericDatabaseObject (DB_CLASS& _db, const TabRow& _row)
+      :db(_db), row(_row)
+    {
+      static_assert (std::is_base_of_v<SqliteDatabase, DB_CLASS>, "DB classes must be derived from SqliteDatabase");
+    }
 
     inline int getId () const
     {
-      return row.getId();
+      return row.id();
     }
 
-    inline bool operator== (const GenericDatabaseObject<DB_CLASS_TYPE>& other) const
+    inline bool operator== (const GenericDatabaseObject& other) const
     {
       return (other.row == row);
     }
 
-    inline bool operator!= (const GenericDatabaseObject<DB_CLASS_TYPE>& other) const
+    inline bool operator!= (const GenericDatabaseObject& other) const
     {
       return (!(this->operator == (other)));
     }
 
-    inline DB_CLASS_TYPE* getDatabaseHandle() const
+    const DatabaseClass& getDatabaseHandle() const
     {
       return db;
     }
     
   protected:
-    DB_CLASS_TYPE* db;
+    reference_wrapper<const DB_CLASS> db;
     TabRow row;
 
   };
