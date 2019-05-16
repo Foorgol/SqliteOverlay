@@ -52,6 +52,8 @@ set(LIB_SOURCES
     ClausesAndQueries.h
     GenericDatabaseObject.cpp
     GenericObjectManager.cpp
+    GenericDatabaseObject.h
+    GenericObjectManager.h
     KeyValueTab.cpp
     KeyValueTab.h
     TableCreator.cpp

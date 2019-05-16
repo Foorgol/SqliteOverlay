@@ -42,7 +42,7 @@ namespace SqliteOverlay
 
     const DatabaseClass& getDatabaseHandle()
     {
-      return db;
+      return db.get();
     }
 
     //----------------------------------------------------------------------------

@@ -14,7 +14,7 @@
 
 namespace SqliteOverlay
 {
-  template<class DB_CLASS>
+  template<class DB_CLASS = SqliteDatabase>
   class GenericDatabaseObject
   {
   public:
@@ -49,7 +49,7 @@ namespace SqliteOverlay
 
     const DatabaseClass& getDatabaseHandle() const
     {
-      return db;
+      return db.get();
     }
     
   protected:
