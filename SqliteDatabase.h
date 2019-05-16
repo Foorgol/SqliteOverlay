@@ -869,7 +869,7 @@ namespace SqliteOverlay
      * \returns `true` if the operation was successful and `false` if it failed or if the
      * parameters where invalid
      *
-     * Test case: not yet
+     * Test case: yes, but only happy path
      *
      */
     bool copyTable(
@@ -893,7 +893,7 @@ namespace SqliteOverlay
      * \returns almost always `true` because most errors should be caught by exceptions; if `true`, the backup
      * is guaranteed to be successful
      *
-     * Test case: not yet
+     * Test case: yes, but only happy path
      *
      */
     bool backupToFile(
@@ -906,10 +906,6 @@ namespace SqliteOverlay
      *
      * \warning All content of the database will be overwritten!
      *
-     * \warning We implicitly call `resetTabCache()` because we can't be sure that the
-     * database structure remains the same. Thus, all user-cached `DbTab` pointers become
-     * invalid!
-     *
      * \throws std::invalid_argument if the provided source file name is empty
      *
      * \throws BusyException if the source (the caller) or destination database (the filename) is busy
@@ -919,7 +915,7 @@ namespace SqliteOverlay
      * \returns almost always `true` because most errors should be caught by exceptions; if `true`, the backup
      * is guaranteed to be successful
      *
-     * Test case: not yet
+     * Test case: yes, but only happy path
      *
      */
     bool restoreFromFile(
@@ -1089,7 +1085,7 @@ namespace SqliteOverlay
      * \returns almost always `true` because most errors should be caught by exceptions; if `true`, the backup
      * is guaranteed to be successful
      *
-     * Test case: not yet
+     * Test case: yes, but only happy path
      *
      */
     static bool copyDatabaseContents(

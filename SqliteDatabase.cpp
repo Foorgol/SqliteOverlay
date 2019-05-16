@@ -701,10 +701,9 @@ namespace SqliteOverlay
       string sqlCopy = "INSERT INTO " + dstTabName + " SELECT * FROM " + srcTabName;
       SqlStatement cpyStmt = prepStatement(sqlCopy);
 
-      execNonQuery(cpyStmt);
       try
       {
-        execNonQuery(cpyStmt);
+        cpyStmt.step();
       }
       catch (...)
       {
@@ -772,7 +771,7 @@ namespace SqliteOverlay
 
     // open the source database
     sqlite3* srcDb;
-    int err = sqlite3_open(srcFileName.c_str(), &srcDb);
+    int err = sqlite3_open_v2(srcFileName.c_str(), &srcDb, SQLITE_OPEN_READONLY, nullptr);
     if (err == SQLITE_BUSY)
     {
       throw BusyException("restoreFromFile(): weird... received SQLITE_BUSY when opening the destination database...");

@@ -138,7 +138,7 @@ set(LIB_SOURCES_TST
     #tests/tstDateTime.cpp
     tests/tstKeyValueTab.cpp
     tests/tstTransaction.cpp
-    #tests/tstCopyAndBackup.cpp
+    tests/tstCopyAndBackup.cpp
     #tests/tstUserManager.cpp
     #tests/tstActionManager.cpp
     tests/tstTableCreator.cpp
