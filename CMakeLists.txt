@@ -145,6 +145,7 @@ set(LIB_SOURCES_TST
     #tests/tstActionManager.cpp
     tests/tstTableCreator.cpp
     tests/tstIterators.cpp
+    tests/tstThreadsAndBusy.cpp
 )
 
 find_package(GTest)
