@@ -1096,16 +1096,12 @@ namespace SqliteOverlay
   void changeLogCallback(void* customPtr, int modType, const char* _dbName, const char* _tabName, sqlite3_int64 id)
   {
     if (customPtr == nullptr) return;
-    ChangeLogCallbackContext* ctx = (ChangeLogCallbackContext *) customPtr;
+    ChangeLogCallbackContext* ctx = reinterpret_cast<ChangeLogCallbackContext*>(customPtr);
 
     string dbName{_dbName};
-    if (dbName == "main") dbName.clear();
 
     lock_guard<mutex> lg{*(ctx->logMutex)};
 
-    ctx->logPtr->push_back(ChangeLogEntry{
-                             static_cast<RowChangeAction>(modType),
-                             dbName, string{_tabName}, id});
-
+    ctx->logPtr->emplace_back(modType, dbName, string{_tabName}, id);
   }
 }

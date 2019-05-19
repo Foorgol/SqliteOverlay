@@ -118,11 +118,20 @@ namespace SqliteOverlay
   // The changelog
   struct ChangeLogEntry
   {
+    ChangeLogEntry(int a, const string& dn, const string& tn, size_t id)
+      :action{static_cast<RowChangeAction>(a)}, dbName{dn}, tabName{tn}, rowId{id} {}
+
     ChangeLogEntry(RowChangeAction a, const string& dn, const string& tn, size_t id)
       :action{a}, dbName{dn}, tabName{tn}, rowId{id} {}
 
+    ChangeLogEntry() = default;
+    ChangeLogEntry(const ChangeLogEntry& other) = default;
+    ChangeLogEntry(ChangeLogEntry&& other) = default;
+    ChangeLogEntry& operator=(const ChangeLogEntry& other) = default;
+    ChangeLogEntry& operator=(ChangeLogEntry&& other) = default;
+
     RowChangeAction action;
-    string dbName;  // will be empty for "main" to save some memory
+    string dbName;
     string tabName;
     size_t rowId;
   };
