@@ -33,38 +33,6 @@ namespace SqliteOverlay
   class TableCreator
   {
   public:
-<<<<<<< HEAD
-    // ctor
-    TableCreator(SqliteDatabase* _db);
-
-    // adding columns
-    void addVarchar(const string& colName, int len, bool isUnique=false, CONFLICT_CLAUSE uniqueConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                    bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                    bool hasDefault=false, const string& defaultValue="");
-    void addInt(const string& colName, bool isUnique=false, CONFLICT_CLAUSE uniqueConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                bool hasDefault=false, const string& defaultValue="");
-    void addText(const string& colName, bool isUnique=false, CONFLICT_CLAUSE uniqueConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                 bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                 bool hasDefault=false, const string& defaultValue="");
-    void addCol(const string& colDef);
-    void addCol(const string& colName, const string& typeName, bool isUnique=false, CONFLICT_CLAUSE uniqueConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                 bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                 bool hasDefault=false, const string& defaultValue="");
-
-    // add foreign keys
-    void addForeignKey(const string& keyName, const string& referedTable,
-                               CONSISTENCY_ACTION onDelete=CONSISTENCY_ACTION::__NOT_SET,
-                               CONSISTENCY_ACTION onUpdate=CONSISTENCY_ACTION::__NOT_SET,
-                       bool notNull=false, CONFLICT_CLAUSE notNullConflictClause=CONFLICT_CLAUSE::__NOT_SET,
-                       bool isUnique=false, CONFLICT_CLAUSE uniqueConflictClause=CONFLICT_CLAUSE::__NOT_SET);
-
-    // add a unique combination of two or more
-    // column values
-    bool addUniqueColumnCombination(initializer_list<string> colNames, CONFLICT_CLAUSE notUniqueConflictClause);
-
-    // reset all internal data
-=======
     /** \brief Default ctor, does nothing
      */
     TableCreator() {}
@@ -135,7 +103,6 @@ namespace SqliteOverlay
     /** \brief Erases all previously added definitions from the objects
      * and resets it back to its initial state
      */
->>>>>>> dev
     void reset();
 
     /** \brief Creates the final SQL-statement text for creating the table; the database itself is left untouched

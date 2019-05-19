@@ -381,15 +381,6 @@ namespace SqliteOverlay
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
-<<<<<<< HEAD
-    int getColType(int colId) const;
-    string getColName(int colId) const;
-    int isNull(int colId) const;
-    int getColCount() const { return resultColCount; }
-
-    // export a row as CSV
-    string toCSV(const string& sep=",") const;
-=======
     /** \brief Retrieves the value of a column in the statement result as long value (64 bit)
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
@@ -406,7 +397,6 @@ namespace SqliteOverlay
     long getLong(
         int colId   ///< the zero-based column ID in the result row
         ) const;
->>>>>>> dev
 
     /** \brief Retrieves the value of a column in the statement result as double value
      *

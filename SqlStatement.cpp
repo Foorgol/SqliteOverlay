@@ -8,11 +8,7 @@
 #include <Sloppy/json.hpp>
 
 #include "SqlStatement.h"
-<<<<<<< HEAD
-#include "Utils.h"
-=======
 #include "SqliteExceptions.h"
->>>>>>> dev
 
 using namespace std;
 using namespace Sloppy::DateTime;
@@ -321,49 +317,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-<<<<<<< HEAD
-  string SqlStatement::toCSV(const string& sep) const
-  {
-    if (resultColCount < 1) return "";
-
-    string result;
-    int64_t i;  // placeholder for switch-case-section
-    double d;  // placeholder for switch-case-section
-    string s;  // placeholder for switch-case-section
-    for (int idx = 0; idx < resultColCount; ++idx)
-    {
-      if (idx > 0) result += sep;
-
-      switch (getColType(idx)) {
-      case SQLITE_INTEGER:
-        i = sqlite3_column_int64(stmt, idx);
-        result += to_string(i);
-        break;
-
-      case SQLITE_FLOAT:
-        d = sqlite3_column_double(stmt, idx);
-        result += to_string(d);
-        break;
-
-      case SQLITE_NULL:    // NULL results in ",," or just ",<EOL>"
-        break;
-
-      default:
-        s = reinterpret_cast<const char*>(sqlite3_column_text(stmt, idx));
-        s = quoteAndEscapeStringForCSV(s);
-        result += s;
-      }
-    }
-
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqlStatement::bindInt(int argPos, int val)
-=======
   void SqlStatement::assertColumnDataAccess(int colId) const
->>>>>>> dev
   {
     if (!hasData())
     {

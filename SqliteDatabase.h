@@ -7,14 +7,8 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
-<<<<<<< HEAD
-#include <functional>
-#include <mutex>
-#include <atomic>
-=======
 #include <optional>
 #include <type_traits>
->>>>>>> dev
 
 #include <Sloppy/Utils.h>
 
@@ -59,17 +53,7 @@ namespace SqliteOverlay
   {
     string result = buildColumnConstraint(uniqueConflictClause, notNullConflictClause);
 
-<<<<<<< HEAD
-  enum class RowChangeAction
-  {
-    Insert = SQLITE_INSERT,
-    Update = SQLITE_UPDATE,
-    Delete = SQLITE_DELETE
-  };
-
-=======
     if (!(result.empty())) result += " ";
->>>>>>> dev
 
     result += "DEFAULT " + to_string(defaultVal);
 
@@ -404,13 +388,6 @@ namespace SqliteOverlay
         const string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
-<<<<<<< HEAD
-    bool execScalarQueryString(const string& sqlStatement, string* out, int* errCodeOut);
-    bool execScalarQueryString(const upSqlStatement& stmt, string* out, int* errCodeOut) const;
-    unique_ptr<ScalarQueryResult<string>> execScalarQueryString(const upSqlStatement& stmt, int* errCodeOut=nullptr, bool skipPrep=false) const;
-    unique_ptr<ScalarQueryResult<string>> execScalarQueryString(const string& sqlStatement, int* errCodeOut=nullptr);
-    bool enforceSynchronousWrites(bool syncOn);
-=======
     /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
      * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
      *
@@ -596,7 +573,6 @@ namespace SqliteOverlay
     optional<double> execScalarQueryDoubleOrNull(
         const string& sqlStatement   ///< the SQL statement to execute
         ) const;
->>>>>>> dev
 
     /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
      * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
@@ -980,27 +956,6 @@ namespace SqliteOverlay
      */
     void resetDirtyFlag();
 
-<<<<<<< HEAD
-    // setting a callback function for
-    // data change notifications
-    void* setDataChangeNotificationCallback(void(*)(void*, int, const char*, const char*, sqlite3_int64), void* customPtr);
-
-    // change log functions.
-    //
-    // THESE FUNCTIONS OVERRIDE ANY CALLBACKS SET VIA
-    // setDataChangeNotificationCallback() !!
-    size_t getChangeLogLength();
-    ChangeLogList getAllChangesAndClearQueue();
-    void enableChangeLog(bool clearLog);
-    void disableChangeLog(bool clearLog);
-
-    // SQLite error message
-    string getErrMsg() const;
-
-  protected:
-    SqliteDatabase(string dbFileName = ":memory:", bool createNew=false);
-    vector<string> foreignKeyCreationCache;
-=======
     /** \returns the total number of rows inserted, modified or deleted by all INSERT,
      * UPDATE or DELETE statements completed since the database connection was opened
      *
@@ -1011,7 +966,6 @@ namespace SqliteOverlay
      *
      */
     int getLocalChangeCounter_total() const;
->>>>>>> dev
 
     /** \brief Resets the internal flag for local data changes (local = on this connection);
      * this does not affect the flag for external data changes through other connections.
@@ -1203,38 +1157,6 @@ namespace SqliteOverlay
     atomic<bool> isMultiThreadMutexLocked;
   };
 
-<<<<<<< HEAD
-  typedef unique_ptr<SqliteDatabase> upSqliteDatabase;
-
-  //----------------------------------------------------------------------------
-
-  template<typename RoleEnumType>
-  class DatabaseLockHolder
-  {
-  public:
-    DatabaseLockHolder(SqliteDatabase* db, RoleEnumType role, bool blocking=true)
-      :dbPtr{db}
-    {
-      int rc = db->acquireDatabaseLock(static_cast<int>(role), blocking);
-      hasNewLockAcquired = (rc == 1);
-      _isLocked = (rc != -1);
-    }
-
-    ~DatabaseLockHolder()
-    {
-      if (hasNewLockAcquired) dbPtr->releaseDatabaseLock();
-    }
-
-    bool islocked() const { return _isLocked; }
-
-  protected:
-    SqliteDatabase* dbPtr;
-    bool hasNewLockAcquired;
-    bool _isLocked;
-  };
-
-=======
->>>>>>> dev
 }
 
 #endif  /* SQLITEDATABASE_H */

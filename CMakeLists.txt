@@ -59,18 +59,12 @@ set(LIB_SOURCES
     TableCreator.cpp
     TableCreator.h
     Transaction.cpp
-<<<<<<< HEAD
-    UserMngr.cpp
-    ActionMngr.cpp
-    Utils.cpp
-=======
     Transaction.h
     #UserMngr.cpp
     #ActionMngr.cpp
     SqliteExceptions.h
     Defs.h
     Defs.cpp
->>>>>>> dev
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
@@ -84,11 +78,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 set(LIB_VERSION_MAJOR 0)
 set(LIB_VERSION_MINOR 4)
-<<<<<<< HEAD
-set(LIB_VERSION_PATCH 1)
-=======
 set(LIB_VERSION_PATCH 0)
->>>>>>> dev
 set(LIB_VERSION_STRING ${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_PATCH})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${LIB_VERSION_STRING}
@@ -123,15 +113,9 @@ set(INSTALLATION_HEADERS
     KeyValueTab.h
     TableCreator.h
     Transaction.h
-<<<<<<< HEAD
-    UserMngr.h
-    ActionMngr.h
-    Utils.h
-=======
     SqliteExceptions.h
     #UserMngr.h
     #ActionMngr.h
->>>>>>> dev
     )
 install(FILES ${INSTALLATION_HEADERS} DESTINATION include/SqliteOverlay)
 
@@ -157,19 +141,11 @@ set(LIB_SOURCES_TST
     tests/tstKeyValueTab.cpp
     tests/tstTransaction.cpp
     tests/tstCopyAndBackup.cpp
-<<<<<<< HEAD
-    tests/tstUserManager.cpp
-    tests/tstActionManager.cpp
-    tests/tstDataChangeCallback.cpp
-    tests/tstCSV.cpp
-    tests/tstMultithreadLocking.cpp
-=======
     #tests/tstUserManager.cpp
     #tests/tstActionManager.cpp
     tests/tstTableCreator.cpp
     tests/tstIterators.cpp
     tests/tstThreadsAndBusy.cpp
->>>>>>> dev
 )
 
 find_package(GTest)
@@ -179,27 +155,16 @@ if (GTEST_FOUND AND Boost_FOUND AND BUILD_TESTS)
     include_directories("." ${GTEST_INCLUDE_DIRS})
 
     add_executable(${PROJECT_NAME}_Tests ${LIB_SOURCES_TST})
-<<<<<<< HEAD
-    set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD 14)
-=======
     set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD 17)
->>>>>>> dev
     set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD_REQUIRED ON)
 
     set_target_properties(${PROJECT_NAME}_Tests PROPERTIES
       IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/lib${PROJECT_NAME}.so"
     )
 
-<<<<<<< HEAD
-    set(LIBS ${LIBS} ${PROJECT_NAME} pthread)
-
-    target_link_libraries(${PROJECT_NAME}_Tests ${GTEST_BOTH_LIBRARIES} ${LIBS})
-
-=======
     set(LIBS ${LIBS} ${PROJECT_NAME})
     message("Using these libs: ${LIBS}")
     message("Writing unit test binary to: ${CMAKE_BINARY_DIR}")
 
     target_link_libraries(${PROJECT_NAME}_Tests ${LIBS} ${GTEST_BOTH_LIBRARIES})
->>>>>>> dev
 endif (GTEST_FOUND AND Boost_FOUND AND BUILD_TESTS)

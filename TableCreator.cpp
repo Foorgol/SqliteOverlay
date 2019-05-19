@@ -46,38 +46,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-<<<<<<< HEAD
-  void TableCreator::addCol(const string& colName, const string& colTypeName, bool isUnique, CONFLICT_CLAUSE uniqueConflictClause,
-                            bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool hasDefault, const string& defaultValue)
-  {
-    if (colName.empty()) return;
-    if (colTypeName.empty()) return;
-
-    string colDef = colName + " " + colTypeName + " ";
-
-    colDef += buildColumnConstraint(isUnique, uniqueConflictClause, notNull, notNullConflictClause,
-                                    hasDefault, defaultValue);
-
-    addCol(colDef);
-  }
-
-  //----------------------------------------------------------------------------
-
-  void TableCreator::addForeignKey(const string& keyName, const string& referedTable, CONSISTENCY_ACTION onDelete, CONSISTENCY_ACTION onUpdate,
-                                   bool notNull, CONFLICT_CLAUSE notNullConflictClause, bool isUnique, CONFLICT_CLAUSE uniqueConflictClause)
-=======
   void TableCreator::addForeignKey(const string& keyName, const string& referedTable, ConsistencyAction onDelete, ConsistencyAction onUpdate, ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause, const string& referedColumn)
->>>>>>> dev
   {
     string ref = "FOREIGN KEY (" + keyName + ") ";
     ref += buildForeignKeyClause(referedTable, onDelete, onUpdate, referedColumn);
 
     constraintCache.push_back(ref);
-<<<<<<< HEAD
-    addInt(keyName, isUnique, uniqueConflictClause, notNull, notNullConflictClause);
-=======
     addCol(keyName, ColumnDataType::Integer, uniqueConflictClause, notNullConflictClause);
->>>>>>> dev
   }
 
   //----------------------------------------------------------------------------

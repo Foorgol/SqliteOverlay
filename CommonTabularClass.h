@@ -257,16 +257,12 @@ namespace SqliteOverlay
      */
     int length() const;
 
-<<<<<<< HEAD
-    string getName() const { return tabName; }
-=======
     /** \returns a reference to the underlying database instance
      */
     const SqliteDatabase& dbRef() const
     {
       return db.get();
     }
->>>>>>> dev
 
   protected:
     /**

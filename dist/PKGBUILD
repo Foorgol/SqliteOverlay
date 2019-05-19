@@ -1,9 +1,5 @@
 pkgname="SqliteOverlay"
-<<<<<<< HEAD
-pkgver=0.4.1
-=======
 pkgver=0.4.0
->>>>>>> dev
 pkgrel=1
 pkgdesc="C++ lib for easier interfacing with SQLite databasses"
 arch=('i686' 'x86_64')

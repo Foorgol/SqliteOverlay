@@ -16,15 +16,7 @@ using namespace std;
 
 namespace SqliteOverlay
 {
-<<<<<<< HEAD
-  SqliteDatabase::SqliteDatabase(string dbFileName, bool createNew)
-    :dbPtr{nullptr}, log{nullptr}, changeCounter_reset(0),
-      isChangeLogEnabled{false}, isMultiThreadMutexLocked{false},
-      curMutexHolderRole{-1}
-=======
-
   bool SqliteDatabase::copyDatabaseContents(sqlite3 *srcHandle, sqlite3 *dstHandle)
->>>>>>> dev
   {
     // check parameters
     if ((srcHandle == nullptr) || (dstHandle == nullptr))
@@ -56,18 +48,7 @@ namespace SqliteOverlay
     int errStep = sqlite3_backup_step(bck, -1);
     int errFinish = sqlite3_backup_finish(bck);
 
-<<<<<<< HEAD
-    // initialize the pointers in the changeLogCallbackContext
-    logCallbackContext.logMutex = &changeLogMutex;
-    logCallbackContext.logPtr = &changeLog;
-
-    // Explicitly enable support for foreign keys
-    // and disable synchronous writes for better performance
-    execNonQuery("PRAGMA foreign_keys = ON", &err);
-    if (err != SQLITE_DONE)
-=======
     if (errStep != SQLITE_DONE)
->>>>>>> dev
     {
       if (errStep == SQLITE_BUSY)
       {
@@ -870,126 +851,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-<<<<<<< HEAD
-  void* SqliteDatabase::setDataChangeNotificationCallback(void(*f)(void*, int, const char*, const char*, sqlite3_int64), void* customPtr)
-  {
-    return sqlite3_update_hook(dbPtr.get(), f, customPtr);
-  }
-
-  //----------------------------------------------------------------------------
-
-  size_t SqliteDatabase::getChangeLogLength()
-  {
-    lock_guard<mutex> lg{changeLogMutex};
-    return changeLog.size();
-  }
-
-  //----------------------------------------------------------------------------
-
-  ChangeLogList SqliteDatabase::getAllChangesAndClearQueue()
-  {
-    lock_guard<mutex> lg{changeLogMutex};
-
-    ChangeLogList logCopy{changeLog};
-    changeLog.clear();
-
-    return logCopy;
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqliteDatabase::enableChangeLog(bool clearLog)
-  {
-    lock_guard<mutex> lg{changeLogMutex};
-
-    if (isChangeLogEnabled) return;
-
-    if (clearLog) changeLog.clear();
-
-    setDataChangeNotificationCallback(changeLogCallback, &logCallbackContext);
-    isChangeLogEnabled = true;
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqliteDatabase::disableChangeLog(bool clearLog)
-  {
-    lock_guard<mutex> lg{changeLogMutex};
-
-    if (!isChangeLogEnabled) return;
-
-    if (clearLog) changeLog.clear();
-
-    setDataChangeNotificationCallback(nullptr, nullptr);
-    isChangeLogEnabled = false;
-  }
-
-  //----------------------------------------------------------------------------
-
-  string SqliteDatabase::getErrMsg() const
-  {
-    return string{sqlite3_errmsg(dbPtr.get())};
-  }
-
-  //----------------------------------------------------------------------------
-
-  int SqliteDatabase::acquireDatabaseLock(int roleId, bool blocking)
-  {
-    // refuse a role "-1" because that's a reserved value
-    if (roleId == -1) return -1;
-
-    // make sure this method is only accessed
-    // by one thread at a time
-    lock_guard<mutex> lg{acquisitionHelperMutex};
-
-    if (isMultiThreadMutexLocked)
-    {
-      // we don't need to create a new lock because
-      // we are already possessed by the correct thread
-      if (curMutexHolderRole == roleId) return 0;
-    }
-
-    // at this point, we...
-    // EITHER have to wait for another thread to release the lock
-    // OR no thread did lock the mutex previously.
-
-    // in non-blocking mode, we return if the database is possed
-    // by a different role
-    if (isMultiThreadMutexLocked && !blocking && (curMutexHolderRole != roleId))
-    {
-      return -1;
-    }
-
-    // now it is safe to call lock() now although
-    // this could been blocking the calling thread
-    multiThreadMutex.lock();
-    curMutexHolderRole = roleId;
-    isMultiThreadMutexLocked = true;
-    return 1;    // 1 == new lock acquired
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqliteDatabase::releaseDatabaseLock()
-  {
-    // make sure this method is only accessed
-    // by one thread at a time
-    lock_guard<mutex> lg{releaseHelperMutex};
-
-    if (!isMultiThreadMutexLocked) return;
-
-    // unlock the mutex
-    multiThreadMutex.unlock();
-    isMultiThreadMutexLocked = false;
-    curMutexHolderRole = -1;
-  }
-
-  //----------------------------------------------------------------------------
-
-  upSqlStatement SqliteDatabase::prepStatement(const string& sqlText, int* errCodeOut)
-=======
   void SqliteDatabase::setBusyTimeout(int ms)
->>>>>>> dev
   {
     sqlite3_busy_timeout(dbPtr, ms);
   }
@@ -1170,27 +1032,5 @@ namespace SqliteOverlay
     // Rule 5, numeric affinity is the default
     return ColumnAffinity::Numeric;
   }
-
-<<<<<<< HEAD
-  //----------------------------------------------------------------------------
-
-  void changeLogCallback(void* customPtr, int modType, const char* _dbName, const char* _tabName, sqlite3_int64 id)
-  {
-    if (customPtr == nullptr) return;
-    ChangeLogCallbackContext* ctx = (ChangeLogCallbackContext *) customPtr;
-
-    string dbName{_dbName};
-    if (dbName == "main") dbName.clear();
-
-    lock_guard<mutex> lg{*(ctx->logMutex)};
-
-    ctx->logPtr->push_back(ChangeLogEntry{
-          static_cast<RowChangeAction>(modType),
-          dbName, string{_tabName}, id});
-
-  }
-=======
-
->>>>>>> dev
 
 }
