@@ -134,6 +134,7 @@ set(LIB_SOURCES_TST
     tests/tstDatabaseInit.cpp
     tests/tstDatabaseQueries.cpp
     tests/tstDatabaseMisc.cpp
+    tests/tstDataChangeCallback.cpp
     tests/tstCommonTabularClass.cpp
     tests/tstClausesAndQueries.cpp
     tests/tstDbTab.cpp

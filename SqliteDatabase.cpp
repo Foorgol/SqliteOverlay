@@ -166,7 +166,10 @@ namespace SqliteOverlay
 
       throw;
     }
-  }
+
+    // initialize the pointers in the changeLogCallbackContext
+    logCallbackContext.logMutex = &changeLogMutex;
+    logCallbackContext.logPtr = &changeLog;  }
 
   //----------------------------------------------------------------------------
 
@@ -851,6 +854,61 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  void* SqliteDatabase::setDataChangeNotificationCallback(void(*f)(void*, int, const char*, const char*, sqlite3_int64), void* customPtr)
+  {
+    return sqlite3_update_hook(dbPtr, f, customPtr);
+  }
+
+  //----------------------------------------------------------------------------
+
+  size_t SqliteDatabase::getChangeLogLength()
+  {
+    lock_guard<mutex> lg{changeLogMutex};
+    return changeLog.size();
+  }
+
+  //----------------------------------------------------------------------------
+
+  ChangeLogList SqliteDatabase::getAllChangesAndClearQueue()
+  {
+    lock_guard<mutex> lg{changeLogMutex};
+
+    ChangeLogList logCopy{changeLog};
+    changeLog.clear();
+
+    return logCopy;
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqliteDatabase::enableChangeLog(bool clearLog)
+  {
+    lock_guard<mutex> lg{changeLogMutex};
+
+    if (isChangeLogEnabled) return;
+
+    if (clearLog) changeLog.clear();
+
+    setDataChangeNotificationCallback(changeLogCallback, &logCallbackContext);
+    isChangeLogEnabled = true;
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqliteDatabase::disableChangeLog(bool clearLog)
+  {
+    lock_guard<mutex> lg{changeLogMutex};
+
+    if (!isChangeLogEnabled) return;
+
+    if (clearLog) changeLog.clear();
+
+    setDataChangeNotificationCallback(nullptr, nullptr);
+    isChangeLogEnabled = false;
+  }
+
+  //----------------------------------------------------------------------------
+
   void SqliteDatabase::setBusyTimeout(int ms)
   {
     sqlite3_busy_timeout(dbPtr, ms);
@@ -1033,4 +1091,21 @@ namespace SqliteOverlay
     return ColumnAffinity::Numeric;
   }
 
+  //----------------------------------------------------------------------------
+
+  void changeLogCallback(void* customPtr, int modType, const char* _dbName, const char* _tabName, sqlite3_int64 id)
+  {
+    if (customPtr == nullptr) return;
+    ChangeLogCallbackContext* ctx = (ChangeLogCallbackContext *) customPtr;
+
+    string dbName{_dbName};
+    if (dbName == "main") dbName.clear();
+
+    lock_guard<mutex> lg{*(ctx->logMutex)};
+
+    ctx->logPtr->push_back(ChangeLogEntry{
+                             static_cast<RowChangeAction>(modType),
+                             dbName, string{_tabName}, id});
+
+  }
 }

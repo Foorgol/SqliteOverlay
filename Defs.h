@@ -3,6 +3,8 @@
 
 #include <stdexcept>
 
+#include <sqlite3.h>
+
 namespace SqliteOverlay
 {
   /** \brief SQLite's primary error codes as specified [here](https://www.sqlite.org/rescode.html)
@@ -154,6 +156,16 @@ namespace SqliteOverlay
     OpenOrCreate_RW,  ///< open an existing database in read/write mode and create a new one if it doesn't exist
     OpenExisting_RW,  ///< open an existing database in read/write mode and fail if it doesn't exist
     OpenExisting_RO   ///< open an existing database in read-only mode and fail if it doesn't exist
+  };
+
+  /** \brief An enum that maps between SQLite constants for row modifications
+   * to enum values.
+   */
+  enum class RowChangeAction
+  {
+    Insert = SQLITE_INSERT,
+    Update = SQLITE_UPDATE,
+    Delete = SQLITE_DELETE
   };
 
 }

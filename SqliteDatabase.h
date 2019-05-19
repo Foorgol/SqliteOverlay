@@ -159,9 +159,6 @@ namespace SqliteOverlay
    */
   class SqliteDatabase
   {
-    template<typename RoleEnumType>
-    friend class DatabaseLockHolder;
-
   public:
     /** \brief Default ctor, creates a blank in-memory database and calls
      * `populateTables()` and `populateViews()` on it.
@@ -1001,6 +998,42 @@ namespace SqliteOverlay
      */
     bool hasExternalChanges() const;
 
+    /** \brief Sets a callback function that is called by SQLite whenever
+     * the database is modified.
+     *
+     * See also [here](https://www.sqlite.org/c3ref/update_hook.html)
+     *
+     * \returns the custom data pointer that was previously set or nullptr if there was none
+     */
+    void* setDataChangeNotificationCallback(
+        void(*)(void*, int, const char*, const char*, sqlite3_int64),   ///< the pointer to the callback function
+        void* customPtr   ///< a pointer that will be passed to the callback function
+        );
+
+    /** \returns the current number of entries in the changelog
+     */
+    size_t getChangeLogLength();
+
+    /** \returns all entries in the changelog and clears the log afterwards
+     */
+    ChangeLogList getAllChangesAndClearQueue();
+
+    /** \brief Enables a built-in callback function that implements a simple
+     * changelog.
+     *
+     * \note This overrides any previously set callback function, e.g. when
+     * using `setDataChangeNotificationCallback` with a user-provided function.
+     */
+    void enableChangeLog(
+        bool clearLog   ///< indicates wheter the internal change log shall be cleared before activating the logging
+        );
+
+    /** \brief Disables any change log callback functions.
+     */
+    void disableChangeLog(
+        bool clearLog   ///< indicates wheter the internal change log shall be cleared after disabling the logging
+        );
+
     /** \brief Defines the timeout for requests if the database is locked by another
      * process (more precisely: another database connection); see [here](https://www.sqlite.org/c3ref/busy_timeout.html)
      * for details.
@@ -1137,24 +1170,10 @@ namespace SqliteOverlay
     int externalChangeCounter_resetValue;   // used for calls to "PRAGMA data_version" which reports changes other than on the local connection
 
     // a queue of changes
-    bool isChangeLogEnabled;
+    bool isChangeLogEnabled{false};
     ChangeLogList changeLog;
     mutex changeLogMutex;
     ChangeLogCallbackContext logCallbackContext;
-
-    // mutex support if this database instance is
-    // access by more than one thread.
-    //
-    // different threads are distinguished based on
-    // a "role" value that is supplied as a enum
-    // convertible to int.
-    int acquireDatabaseLock(int roleId, bool blocking=true);   // protected; only to be accessed by DatabaseLockHolder
-    void releaseDatabaseLock();             // protected; only to be accessed by DatabaseLockHolder
-    mutex multiThreadMutex;
-    mutex acquisitionHelperMutex;
-    mutex releaseHelperMutex;
-    atomic<int> curMutexHolderRole;
-    atomic<bool> isMultiThreadMutexLocked;
   };
 
 }
