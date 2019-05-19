@@ -859,21 +859,6 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  SqliteDatabase SqliteDatabase::duplicateConnection(bool readOnly)
-  {
-    string fn = filename();
-    if (fn.empty())
-    {
-      throw std::invalid_argument("duplicateConnection(): called on a temporary or in-memory database");
-    }
-
-    OpenMode om = readOnly ? OpenMode::OpenExisting_RO : OpenMode::OpenExisting_RW;
-
-    return SqliteDatabase{fn, om, false};
-  }
-
-  //----------------------------------------------------------------------------
-
   KeyValueTab SqliteDatabase::createNewKeyValueTab(const string& tabName)
   {
     Sloppy::estring tn{tabName};

@@ -1012,9 +1012,23 @@ namespace SqliteOverlay
      * Test case: not yet
      *
      */
-    SqliteDatabase duplicateConnection(
+    template<class DB_CLASS = SqliteDatabase>
+    DB_CLASS duplicateConnection(
         bool readOnly   ///< `true`: open the new connection in read-only mode; `false`: open in r/w mode
-        );
+        )
+    {
+      static_assert (std::is_base_of_v<SqliteDatabase, DB_CLASS>);
+
+      string fn = filename();
+      if (fn.empty())
+      {
+        throw std::invalid_argument("duplicateConnection(): called on a temporary or in-memory database");
+      }
+
+      OpenMode om = readOnly ? OpenMode::OpenExisting_RO : OpenMode::OpenExisting_RW;
+
+      return DB_CLASS{fn, om, false};
+    }
 
     /** \brief Function for creating a new, empty key-value-table in the database
      *

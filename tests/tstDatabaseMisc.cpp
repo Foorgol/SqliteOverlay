@@ -48,7 +48,7 @@ TEST_F(DatabaseTestScenario, LastInsertIdAndRowsAffected)
 TEST_F(DatabaseTestScenario, CheckDirty)
 {
   auto db1 = getScenario01();
-  auto db2 = db1.duplicateConnection(false);
+  auto db2 = db1.duplicateConnection<SampleDB>(false);
 
   // we start with clean databases
   ASSERT_FALSE(db1.isDirty());
