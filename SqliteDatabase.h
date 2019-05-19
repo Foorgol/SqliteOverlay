@@ -115,6 +115,29 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  // The changelog
+  struct ChangeLogEntry
+  {
+    ChangeLogEntry(RowChangeAction a, const string& dn, const string& tn, size_t id)
+      :action{a}, dbName{dn}, tabName{tn}, rowId{id} {}
+
+    RowChangeAction action;
+    string dbName;  // will be empty for "main" to save some memory
+    string tabName;
+    size_t rowId;
+  };
+  using ChangeLogList = vector<ChangeLogEntry>;
+
+  void changeLogCallback(void* customPtr, int modType, char const * _dbName, char const* _tabName, sqlite3_int64 id);
+
+  struct ChangeLogCallbackContext
+  {
+    mutex* logMutex;
+    ChangeLogList* logPtr;
+  };
+
+  //----------------------------------------------------------------------------
+
   //
   // forward definitions
   //
@@ -136,6 +159,9 @@ namespace SqliteOverlay
    */
   class SqliteDatabase
   {
+    template<typename RoleEnumType>
+    friend class DatabaseLockHolder;
+
   public:
     /** \brief Default ctor, creates a blank in-memory database and calls
      * `populateTables()` and `populateViews()` on it.
@@ -1110,6 +1136,25 @@ namespace SqliteOverlay
     int localChangeCounter_resetValue;  // used for calls to sqlite3_total_changes(), reporting changes on the local connection
     int externalChangeCounter_resetValue;   // used for calls to "PRAGMA data_version" which reports changes other than on the local connection
 
+    // a queue of changes
+    bool isChangeLogEnabled;
+    ChangeLogList changeLog;
+    mutex changeLogMutex;
+    ChangeLogCallbackContext logCallbackContext;
+
+    // mutex support if this database instance is
+    // access by more than one thread.
+    //
+    // different threads are distinguished based on
+    // a "role" value that is supplied as a enum
+    // convertible to int.
+    int acquireDatabaseLock(int roleId, bool blocking=true);   // protected; only to be accessed by DatabaseLockHolder
+    void releaseDatabaseLock();             // protected; only to be accessed by DatabaseLockHolder
+    mutex multiThreadMutex;
+    mutex acquisitionHelperMutex;
+    mutex releaseHelperMutex;
+    atomic<int> curMutexHolderRole;
+    atomic<bool> isMultiThreadMutexLocked;
   };
 
 }

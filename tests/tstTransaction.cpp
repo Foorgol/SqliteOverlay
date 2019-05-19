@@ -36,7 +36,7 @@ TEST_F(DatabaseTestScenario, BasicTransaction)
   // make sure that connection 2 still sees the old value
   ASSERT_EQ(42, db2.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
 
-  // make sure that connectio 2 can't start a transaction
+  // make sure that connection 2 can't start a transaction
   // while the first one is still active
   ASSERT_THROW(db2.startTransaction(TransactionType::Immediate, TransactionDtorAction::Rollback), BusyException);
   ASSERT_FALSE(db.isAutoCommit());
