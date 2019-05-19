@@ -21,82 +21,11 @@
 namespace SqliteOverlay
 {
 
-  unique_ptr<Transaction> Transaction::startNew(SqliteDatabase* _db, TRANSACTION_TYPE tt, TRANSACTION_DESTRUCTOR_ACTION _dtorAct, int* errCodeOut)
-  {
-    Transaction* tmpPtr;
-    try
-    {
-      tmpPtr = new Transaction(_db, tt, _dtorAct, errCodeOut);
-    } catch (exception e) {
-      return nullptr;
-    }
-
-    return unique_ptr<Transaction>(tmpPtr);
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool Transaction::isActive() const
-  {
-    return (!(db->isAutoCommit()) && !isFinished);
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool Transaction::commit(int* errCodeOut)
-  {
-    string sql = getFinishSql(true);
-    int err;
-    db->execNonQuery(sql, &err);
-    if (errCodeOut != nullptr) *errCodeOut = err;
-
-    isFinished = (err == SQLITE_DONE);
-    return isFinished;
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool Transaction::rollback(int* errCodeOut)
-  {
-    string sql = getFinishSql(false);
-    int err;
-    db->execNonQuery(sql, &err);
-    if (errCodeOut != nullptr) *errCodeOut = err;
-
-    isFinished = (err == SQLITE_DONE);
-    return isFinished;
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool Transaction::isNested() const
-  {
-    return (!(savepointName.empty()));
-  }
-
-  //----------------------------------------------------------------------------
-
-  Transaction::~Transaction()
-  {
-    if (isFinished) return;
-
-    // the transaction has not been finalized yet.
-    // What to do?
-    string sql = getFinishSql(dtorAct == TRANSACTION_DESTRUCTOR_ACTION::COMMIT);
-    if (!(sql.empty()) && (db != nullptr))
-    {
-      db->execNonQuery(sql);
-    }
-  }
-
-//----------------------------------------------------------------------------
-
-  Transaction::Transaction(SqliteDatabase* _db, TRANSACTION_TYPE tt, TRANSACTION_DESTRUCTOR_ACTION _dtorAct, int* errCodeOut)
+  Transaction::Transaction(const SqliteDatabase* _db, TransactionType tt, TransactionDtorAction _dtorAct)
     :db(_db), dtorAct(_dtorAct), isFinished(false)
   {
     if (db == nullptr)
     {
-      if (errCodeOut != nullptr) *errCodeOut = SQLITE_ERROR;
       throw invalid_argument("Received NULL handle for database in Transaction ctor");
     }
 
@@ -115,8 +44,8 @@ namespace SqliteOverlay
       // a combination of a 5-digit random number
       // and the current time. Should be sufficiently
       // unique
-      savepointName = "s" + to_string(rand() % 100000);
-      savepointName += "_" + to_string(time(nullptr));
+      savepointName = "SP" + to_string(rand() % 100000);
+      savepointName += to_string(time(nullptr));
 
       // create the savepoint
       sql = "SAVEPOINT " + savepointName;
@@ -127,11 +56,11 @@ namespace SqliteOverlay
       sql = "BEGIN ";
       switch (tt)
       {
-      case TRANSACTION_TYPE::DEFERRED:
+      case TransactionType::Deferred:
         sql += "DEFERRED";
         break;
 
-      case TRANSACTION_TYPE::EXCLUSIVE:
+      case TransactionType::Exclusive:
         sql += "EXCLUSIVE";
         break;
 
@@ -142,19 +71,140 @@ namespace SqliteOverlay
     }
 
     // try to acquire the database lock
-    int err;
-    db->execNonQuery(sql, &err);
-    if (errCodeOut != nullptr) *errCodeOut = err;
-
-    // raise an exception on error, e. g. if the database is locked by
-    // another transaction
-    if (err != SQLITE_DONE)
-    {
-      throw std::runtime_error("Couldn't initiate transaction in Transaction ctor");
-    }
+    db->execNonQuery(sql);
   }
 
   //----------------------------------------------------------------------------
+
+  Transaction::Transaction(Transaction&& other)
+  {
+    operator=(std::move(other));
+  }
+
+  //----------------------------------------------------------------------------
+
+  Transaction& Transaction::operator=(Transaction&& other)
+  {
+    db = other.db;
+    other.db = nullptr;
+
+    dtorAct =other.dtorAct;
+
+    savepointName = other.savepointName;
+    other.savepointName.clear();
+
+    isFinished = other.isFinished;
+    other.isFinished = true;
+
+    return *this;
+  }
+
+//----------------------------------------------------------------------------
+
+  bool Transaction::isActive() const
+  {
+    return (!(db->isAutoCommit()) && !isFinished);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void Transaction::commit()
+  {
+    try
+    {
+      if (savepointName.empty())
+      {
+        db->execNonQuery("COMMIT");   // we're the outermost transaction
+      } else {
+        db->execNonQuery("RELEASE " + savepointName);   // we're an inner, nested transaction
+      }
+    }
+    catch (GenericSqliteException e)
+    {
+      // re-throw anything but in case of a "SQL logic error"
+      // tag this transaction as finished because the
+      // logic error indicated that the transaction has already been committed / rolled back
+      // by an outer transaction
+      //
+      // tagging this transaction as finished avoids termination
+      // of the programm when we hit the dtor
+      if (e.errCode() == PrimaryResultCode::ERROR) isFinished = true;
+      throw;
+    }
+
+    isFinished = true;
+  }
+
+  //----------------------------------------------------------------------------
+
+  void Transaction::rollback()
+  {
+    try
+    {
+      if (savepointName.empty())
+      {
+        db->execNonQuery("ROLLBACK");   // we're the outermost transaction
+      } else {
+        db->execNonQuery("ROLLBACK TO " + savepointName);   // we're an inner, nested transaction
+      }
+    }
+    catch (GenericSqliteException e)
+    {
+      // re-throw anything but in case of a "SQL logic error"
+      // tag this transaction as finished because the
+      // logic error indicated that the transaction has already been committed / rolled back
+      // by an outer transaction
+      //
+      // tagging this transaction as finished avoids termination
+      // of the programm when we hit the dtor
+      if (e.errCode() == PrimaryResultCode::ERROR) isFinished = true;
+      throw;
+    }
+
+    isFinished = true;
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool Transaction::isNested() const
+  {
+    return (!(savepointName.empty()));
+  }
+
+  //----------------------------------------------------------------------------
+
+  Transaction::~Transaction()
+  {
+    if (isFinished) return;
+
+    // the transaction has not been finalized yet.
+    // What to do?
+    string sql;
+    if (dtorAct == TransactionDtorAction::Commit)
+    {
+      if (savepointName.empty())
+      {
+        sql = "COMMIT";
+      } else {
+        sql = "RELEASE SAVEPOINT " + savepointName;
+      }
+    }
+    if (dtorAct == TransactionDtorAction::Rollback)
+    {
+      sql = "ROLLBACK";
+      if (!(savepointName.empty()))
+      {
+        sql += " TO SAVEPOINT " + savepointName;
+      }
+    }
+
+    if (!(sql.empty()) && (db != nullptr))
+    {
+      db->execNonQuery(sql);
+    }
+  }
+
+//----------------------------------------------------------------------------
 
   string Transaction::getFinishSql(bool isCommit) const
   {

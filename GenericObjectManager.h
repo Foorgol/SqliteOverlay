@@ -9,6 +9,7 @@
 #define	SQLITE_OVERLAY_GENERICOBJECTMANAGER_H
 
 #include <vector>
+#include <type_traits>
 
 #include "SqliteDatabase.h"
 #include "DbTab.h"
@@ -17,312 +18,235 @@
 
 namespace SqliteOverlay
 {
-  template <class DB_CLASS_TYPE>
+  template<class DB_CLASS = SqliteDatabase>
   class GenericObjectManager
   {
   public:
-    GenericObjectManager (DB_CLASS_TYPE* _db, DbTab* _tab)
+    using DatabaseClass = DB_CLASS;
+
+    GenericObjectManager (const DatabaseClass& _db, DbTab _tab)
       :db(_db), tab(_tab)
     {
-      if (db == nullptr)
-      {
-        throw invalid_argument("Received nullptr for database handle!");
-      }
-      if (tab == nullptr)
-      {
-        throw invalid_argument("Received nullptr for table handle!");
-      }
+      static_assert (std::is_base_of_v<SqliteDatabase, DB_CLASS>, "DB classes must be derived from SqliteDatabase");
     }
 
     //----------------------------------------------------------------------------
 
-    GenericObjectManager (DB_CLASS_TYPE* _db, const string& tabName)
-      :db(_db)
+    GenericObjectManager (const DatabaseClass& _db, const string& tabName)
+      :db(_db), tab{db, tabName, true}
     {
-      if (db == nullptr)
-      {
-        throw invalid_argument("Received nullptr for database handle!");
-      }
-
-      tab = db->getTab(tabName);
-      if (db == nullptr)
-      {
-        throw invalid_argument("Received invalid table name for object manager!");
-      }
+      static_assert (std::is_base_of_v<SqliteDatabase, DB_CLASS>, "DB classes must be derived from SqliteDatabase");
     }
 
     //----------------------------------------------------------------------------
 
-    DB_CLASS_TYPE* getDatabaseHandle()
+    const DatabaseClass& getDatabaseHandle()
     {
-      return db;
+      return db.get();
     }
 
     //----------------------------------------------------------------------------
 
     int getObjCount() const
     {
-      return tab->length();
+      return tab.length();
     }
 
     //----------------------------------------------------------------------------
 
   protected:
-    DB_CLASS_TYPE* db;
-    DbTab* tab;
+    reference_wrapper<const DB_CLASS> db;
+    DbTab tab;
 
-    template<class T>
-    vector<T> getObjectsByColumnValue(const DbTab* objectTab, const string& colName, int val) const
+    template<class T, typename ValType>
+    vector<T> getObjectsByColumnValue(const DbTab& objectTab, const string& colName, const ValType& val) const
     {
-      DbTab::CachingRowIterator it = objectTab->getRowsByColumnValue(colName, val);
-      return iterator2Objects<T>(it);
-    }
-    template<class T>
-    vector<T> getObjectsByColumnValue(const string& colName, int val) const
-    {
-      DbTab::CachingRowIterator it = tab->getRowsByColumnValue(colName, val);
-      return iterator2Objects<T>(it);
+      const auto& resultVector = objectTab.getRowsByColumnValue(colName, val);
+      return vector2Objects<T>(resultVector);
     }
 
-    template<class T>
-    vector<T> getObjectsByColumnValue(const DbTab* objectTab, const string& colName, double val) const
+    template<class T, typename ValType>
+    vector<T> getObjectsByColumnValue(const string& colName, const ValType& val) const
     {
-      DbTab::CachingRowIterator it = objectTab->getRowsByColumnValue(colName, val);
-      return iterator2Objects<T>(it);
-    }
-    template<class T>
-    vector<T> getObjectsByColumnValue(const string& colName, double val) const
-    {
-      DbTab::CachingRowIterator it = tab->getRowsByColumnValue(colName, val);
-      return iterator2Objects<T>(it);
+      return getObjectsByColumnValue<T>(tab, colName, val);
     }
 
     template<class T>
-    vector<T> getObjectsByColumnValue(const DbTab* objectTab, const string& colName, const string& val) const
+    vector<T> getObjectsByWhereClause(const DbTab& objectTab, const WhereClause& w) const
     {
-      DbTab::CachingRowIterator it = objectTab->getRowsByColumnValue(colName, val);
-      return iterator2Objects<T>(it);
-    }
-    template<class T>
-    vector<T> getObjectsByColumnValue(const string& colName, const string& val) const
-    {
-      DbTab::CachingRowIterator it = tab->getRowsByColumnValue(colName, val);
-      return iterator2Objects<T>(it);
+      const auto& resultVector = objectTab.getRowsByWhereClause(w);
+      return vector2Objects<T>(resultVector);
     }
 
-    template<class T>
-    vector<T> getObjectsByWhereClause(const DbTab* objectTab, const WhereClause& w) const
-    {
-      DbTab::CachingRowIterator it = objectTab->getRowsByWhereClause(w);
-      return iterator2Objects<T>(it);
-    }
     template<class T>
     vector<T> getObjectsByWhereClause(const WhereClause& w) const
     {
-      DbTab::CachingRowIterator it = tab->getRowsByWhereClause(w);
-      return iterator2Objects<T>(it);
+      return getObjectsByWhereClause<T>(tab, w);
     }
+
+    template<class T>
+    vector<T> getObjectsByWhereClause(const DbTab& objectTab, const string& w) const
+    {
+      const auto& resultVector = objectTab.getRowsByWhereClause(w);
+      return vector2Objects<T>(resultVector);
+    }
+
     template<class T>
     vector<T> getObjectsByWhereClause(const string& w) const
     {
-      DbTab::CachingRowIterator it = tab->getRowsByWhereClause(w);
-      return iterator2Objects<T>(it);
-    }
-    template<class T>
-    vector<T> getObjectsByWhereClause(const DbTab* objectTab, const string& w) const
-    {
-      DbTab::CachingRowIterator it = objectTab->getRowsByWhereClause(w);
-      return iterator2Objects<T>(it);
+      return getObjectsByWhereClause<T>(tab, w);
     }
 
     template<class T>
-    vector<T> getAllObjects(const DbTab* objectTab) const
+    vector<T> getAllObjects(const DbTab& objectTab) const
     {
-      DbTab::CachingRowIterator it = objectTab->getAllRows();
-      return iterator2Objects<T>(it);
+      const auto& resultVector = objectTab.getAllRows();
+      return vector2Objects<T>(resultVector);
     }
+
     template<class T>
     vector<T> getAllObjects() const
     {
-      DbTab::CachingRowIterator it = tab->getAllRows();
-      return iterator2Objects<T>(it);
+      return getAllObjects<T>(tab);
     }
 
     template<class T>
-    vector<T> iterator2Objects(DbTab::CachingRowIterator& it) const
+    vector<T> vector2Objects(const vector<TabRow>& rows) const
     {
       vector<T> result;
-      while (it.pointsToElement())
+      for_each(rows.begin(), rows.end(), [&](const TabRow& r)
       {
-        result.push_back(T(db, *it));
-        ++it;
-      }
+        result.push_back(T{db, r});
+      });
       return result;
     }
 
-    template<class T>
-    unique_ptr<T> getSingleObjectByColumnValue(const DbTab* objectTab, const string& colName, int val) const
+    template<class T, typename ValType>
+    optional<T> getSingleObjectByColumnValue(const DbTab& objectTab, const string& colName, const ValType& val) const
     {
       try
       {
-        TabRow r = objectTab->getSingleRowByColumnValue(colName, val);
-        return unique_ptr<T>(new T(db, r));
-      } catch (std::exception e) {
+        TabRow r = objectTab.getSingleRowByColumnValue(colName, val);
+        return T{db, r};
+      } catch (NoDataException e) {
+        return optional<T>{};
       }
-      return nullptr;
+
+      // throw all other execeptions, e.g. BUSY
     }
+
+    template<class T, typename ValType>
+    optional<T> getSingleObjectByColumnValue(const string& colName, const ValType& val) const
+    {
+      return getSingleObjectByColumnValue<T>(tab, colName, val);
+    }
+
+
     template<class T>
-    unique_ptr<T> getSingleObjectByColumnValue(const string& colName, int val) const
+    optional<T> getSingleObjectByWhereClause(const DbTab& objectTab, const WhereClause& w) const
     {
       try
       {
-        TabRow r = tab->getSingleRowByColumnValue(colName, val);
-        return unique_ptr<T>(new T(db, r));
-      } catch (std::exception e) {
+        TabRow r = objectTab.getSingleRowByWhereClause(w);
+        return T{db, r};
+      } catch (NoDataException e) {
+        return optional<T>{};
       }
-      return nullptr;
+
+      // throw all other execeptions, e.g. BUSY
     }
 
     template<class T>
-    unique_ptr<T> getSingleObjectByColumnValue(const DbTab* objectTab, const string& colName, double val) const
+    optional<T> getSingleObjectByWhereClause(const WhereClause& w) const
     {
-      try
-      {
-        TabRow r = objectTab->getSingleRowByColumnValue(colName, val);
-        return unique_ptr<T>(new T(db, r));
-      } catch (std::exception e) {
-      }
-      return nullptr;
-    }
-    template<class T>
-    unique_ptr<T> getSingleObjectByColumnValue(const string& colName, double val) const
-    {
-      try
-      {
-        TabRow r = tab->getSingleRowByColumnValue(colName, val);
-        return unique_ptr<T>(new T(db, r));
-      } catch (std::exception e) {
-      }
-      return nullptr;
+      return getSingleObjectByWhereClause<T>(tab, w);
     }
 
     template<class T>
-    unique_ptr<T> getSingleObjectByColumnValue(const DbTab* objectTab, const string& colName, const string& val) const
+    optional<T> getSingleObjectByWhereClause(const DbTab& objectTab, const string& w) const
     {
       try
       {
-        TabRow r = objectTab->getSingleRowByColumnValue(colName, val);
-        return unique_ptr<T>(new T(db, r));
-      } catch (std::exception e) {
+        TabRow r = objectTab.getSingleRowByWhereClause(w);
+        return T{db, r};
+      } catch (NoDataException e) {
+        return optional<T>{};
       }
-      return nullptr;
+
+      // throw all other execeptions, e.g. BUSY
     }
     template<class T>
-    unique_ptr<T> getSingleObjectByColumnValue(const string& colName, const string& val) const
+    optional<T> getSingleObjectByWhereClause(const string& w) const
     {
-      try
-      {
-        TabRow r = tab->getSingleRowByColumnValue(colName, val);
-        return unique_ptr<T>(new T(db, r));
-      } catch (std::exception e) {
-      }
-      return nullptr;
+      return getSingleObjectByWhereClause<T>(tab, w);
     }
 
+    /** \brief Filters all rows that contain a given value in a given column; in
+     * all rows that match the given value in the given column, look up an integer
+     * in another given column; use that integer value as an ID for instanciating
+     * a database object of type T.
+     *
+     * Example: a table has the column "RefId" and "ObjType". With this function
+     * you can easily search for all rows in which "ObjType" equals "42" and then
+     * use the value in "RefId" to instantiate a new object of type T.
+     *
+     * \returns A list of database objects of type T whose IDs were retrieved from
+     * rows in a custom table that matched a specific column-value-pair.
+     */
     template<class T>
-    unique_ptr<T> getSingleObjectByWhereClause(const DbTab* objectTab, const WhereClause& w) const
-    {
-      try
-      {
-        TabRow r = objectTab->getSingleRowByWhereClause(w);
-        return unique_ptr<T>(new T(db, r));
-      } catch (std::exception e) {
-      }
-      return nullptr;
-    }
-    template<class T>
-    unique_ptr<T> getSingleObjectByWhereClause(const WhereClause& w) const
-    {
-      try
-      {
-        TabRow r = tab->getSingleRowByWhereClause(w);
-        return unique_ptr<T>(new T(db, r));
-      } catch (std::exception e) {
-      }
-      return nullptr;
-    }
-    template<class T>
-    unique_ptr<T> getSingleObjectByWhereClause(const DbTab* objectTab, const string& w) const
-    {
-      try
-      {
-        TabRow r = objectTab->getSingleRowByWhereClause(w);
-        return unique_ptr<T>(new T(db, r));
-      } catch (std::exception e) {
-      }
-      return nullptr;
-    }
-    template<class T>
-    unique_ptr<T> getSingleObjectByWhereClause(const string& w) const
-    {
-      try
-      {
-        TabRow r = tab->getSingleRowByWhereClause(w);
-        return unique_ptr<T>(new T(db, r));
-      } catch (std::exception e) {
-      }
-      return nullptr;
-    }
-
-    template<class T>
-    vector<T> resolveMappingAndGetObjects(const string& mappingTabName, const string& keyColumnName, int keyColumnValue, const string& mappedIdColumnName) const
+    vector<T> resolveMappingAndGetObjects(
+        const string& mappingTabName,   ///< the name of the table that contains the references and the key column
+        const string& keyColumnName,   ///< the column in that table that contains the key
+        int keyColumnValue,   ///< the value that the result rows should match
+        const string& mappedIdColumnName   ///< the name of the column that holds the requested object IDs
+        ) const
     {
       string sql = "SELECT " + mappedIdColumnName + " FROM " + mappingTabName + " WHERE ";
       sql += keyColumnName + " = " + to_string(keyColumnValue);
 
-      int dbErr;
-      auto qry = db->execContentQuery(sql, &dbErr);
-      if (((dbErr != SQLITE_ROW) && (dbErr != SQLITE_DONE) && (dbErr != SQLITE_OK)) || (qry == nullptr))
-      {
-        return vector<T>();
-      }
+      auto stmt = db.get().prepStatement(sql);
+      stmt.step();
 
       vector<T> result;
-      while (qry->hasData())
+      while (stmt.hasData())
       {
-        int refId;
-        qry->getInt(0, &refId);
-        auto obj = T(db, refId);
+        auto obj = T(db.get(), stmt.getInt(0));
         result.push_back(obj);
-
-        qry->step();
+        stmt.step();
       }
 
       return result;
     }
 
+    /** \brief Takes the value of a given column in a given row and uses
+     * it to instantiate a new database object of type T
+     */
     template<class T>
-    unique_ptr<T> getSingleReferencedObject(const TabRow& r, const string& refColumnName) const
+    optional<T> getSingleReferencedObject(const TabRow& r, const string& refColumnName) const
     {
       auto objId = r.getInt2(refColumnName);
-      if (objId->isNull()) return nullptr;
-      return unique_ptr<T>(new T(db, objId->get()));
+      return (objId.has_value()) ? T(db.get(), objId.value()) : optional<T>{};
     }
 
+    /** \brief Takes the value of a given column in a row that is the first match in a WHERE clause
+     * and uses that column to instantiate a new database object of type T
+     */
     template<class T>
-    unique_ptr<T> getSingleReferencedObject(DbTab* srcTab, const WhereClause& w, const string& refColumnName) const
+    optional<T> getSingleReferencedObject(const DbTab& srcTab, const WhereClause& w, const string& refColumnName) const
     {
-      try
+      optional<TabRow> row = srcTab.getSingleRowByWhereClause2(w);
+      if (row.has_value())
       {
-        TabRow r = srcTab->getSingleRowByWhereClause(w);
-        return getSingleReferencedObject(r, refColumnName);
-      } catch (...) {
+        return getSingleReferencedObject(row.value(), refColumnName);
       }
-      return nullptr;
+      return optional<TabRow>{};
     }
 
+    /** \brief Takes the value of a given column in a row that is the first match in a WHERE clause
+     * and uses that column to instantiate a new database object of type T
+     */
     template<class T>
-    unique_ptr<T> getSingleReferencedObject(const WhereClause& w, const string& refColumnName) const
+    optional<T> getSingleReferencedObject(const WhereClause& w, const string& refColumnName) const
     {
       return getSingleReferencedObject<T>(tab, w, refColumnName);
     }

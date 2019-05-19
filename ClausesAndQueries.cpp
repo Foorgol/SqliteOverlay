@@ -1,17 +1,17 @@
 #include <boost/date_time/local_time/local_time.hpp>
 
-#include <Sloppy/libSloppy.h>
+#include <Sloppy/json.hpp>
 
 #include "ClausesAndQueries.h"
 #include "SqlStatement.h"
 
 namespace SqliteOverlay {
 
-  unique_ptr<SqlStatement> ColumnValueClause::getInsertStmt(SqliteDatabase* db, const string& tabName) const
+  SqlStatement ColumnValueClause::getInsertStmt(const SqliteDatabase& db, const string& tabName) const
   {
     if (tabName.empty())
     {
-      return nullptr;
+      throw std::invalid_argument("getInsertStmt(): empty parameters");
     }
 
     string sql;
@@ -42,11 +42,11 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<SqlStatement> ColumnValueClause::getUpdateStmt(SqliteDatabase* db, const string& tabName, int rowId) const
+  SqlStatement ColumnValueClause::getUpdateStmt(const SqliteDatabase& db, const string& tabName, int rowId) const
   {
     if (tabName.empty() || colVals.empty())
     {
-      return nullptr;
+      throw std::invalid_argument("getUpdateStmt(): empty parameters");
     }
 
     string sql;
@@ -54,17 +54,19 @@ namespace SqliteOverlay {
     {
       if (!(sql.empty()))
       {
-        sql += ", ";
+        sql += ",";
       }
 
       sql += curCol.colName + "=";
       sql += (curCol.type == ColValType::Null) ? "NULL" : "?";
     }
     sql = "UPDATE " + tabName + " SET " + sql;
-    sql += " WHERE id=" + to_string(rowId);
+    sql += " WHERE rowid=" + to_string(rowId);
 
     return createStatementAndBindValuesToPlaceholders(db, sql);
   }
+
+  //----------------------------------------------------------------------------
 
   bool ColumnValueClause::hasColumns() const
   {
@@ -72,57 +74,83 @@ namespace SqliteOverlay {
   }
 
   //----------------------------------------------------------------------------
+
+  bool CommonClause::isEmpty() const
+  {
+    return colVals.empty();
+  }
+
+  //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
 
-  void WhereClause::addIntCol(const string& colName, const string& op, int val)
+  void WhereClause::addCol(const string& colName, const string& op, int val)
   {
-    addIntCol(colName, val);
+    addCol(colName, val);
+    colVals[colVals.size() - 1].op = op;
+  }
+
+  void WhereClause::addCol(const string& colName, const string& op, long val)
+  {
+    addCol(colName, val);
     colVals[colVals.size() - 1].op = op;
   }
 
   //----------------------------------------------------------------------------
 
-  void WhereClause::addDoubleCol(const string& colName, const string& op, double val)
+  void WhereClause::addCol(const string& colName, const string& op, double val)
   {
-    addDoubleCol(colName, val);
+    addCol(colName, val);
     colVals[colVals.size() - 1].op = op;
   }
 
   //----------------------------------------------------------------------------
 
-  void WhereClause::addStringCol(const string& colName, const string& op, const string& val)
+  void WhereClause::addCol(const string& colName, const string& op, const string& val)
   {
-    addStringCol(colName, val);
+    addCol(colName, val);
     colVals[colVals.size() - 1].op = op;
   }
 
   //----------------------------------------------------------------------------
 
-  void WhereClause::addDateTimeCol(const string& colName, const string& op, const CommonTimestamp* pTimestamp)
+  void WhereClause::addCol(const string& colName, const string& op, const CommonTimestamp* pTimestamp)
   {
-    addDateTimeCol(colName, pTimestamp);
+    addCol(colName, pTimestamp);
     colVals[colVals.size() - 1].op = op;
   }
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<SqlStatement> WhereClause::getSelectStmt(SqliteDatabase* db, const string& tabName, bool countOnly) const
+  SqlStatement WhereClause::getSelectStmt(const SqliteDatabase& db, const string& tabName, bool countOnly) const
   {
-    if ((tabName.empty()) || (isEmpty()))
+    if (tabName.empty() || (!countOnly && isEmpty()))
     {
-      return nullptr;
+      throw std::invalid_argument("getSelectStmt(): empty parameters");
     }
 
-    string sql = "SELECT ";
-    if (countOnly) sql += "COUNT(*)";
-    else sql += "id";
-    sql += " FROM " + tabName + " WHERE " + getWherePartWithPlaceholders();
-
-    if (!(orderBy.empty()))
+    // if we have no column values and countOnly is true, we simply
+    // return the number of rows in the table
+    if (isEmpty())
     {
-      sql += orderBy;
+      Sloppy::estring sql = "SELECT COUNT(*) FROM " + tabName;
+      return createStatementAndBindValuesToPlaceholders(db, sql);
     }
+
+    // prepare a select statement for the provided table name
+    // with a specific where clause
+    Sloppy::estring sql{"SELECT %1 FROM %2 WHERE %3 %4"};
+    if (countOnly)
+    {
+      sql.arg("COUNT(*)");
+    } else
+    {
+      sql.arg("rowid");
+    }
+    sql.arg(tabName);
+    sql.arg(getWherePartWithPlaceholders());
+
+    sql.arg(orderBy);   // removes the "%4" if orderBy is empty
 
     if (limit > 0)
     {
@@ -134,24 +162,18 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<SqlStatement> WhereClause::getDeleteStmt(SqliteDatabase* db, const string& tabName) const
+  SqlStatement WhereClause::getDeleteStmt(const SqliteDatabase& db, const string& tabName) const
   {
-    if ((tabName.empty()) || (isEmpty()))
+    if (tabName.empty() || isEmpty())
     {
-      return nullptr;
+      throw std::invalid_argument("getDeleteStmt(): empty parameters");
     }
 
-    string sql = "DELETE ";
-    sql += "FROM " + tabName + " WHERE " + getWherePartWithPlaceholders();
+    Sloppy::estring sql{"DELETE FROM %1 WHERE %2"};
+    sql.arg(tabName);
+    sql.arg(getWherePartWithPlaceholders());
 
     return createStatementAndBindValuesToPlaceholders(db, sql);
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool WhereClause::isEmpty() const
-  {
-    return colVals.empty();
   }
 
   //----------------------------------------------------------------------------
@@ -160,18 +182,20 @@ namespace SqliteOverlay {
   {
     if (orderBy.empty())
     {
-      orderBy = " ORDER BY ";
+      orderBy = "ORDER BY ";
     } else {
       orderBy += ", ";
     }
     orderBy += colName + " ASC";
   }
 
+  //----------------------------------------------------------------------------
+
   void WhereClause::setOrderColumn_Desc(const string& colName)
   {
     if (orderBy.empty())
     {
-      orderBy = " ORDER BY ";
+      orderBy = "ORDER BY ";
     } else {
       orderBy += ", ";
     }
@@ -183,6 +207,13 @@ namespace SqliteOverlay {
   void WhereClause::setLimit(int _limit)
   {
     if (_limit > 0) limit = _limit;
+  }
+
+  void WhereClause::clear()
+  {
+    CommonClause::clear();
+    limit = 0;
+    orderBy.clear();
   }
 
   //----------------------------------------------------------------------------
@@ -220,9 +251,18 @@ namespace SqliteOverlay {
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
 
+  void CommonClause::addCol(const string& colName, const nlohmann::json& val)
+  {
+    const string jsonData = val.dump();
+    addCol(colName, jsonData);
+  }
+
+  //----------------------------------------------------------------------------
+
   void CommonClause::clear()
   {
     intVals.clear();
+    longVals.clear();
     doubleVals.clear();
     stringVals.clear();
     colVals.clear();
@@ -230,33 +270,34 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  unique_ptr<SqlStatement> CommonClause::createStatementAndBindValuesToPlaceholders(SqliteDatabase* db, const string& sql) const
+  SqlStatement CommonClause::createStatementAndBindValuesToPlaceholders(const SqliteDatabase& db, const string& sql) const
   {
-    auto stmt = db->prepStatement(sql);
-    if (stmt == nullptr) return nullptr;
+    SqlStatement stmt = db.prepStatement(sql);
 
     // bind the actual column values to the placeholders
     int curPlaceholderIdx = 1;   // leftmost placeholder is at position 1
-    for (size_t i=0; i < colVals.size(); ++i)
+    for (const ColValInfo& curCol : colVals)
     {
-      const ColValInfo& curCol = colVals[i];
-
-      // NULL or NOT NULL has to handled directly as literal value when
+      // NULL or NOT NULL has to be handled directly as literal value when
       // creating the sql statement's text
       if ((curCol.type == ColValType::Null) || (curCol.type == ColValType::NotNull)) continue;
 
       switch (curCol.type)
       {
       case ColValType::Int:
-        stmt->bindInt(curPlaceholderIdx, intVals[curCol.indexInList]);
+        stmt.bind(curPlaceholderIdx, intVals[curCol.indexInList]);
+        break;
+
+      case ColValType::Long:
+        stmt.bind(curPlaceholderIdx, longVals[curCol.indexInList]);
         break;
 
       case ColValType::Double:
-        stmt->bindDouble(curPlaceholderIdx, doubleVals[curCol.indexInList]);
+        stmt.bind(curPlaceholderIdx, doubleVals[curCol.indexInList]);
         break;
 
       case ColValType::String:
-        stmt->bindString(curPlaceholderIdx, stringVals[curCol.indexInList]);
+        stmt.bind(curPlaceholderIdx, stringVals[curCol.indexInList]);
         break;
 
       default:

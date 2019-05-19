@@ -14,89 +14,127 @@
 
 #include <boost/date_time/local_time/local_time.hpp>
 
+#include <Sloppy/String.h>
+
 #include "CommonTabularClass.h"
 #include "ClausesAndQueries.h"
+#include "SqlStatement.h"
 
 namespace SqliteOverlay
 {
 
-  int ColInfo::getId() const
+  ColInfo::ColInfo(int colId, const string& colName, const string& colType)
+    : _id{colId}, _name{colName}, _declType{colType}, _affinity{string2Affinity(colType)}
   {
-    return cid;
+  }
+
+  //----------------------------------------------------------------------------
+
+  int ColInfo::id() const
+  {
+    return _id;
   }
   
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
-  string ColInfo::getColName() const
+  string ColInfo::name() const
   {
-    return name;
+    return _name;
   }
 
 //----------------------------------------------------------------------------
 
-  string ColInfo::getColType() const
+  string ColInfo::declType() const
   {
-    return type;
+    return _declType;
+  }
+
+  //----------------------------------------------------------------------------
+
+  ColumnAffinity ColInfo::affinity() const
+  {
+    return _affinity;
   }
 
 //----------------------------------------------------------------------------
 
-  /**
-   * Basic constructor of a table or view
-   * 
-   * @param _db the reference to the database instance for this table / view
-   * @param _tabName the name of the table / view
-   * @param _isView true if name refers to a view and "false" for tables
-   */
-  CommonTabularClass::CommonTabularClass(SqliteDatabase* _db, const string& _tabName, bool _isView)
-  : db(_db), tabName(_tabName), isView(_isView)
+  CommonTabularClass::CommonTabularClass(const SqliteDatabase& _db, const string& _tabName, bool _isView, bool forceNameCheck)
+  : db(_db), tabName(_tabName), isView(_isView),
+    sqlColumnCount{"SELECT COUNT(*) FROM " + tabName + " WHERE "}
   {
-    if (db == NULL)
+    if (forceNameCheck)
     {
-      throw invalid_argument("Received null pointer for database handle");
-    }
-    
-    if (tabName.empty())
-    {
-      throw invalid_argument("Receied emtpty table or view name");
-    }
-    
-    if ((isView) && (!db->hasView(tabName)))
-    {
-      throw invalid_argument("Tried to access non-existing view");
-    }
-    
-    if ((!isView) && (!db->hasTable(tabName)))
-    {
-      throw invalid_argument("Tried to access non-existing table");
+      Sloppy::estring tn{tabName};
+      tn.trim();
+      if (tn.empty())
+      {
+        throw invalid_argument("Received emtpty table or view name");
+      }
+
+      if (!(db.get().hasTable(tn, isView)))
+      {
+        throw NoSuchTableException("CommonTabularClass ctor for table/view named " + tabName);
+      }
+
+      tabName = tn;
     }
   }
 
-//----------------------------------------------------------------------------
-
-  CommonTabularClass::~CommonTabularClass()
+  //----------------------------------------------------------------------------
+/*
+  CommonTabularClass::CommonTabularClass(const CommonTabularClass& other)
+    :db{other.db}, tabName{other.tabName}, isView{other.isView}, sqlColumnCount{other.sqlColumnCount}
   {
   }
+
+  //----------------------------------------------------------------------------
+
+  CommonTabularClass::CommonTabularClass(CommonTabularClass&& other)
+    :db{other.db},
+     tabName{std::move(other.tabName)}, isView{other.isView}, sqlColumnCount{std::move(other.sqlColumnCount)}
+  {
+  }
+
+  //----------------------------------------------------------------------------
+
+  CommonTabularClass& CommonTabularClass::operator=(const CommonTabularClass& other)
+  {
+    db = other.db;
+    tabName = other.tabName;
+    isView = other.isView;
+    sqlColumnCount = other.sqlColumnCount;
+
+    return *this;
+  }
+
+  //----------------------------------------------------------------------------
+
+  CommonTabularClass&CommonTabularClass::operator=(CommonTabularClass&& other)
+  {
+    db = other.db;
+    tabName = std::move(other.tabName);
+    isView = other.isView;
+    sqlColumnCount = std::move(other.sqlColumnCount);
+
+    return *this;
+  }
+*/
 
 //----------------------------------------------------------------------------
 
   ColInfoList CommonTabularClass::allColDefs() const
   {
     ColInfoList result;
-    auto stmt = db->execContentQuery("PRAGMA table_info(" + tabName + ")", nullptr);
+    SqlStatement stmt = db.get().execContentQuery("PRAGMA table_info(" + tabName + ")");
       
-    while (stmt->hasData())
+    while (stmt.hasData())
     {
-      int colId;
-      string colName;
-      string colType;
-      stmt->getInt(0, &colId);
-      stmt->getString(1, &colName);
-      stmt->getString(2, &colType);
+      int colId = stmt.getInt(0);
+      string colName = stmt.getString(1);
+      string colType = stmt.getString(2);
 
-      ColInfo ci(colId, colName, colType);
-      result.push_back(ci);
-      stmt->step();
+      result.emplace_back(colId, colName, colType);
+      stmt.step();
     }
       
     return result;
@@ -104,148 +142,151 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  string CommonTabularClass::getColType(const string& colName) const
+  ColumnAffinity CommonTabularClass::colAffinity(const string& colName) const
   {
-    ColInfoList cil = allColDefs();
+    return string2Affinity(colDeclType(colName));
+  }
 
-    for (ColInfo ci : cil)
+  //----------------------------------------------------------------------------
+
+  string CommonTabularClass::colDeclType(const string& colName) const
+  {
+    if (colName.empty())
     {
-      if (ci.getColName() == colName) {
-        return ci.getColType();
-      }
-    };
-    
-    return string();
+      throw std::invalid_argument("Invalid column name");
+    }
+
+    SqlStatement stmt = db.get().prepStatement("SELECT type FROM pragma_table_info(?) WHERE name=?");
+    stmt.bind(1, tabName);
+    stmt.bind(2, colName);
+
+    stmt.step();
+    if (!stmt.hasData())
+    {
+      throw std::invalid_argument("Invalid column name");
+    }
+
+    return stmt.getString(0);
   }
 
 //----------------------------------------------------------------------------
 
   string CommonTabularClass::cid2name(int cid) const
   {
-    ColInfoList cil = allColDefs();
-
-    for (ColInfo ci : cil)
+    if (cid < 0)
     {
-      if (ci.getId() == cid) {
-        return ci.getColName();
-      }
-    };
+      throw std::invalid_argument("Invalid column ID");
+    }
 
-    return string();
+    SqlStatement stmt = db.get().prepStatement("SELECT name FROM pragma_table_info(?) WHERE cid=?");
+    stmt.bind(1, tabName);
+    stmt.bind(2, cid);
+
+    stmt.step();
+    if (!stmt.hasData())
+    {
+      throw std::invalid_argument("Invalid column ID");
+    }
+
+    return stmt.getString(0);
   }
 
 //----------------------------------------------------------------------------
 
   int CommonTabularClass::name2cid(const string& colName) const
   {
-    ColInfoList cil = allColDefs();
-
-    for (ColInfo ci : cil)
+    if (colName.empty())
     {
-      if (ci.getColName() == colName) {
-        return ci.getId();
-      }
-    };
+      throw std::invalid_argument("Invalid column name");
+    }
 
-    return -1;
+    SqlStatement stmt = db.get().prepStatement("SELECT cid FROM pragma_table_info(?) WHERE name=?");
+    stmt.bind(1, tabName);
+    stmt.bind(2, colName);
+
+    stmt.step();
+    if (!stmt.hasData())
+    {
+      throw std::invalid_argument("Invalid column name");
+    }
+
+    return stmt.getInt(0);
   }
 
 //----------------------------------------------------------------------------
 
   bool CommonTabularClass::hasColumn(const string& colName) const
   {
-    ColInfoList cil = allColDefs();
-
-    for (ColInfo ci : cil)
+    try
     {
-      if (ci.getColName() == colName) {
-        return true;
-      }
-    };
+      name2cid(colName);
+    }
+    catch (std::invalid_argument& e)
+    {
+      return false;
+    }
 
-    return false;
+    return true;
   }
 
 //----------------------------------------------------------------------------
 
   bool CommonTabularClass::hasColumn(int cid) const
   {
-    ColInfoList cil = allColDefs();
-    
-    return ((cid >= 0) && (static_cast<size_t>(cid) < cil.size()));
+    SqlStatement stmt = db.get().prepStatement("SELECT count(*) FROM pragma_table_info(?) WHERE cid=?");
+    stmt.bind(1, tabName);
+    stmt.bind(2, cid);
+
+    return (db.get().execScalarQueryInt(stmt) > 0);
   }
 
 //----------------------------------------------------------------------------
 
   int CommonTabularClass::getMatchCountForWhereClause(const WhereClause& w) const
   {
-    auto stmt = w.getSelectStmt(db, tabName, true);
-    if (stmt == nullptr) return -1;
-    int cnt;
-    bool isOk = db->execScalarQueryInt(stmt, &cnt, nullptr);
-
-    return isOk ? cnt : -1;
-  }
-
-//----------------------------------------------------------------------------
-
-  int CommonTabularClass::getMatchCountForColumnValue(const string& col, const string& val) const
-  {
-    WhereClause w;
-    w.addStringCol(col, val);
-    return getMatchCountForWhereClause(w);
-  }
-
-//----------------------------------------------------------------------------
-
-  int CommonTabularClass::getMatchCountForColumnValue(const string& col, int val) const
-  {
-    WhereClause w;
-    w.addIntCol(col, val);
-    return getMatchCountForWhereClause(w);
-  }
-
-//----------------------------------------------------------------------------
-
-  int CommonTabularClass::getMatchCountForColumnValue(const string& col, double val) const
-  {
-    WhereClause w;
-    w.addDoubleCol(col, val);
-    return getMatchCountForWhereClause(w);
-  }
-
-  //----------------------------------------------------------------------------
-
-  int CommonTabularClass::getMatchCountForColumnValue(const string& col, const CommonTimestamp* pTimestamp) const
-  {
-    // thanks to polymorphism, this works for
-    // both LocalTimestamp and UTCTimestamp
-    time_t rawTime = pTimestamp->getRawTime();
-
-    WhereClause w;
-    w.addIntCol(col, rawTime);
-    return getMatchCountForWhereClause(w);
+    if (w.isEmpty())
+    {
+      throw std::invalid_argument("Match count for empty where clause");
+    }
+    SqlStatement stmt = w.getSelectStmt(db, tabName, true);
+    return db.get().execScalarQueryInt(stmt);
   }
 
 //----------------------------------------------------------------------------
 
   int CommonTabularClass::getMatchCountForColumnValueNull(const string& col) const
   {
-    WhereClause w;
-    w.addNullCol(col);
-    return getMatchCountForWhereClause(w);
+    if (col.empty())
+    {
+      throw std::invalid_argument("getMatchCountForColumnValue(): empty column name");
+    }
+
+    string sql = sqlColumnCount + col + " IS NULL";
+
+    try
+    {
+      SqlStatement stmt = db.get().prepStatement(sql);
+      stmt.step();
+      return stmt.getInt(0);
+    }
+    catch (SqlStatementCreationError e)
+    {
+      throw std::invalid_argument("getMatchCountForColumnValueNull(): invalid column name");
+    }
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   int CommonTabularClass::getMatchCountForWhereClause(const string& where) const
   {
+    if (where.empty())
+    {
+      throw std::invalid_argument("Empty string for match count by WHERE clause");
+    }
+
     string sql = "SELECT COUNT(*) FROM " + tabName + " WHERE " + where;
 
-    int cnt;
-    bool isOk = db->execScalarQueryInt(sql, &cnt, nullptr);
-
-    return isOk ? cnt : -1;
+    return db.get().execScalarQueryInt(sql);
   }
 
 
@@ -253,10 +294,7 @@ namespace SqliteOverlay
 
   int CommonTabularClass::length() const
   {
-    string sql = "SELECT count(*) FROM " + tabName;
-    int result;
-    db->execScalarQueryInt(sql, &result, nullptr);
-    return result;
+    return db.get().execScalarQueryInt("SELECT COUNT(*) FROM " + tabName);
   }
 
 //----------------------------------------------------------------------------

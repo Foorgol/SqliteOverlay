@@ -20,7 +20,6 @@ class EmptyFixture
 class BasicTestFixture : public ::testing::Test
 {
 protected:
-  static constexpr char DB_TEST_FILE_NAME[] = "SqliteTestDB.db";
 
   virtual void SetUp ();
   virtual void TearDown ();
@@ -28,12 +27,6 @@ protected:
   string getTestDir () const;
   string genTestFilePath(string fName) const;
   boostfs::path tstDirPath;
-  unique_ptr<Logger> log;
-  void printStartMsg(string _tcName);
-  void printEndMsg();
-
-private:
-  string tcName;
 };
 
 #endif /* BASICTESTCLASS_H */

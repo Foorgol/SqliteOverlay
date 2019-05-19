@@ -14,28 +14,39 @@
 #define	DATABASETESTSCENARIO_H
 
 #include <sqlite3.h>
+#include <memory>
+#include <iostream>
 
 #include "BasicTestClass.h"
 #include "SqliteDatabase.h"
 #include "SampleDB.h"
+
+using namespace std;
+
+void closeRawSqliteDb(sqlite3* ptr);
+
+void closeRawSqliteStmt(sqlite3_stmt* ptr);
+
+using RawSqlitePtr = std::unique_ptr<sqlite3, decltype (&closeRawSqliteDb)>;
+using RawSqliteStmt = std::unique_ptr<sqlite3_stmt, decltype (&closeRawSqliteStmt)>;
+
 
 class DatabaseTestScenario : public BasicTestFixture
 {
 public:
 
 protected:
-  static constexpr char SQLITE_DB[] = "SqliteTestDB.db";
+  static const string DB_TEST_FILE_NAME;
 
-  upSqlite3Db getRawDbHandle() const;
-  sqlite3_stmt* prepStatement(upSqlite3Db& db, const string& sql);
+  RawSqlitePtr getRawDbHandle() const;
+  RawSqlitePtr getRawMemDb() const;
+  RawSqliteStmt prepStatement(const RawSqlitePtr& db, const string& sql);
 
   void prepScenario01();
-  upSqliteDatabase getScenario01();
+  SampleDB getScenario01();
   
-  //void execQueryAndDumpError(QSqlQuery& qry, const QString& sqlStatement="");
-
-public:
-  virtual void TearDown ();
+  void SetUp () override;
+  void TearDown () override;
   string getSqliteFileName() const;
   bool sqliteFileExists() const;
 };
