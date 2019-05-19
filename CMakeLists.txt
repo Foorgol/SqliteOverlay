@@ -65,6 +65,8 @@ set(LIB_SOURCES
     SqliteExceptions.h
     Defs.h
     Defs.cpp
+    Changelog.h
+    Changelog.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${LIB_SOURCES})
@@ -77,7 +79,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 set(LIB_VERSION_MAJOR 0)
-set(LIB_VERSION_MINOR 4)
+set(LIB_VERSION_MINOR 5)
 set(LIB_VERSION_PATCH 0)
 set(LIB_VERSION_STRING ${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_PATCH})
 
@@ -116,6 +118,7 @@ set(INSTALLATION_HEADERS
     SqliteExceptions.h
     #UserMngr.h
     #ActionMngr.h
+    Changelog.h
     )
 install(FILES ${INSTALLATION_HEADERS} DESTINATION include/SqliteOverlay)
 

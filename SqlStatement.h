@@ -603,10 +603,7 @@ namespace SqliteOverlay
      * Test case: yes, implicitly in the `bind` test case
      *
      */
-    string getExpandedSQL() const
-    {
-      return string{sqlite3_expanded_sql(stmt)};
-    }
+    string getExpandedSQL() const;
 
     /** \brief Catches all calls to `get()` with unsupported
      * value types at compile time.

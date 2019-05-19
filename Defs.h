@@ -158,16 +158,6 @@ namespace SqliteOverlay
     OpenExisting_RO   ///< open an existing database in read-only mode and fail if it doesn't exist
   };
 
-  /** \brief An enum that maps between SQLite constants for row modifications
-   * to enum values.
-   */
-  enum class RowChangeAction
-  {
-    Insert = SQLITE_INSERT,
-    Update = SQLITE_UPDATE,
-    Delete = SQLITE_DELETE
-  };
-
 }
 
 namespace std

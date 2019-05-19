@@ -310,6 +310,17 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  string SqlStatement::getExpandedSQL() const
+  {
+    char* sql = sqlite3_expanded_sql(stmt);
+    string result{sql};
+    sqlite3_free(sql);
+
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
   void SqlStatement::get(int colId, nlohmann::json& result) const
   {
     result = getJson(colId);

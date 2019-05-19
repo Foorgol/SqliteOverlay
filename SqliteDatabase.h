@@ -15,6 +15,7 @@
 #include "SqlStatement.h"
 #include "SqliteExceptions.h"
 #include "Defs.h"
+#include "Changelog.h"
 
 using namespace std;
 
@@ -115,37 +116,6 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  // The changelog
-  struct ChangeLogEntry
-  {
-    ChangeLogEntry(int a, const string& dn, const string& tn, size_t id)
-      :action{static_cast<RowChangeAction>(a)}, dbName{dn}, tabName{tn}, rowId{id} {}
-
-    ChangeLogEntry(RowChangeAction a, const string& dn, const string& tn, size_t id)
-      :action{a}, dbName{dn}, tabName{tn}, rowId{id} {}
-
-    ChangeLogEntry() = default;
-    ChangeLogEntry(const ChangeLogEntry& other) = default;
-    ChangeLogEntry(ChangeLogEntry&& other) = default;
-    ChangeLogEntry& operator=(const ChangeLogEntry& other) = default;
-    ChangeLogEntry& operator=(ChangeLogEntry&& other) = default;
-
-    RowChangeAction action;
-    string dbName;
-    string tabName;
-    size_t rowId;
-  };
-  using ChangeLogList = vector<ChangeLogEntry>;
-
-  void changeLogCallback(void* customPtr, int modType, char const * _dbName, char const* _tabName, sqlite3_int64 id);
-
-  struct ChangeLogCallbackContext
-  {
-    mutex* logMutex;
-    ChangeLogList* logPtr;
-  };
-
-  //----------------------------------------------------------------------------
 
   //
   // forward definitions
