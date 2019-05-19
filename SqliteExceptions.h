@@ -10,14 +10,15 @@
 
 #include "Defs.h"
 
-using namespace std;
-
 namespace SqliteOverlay
 {
   class BasicException
   {
   public:
-    BasicException(const string& exName, optional<PrimaryResultCode> errCode = optional<PrimaryResultCode>{}, const string& context = "")
+    BasicException(
+        const std::string& exName,
+        std::optional<PrimaryResultCode> errCode = std::optional<PrimaryResultCode>{},
+        const std::string& context = "")
       :err{errCode}
     {
       msg = "Exception in SqliteOverlay lib:\n";
@@ -29,26 +30,26 @@ namespace SqliteOverlay
       if (errCode.has_value())
       {
         int e = static_cast<int>(err.value());
-        string sErr{sqlite3_errstr(e)};
+        std::string sErr{sqlite3_errstr(e)};
         msg += "  SQLite error: " + sErr + "(" + std::to_string(e) + ")\n";
       }
 
-      cerr << msg << "\n" << endl;
+      std::cerr << msg << "\n" << std::endl;
     }
 
-    BasicException(const string& exName, int errCode, const string& context = "")
+    BasicException(const std::string& exName, int errCode, const std::string& context = "")
       :BasicException(exName, static_cast<PrimaryResultCode>(errCode), context) {}
 
-    BasicException(const string& exName, const string& context = "")
-      :BasicException(exName, optional<PrimaryResultCode>{}, context) {}
+    BasicException(const std::string& exName, const std::string& context = "")
+      :BasicException(exName, std::optional<PrimaryResultCode>{}, context) {}
 
-    string what() const { return msg; }
+    std::string what() const { return msg; }
 
     PrimaryResultCode errCode() const { return err.value(); }
 
   private:
-    string msg;
-    optional<PrimaryResultCode> err;
+    std::string msg;
+    std::optional<PrimaryResultCode> err;
   };
 
   /** \brief An exception that is thrown in case SQLite returns an error
@@ -59,7 +60,7 @@ namespace SqliteOverlay
   class GenericSqliteException : public BasicException
   {
   public:
-    GenericSqliteException(int errCode, const string& context = "")
+    GenericSqliteException(int errCode, const std::string& context = "")
       :BasicException("Generic SQLite API error", errCode, context) {}
   };
 
@@ -67,8 +68,8 @@ namespace SqliteOverlay
   class SqlStatementCreationError : public BasicException
   {
   public:
-    SqlStatementCreationError(int errCode, const string& sqlTxt, const char* sqliteErrMsg)
-      :BasicException("SqlStatement Creation Error", errCode, string{sqliteErrMsg} + "\n  SQL Statement: " + sqlTxt) {}
+    SqlStatementCreationError(int errCode, const std::string& sqlTxt, const char* sqliteErrMsg)
+      :BasicException("SqlStatement Creation Error", errCode, std::string{sqliteErrMsg} + "\n  SQL Statement: " + sqlTxt) {}
   };
 
   /** \brief An exception that is thrown if SQL statements couldn't be executed
@@ -77,7 +78,7 @@ namespace SqliteOverlay
   class BusyException : public BasicException
   {
   public:
-    BusyException(const string& context = "")
+    BusyException(const std::string& context = "")
       :BasicException("Database Busy Error", SQLITE_BUSY, context) {}
   };
 
@@ -86,7 +87,7 @@ namespace SqliteOverlay
   class InvalidColumnException : public BasicException
   {
   public:
-    InvalidColumnException(const string& context = "")
+    InvalidColumnException(const std::string& context = "")
       :BasicException("Invalid column", context) {}
   };
 
@@ -96,7 +97,7 @@ namespace SqliteOverlay
   class NoDataException : public BasicException
   {
   public:
-    NoDataException(const string& context = "")
+    NoDataException(const std::string& context = "")
       :BasicException("Column data access in a SQL statement that did not return any data or that is finished", context) {}
   };
 
@@ -106,7 +107,7 @@ namespace SqliteOverlay
   class NullValueException : public BasicException
   {
   public:
-    NullValueException(const string& context = "")
+    NullValueException(const std::string& context = "")
       :BasicException("Null Value", context) {}
   };
 
@@ -116,7 +117,7 @@ namespace SqliteOverlay
   class NoSuchTableException : public BasicException
   {
   public:
-    NoSuchTableException(const string& context = "")
+    NoSuchTableException(const std::string& context = "")
       :BasicException("No Such Table (e.g., invalid table name", context) {}
   };
 
@@ -125,7 +126,7 @@ namespace SqliteOverlay
   class ConstraintFailedException : public BasicException
   {
   public:
-    ConstraintFailedException(const string& context = "")
+    ConstraintFailedException(const std::string& context = "")
       :BasicException("Constraint Failed (e.g., foreign key violation)", context) {}
   };
 }

@@ -20,7 +20,7 @@ namespace SqliteOverlay
   public:
     using DatabaseClass = DB_CLASS;
 
-    GenericDatabaseObject (const DB_CLASS& _db, const string& _tabName, int _id)
+    GenericDatabaseObject (const DB_CLASS& _db, const std::string& _tabName, int _id)
       : db(_db), row(TabRow(_db, _tabName, _id))
     {
       static_assert (std::is_base_of_v<SqliteDatabase, DB_CLASS>, "DB classes must be derived from SqliteDatabase");
@@ -53,7 +53,7 @@ namespace SqliteOverlay
     }
     
   protected:
-    reference_wrapper<const DB_CLASS> db;
+    std::reference_wrapper<const DB_CLASS> db;
     TabRow row;
 
   };

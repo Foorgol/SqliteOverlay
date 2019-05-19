@@ -30,7 +30,7 @@ namespace SqliteOverlay {
      *
      */
     inline void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
+        const std::string& colName,   ///< the name of the column that should contain the value
         int val   ///< the value itself
         )
     {
@@ -45,7 +45,7 @@ namespace SqliteOverlay {
      *
      */
     inline void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
+        const std::string& colName,   ///< the name of the column that should contain the value
         long val   ///< the value itself
         )
     {
@@ -60,7 +60,7 @@ namespace SqliteOverlay {
      *
      */
     inline void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
+        const std::string& colName,   ///< the name of the column that should contain the value
         double val   ///< the value itself
         )
     {
@@ -75,11 +75,11 @@ namespace SqliteOverlay {
      *
      */
     void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
+        const std::string& colName,   ///< the name of the column that should contain the value
         const char* val   ///< the value itself
         )
     {
-      stringVals.push_back(string{val});
+      stringVals.push_back(std::string{val});
       colVals.push_back(ColValInfo{colName, ColValType::String, static_cast<int>(stringVals.size()) - 1, ""});
     }
 
@@ -90,8 +90,8 @@ namespace SqliteOverlay {
      *
      */
     void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
-        const string& val   ///< the value itself
+        const std::string& colName,   ///< the name of the column that should contain the value
+        const std::string& val   ///< the value itself
         )
     {
       stringVals.push_back(val);
@@ -105,7 +105,7 @@ namespace SqliteOverlay {
      *
      */
     void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
+        const std::string& colName,   ///< the name of the column that should contain the value
         const nlohmann::json& val   ///< the value itself
         );
 
@@ -115,7 +115,7 @@ namespace SqliteOverlay {
      *
      */
     inline void addNullCol(
-        const string& colName   ///< the name of the column that should be NULL
+        const std::string& colName   ///< the name of the column that should be NULL
         )
     {
       colVals.push_back(ColValInfo{colName, ColValType::Null, -1, ""});
@@ -128,7 +128,7 @@ namespace SqliteOverlay {
      *
      */
     inline void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
+        const std::string& colName,   ///< the name of the column that should contain the value
         const CommonTimestamp* pTimestamp   ///< the value itself
         )
     {
@@ -142,7 +142,7 @@ namespace SqliteOverlay {
      *
      */
     inline void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
+        const std::string& colName,   ///< the name of the column that should contain the value
         const boost::gregorian::date& d   ///< the value itself
         )
     {
@@ -175,7 +175,7 @@ namespace SqliteOverlay {
      */
     SqlStatement createStatementAndBindValuesToPlaceholders(
         const SqliteDatabase& db,  ///< the database on which to construct the statement
-        const string& sql   ///< the SQL statement as text with placeholders
+        const std::string& sql   ///< the SQL statement as text with placeholders
         ) const;
 
   protected:
@@ -191,18 +191,18 @@ namespace SqliteOverlay {
 
     struct ColValInfo
     {
-      string colName;
+      std::string colName;
       ColValType type;
       int indexInList;
-      string op;
+      std::string op;
     };
 
-    vector<int> intVals;
-    vector<long> longVals;
-    vector<double> doubleVals;
-    vector<string> stringVals;
+    std::vector<int> intVals;
+    std::vector<long> longVals;
+    std::vector<double> doubleVals;
+    std::vector<std::string> stringVals;
 
-    vector<ColValInfo> colVals;
+    std::vector<ColValInfo> colVals;
   };
 
   //----------------------------------------------------------------------------
@@ -234,7 +234,7 @@ namespace SqliteOverlay {
      */
     SqlStatement getInsertStmt(
         const SqliteDatabase& db,   ///< pointer to the database that contains the target table
-        const string& tabName   ///< name of the table in which the new row should be inserted
+        const std::string& tabName   ///< name of the table in which the new row should be inserted
         ) const;
 
     /** \brief Constructs an UPDATE statement for a given combination of
@@ -255,7 +255,7 @@ namespace SqliteOverlay {
      */
     SqlStatement getUpdateStmt(
         const SqliteDatabase& db,   ///< pointer to the database that contains the target table
-        const string& tabName,   ///< name of the table in which the row should be updated
+        const std::string& tabName,   ///< name of the table in which the row should be updated
         int rowId   ///< the ID of the row that should be updated
         ) const;
 
@@ -287,8 +287,8 @@ namespace SqliteOverlay {
      *
      */
     void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
-        const string& op,   ///< the operator between column name and value
+        const std::string& colName,   ///< the name of the column that should contain the value
+        const std::string& op,   ///< the operator between column name and value
         int val   ///< the value itself
         );
 
@@ -299,8 +299,8 @@ namespace SqliteOverlay {
      *
      */
     void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
-        const string& op,   ///< the operator between column name and value
+        const std::string& colName,   ///< the name of the column that should contain the value
+        const std::string& op,   ///< the operator between column name and value
         long val   ///< the value itself
         );
 
@@ -311,8 +311,8 @@ namespace SqliteOverlay {
      *
      */
     void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
-        const string& op,   ///< the operator between column name and value
+        const std::string& colName,   ///< the name of the column that should contain the value
+        const std::string& op,   ///< the operator between column name and value
         double val   ///< the value itself
         );
 
@@ -323,9 +323,9 @@ namespace SqliteOverlay {
      *
      */
     void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
-        const string& op,   ///< the operator between column name and value
-        const string& val   ///< the value itself
+        const std::string& colName,   ///< the name of the column that should contain the value
+        const std::string& op,   ///< the operator between column name and value
+        const std::string& val   ///< the value itself
         );
 
     /** \brief Adds a timestamp to the list of column values with a custom
@@ -335,8 +335,8 @@ namespace SqliteOverlay {
      *
      */
     void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
-        const string& op,   ///< the operator between column name and value
+        const std::string& colName,   ///< the name of the column that should contain the value
+        const std::string& op,   ///< the operator between column name and value
         const CommonTimestamp* pTimestamp   ///< the value itself
         );
 
@@ -346,7 +346,7 @@ namespace SqliteOverlay {
      *
      */
     inline void addNotNullCol(
-        const string& colName
+        const std::string& colName
         )
     {
       colVals.push_back(ColValInfo{colName, ColValType::NotNull, -1, ""});
@@ -359,8 +359,8 @@ namespace SqliteOverlay {
      *
      */
     inline void addCol(
-        const string& colName,   ///< the name of the column that should contain the value
-        const string& op,   ///< the operator between column name and value
+        const std::string& colName,   ///< the name of the column that should contain the value
+        const std::string& op,   ///< the operator between column name and value
         const boost::gregorian::date& d   ///< the value itself
         )
     {
@@ -388,7 +388,7 @@ namespace SqliteOverlay {
      */
     SqlStatement getSelectStmt(
         const SqliteDatabase& db,   ///< the database on which to construct the statement
-        const string& tabName,   ///< the table on which the SELECT query should be run
+        const std::string& tabName,   ///< the table on which the SELECT query should be run
         bool countOnly   ///< `true`: retrieve only the number of matchtes ("SELECT COUNT(*) ... ") instead of the actual matches
         ) const;
 
@@ -410,7 +410,7 @@ namespace SqliteOverlay {
      */
     SqlStatement getDeleteStmt(
         const SqliteDatabase& db,   ///< the database on which to construct the statement
-        const string& tabName   ///< the table on which the DELETE query should be run
+        const std::string& tabName   ///< the table on which the DELETE query should be run
         ) const;
 
     /** \brief For SELECT statements only: define a column that will be used
@@ -423,7 +423,7 @@ namespace SqliteOverlay {
      *
      */
     void setOrderColumn_Asc(
-        const string& colName   ///< the name of the column(s) that should be used for sorting the SELECT results
+        const std::string& colName   ///< the name of the column(s) that should be used for sorting the SELECT results
         );
 
     /** \brief For SELECT statements only: define a column that will be used
@@ -436,7 +436,7 @@ namespace SqliteOverlay {
      *
      */
     void setOrderColumn_Desc(
-        const string& colName   ///< the name of the column(s) that should be used for sorting the SELECT results
+        const std::string& colName   ///< the name of the column(s) that should be used for sorting the SELECT results
         );
 
     /** \brief For SELECT statements only: limit the list of results to a maximum number of rows
@@ -459,10 +459,10 @@ namespace SqliteOverlay {
     /** \returns a string that contains the SQL text that you would expect after the `WHERE` in
      * a SELECT statement, for instance; all column values are represented by `?`-placeholders.
      */
-    string getWherePartWithPlaceholders() const;
+    std::string getWherePartWithPlaceholders() const;
 
   private:
-    string orderBy;
+    std::string orderBy;
     int limit{0};
   };
 

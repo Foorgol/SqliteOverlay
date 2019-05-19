@@ -20,6 +20,8 @@
 #include "ClausesAndQueries.h"
 #include "SqlStatement.h"
 
+using namespace std;
+
 namespace SqliteOverlay
 {
 

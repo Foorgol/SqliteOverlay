@@ -14,9 +14,9 @@ TEST_F(DatabaseTestScenario, DatabaseCtor)
   bfs::path dbPathObj(dbFileName);
 
   ASSERT_FALSE(bfs::exists(dbPathObj));
-  ASSERT_THROW(SqliteDatabase(dbFileName, OpenMode::OpenExisting_RW, false), std::invalid_argument);
-  ASSERT_THROW(SqliteDatabase(dbFileName, OpenMode::OpenExisting_RO, false), std::invalid_argument);
-  SqliteDatabase db{dbFileName, OpenMode::OpenOrCreate_RW, false};
+  ASSERT_THROW(SqliteDatabase(dbFileName, OpenMode::OpenExisting_RW), std::invalid_argument);
+  ASSERT_THROW(SqliteDatabase(dbFileName, OpenMode::OpenExisting_RO), std::invalid_argument);
+  SqliteDatabase db{dbFileName, OpenMode::OpenOrCreate_RW};
   ASSERT_TRUE(bfs::exists(dbPathObj));
   ASSERT_TRUE(db.isAlive());
 
@@ -25,28 +25,28 @@ TEST_F(DatabaseTestScenario, DatabaseCtor)
   ASSERT_FALSE(db.isAlive());
 
   // open an existing database
-  ASSERT_THROW(SqliteDatabase(dbFileName, OpenMode::ForceNew, false), std::invalid_argument);
-  db = SqliteDatabase{dbFileName, OpenMode::OpenExisting_RO, false};
+  ASSERT_THROW(SqliteDatabase(dbFileName, OpenMode::ForceNew), std::invalid_argument);
+  db = SqliteDatabase{dbFileName, OpenMode::OpenExisting_RO};
   db.close();
-  db = SqliteDatabase{dbFileName, OpenMode::OpenExisting_RW, false};
+  db = SqliteDatabase{dbFileName, OpenMode::OpenExisting_RW};
   db.close();
-  db = SqliteDatabase{dbFileName, OpenMode::OpenOrCreate_RW, false};
+  db = SqliteDatabase{dbFileName, OpenMode::OpenOrCreate_RW};
   db.close();
 
   // clean-up and test "force new"
   ASSERT_TRUE(bfs::remove(dbPathObj));
   ASSERT_FALSE(bfs::exists(dbPathObj));
-  db = SqliteDatabase{dbFileName, OpenMode::ForceNew, false};
+  db = SqliteDatabase{dbFileName, OpenMode::ForceNew};
   ASSERT_TRUE(bfs::exists(dbPathObj));
   ASSERT_TRUE(bfs::remove(dbPathObj));
   ASSERT_FALSE(bfs::exists(dbPathObj));
 
   // try to open a non-existing / invalid / empty file
-  ASSERT_THROW(SqliteDatabase("", OpenMode::OpenOrCreate_RW, false), std::invalid_argument);
+  ASSERT_THROW(SqliteDatabase("", OpenMode::OpenOrCreate_RW), std::invalid_argument);
 
   // try invalid flag combinations
-  ASSERT_THROW(SqliteDatabase(":memory:", OpenMode::OpenExisting_RW, false), std::invalid_argument);
-  ASSERT_THROW(SqliteDatabase(":memory:", OpenMode::OpenExisting_RO, false), std::invalid_argument);
+  ASSERT_THROW(SqliteDatabase(":memory:", OpenMode::OpenExisting_RW), std::invalid_argument);
+  ASSERT_THROW(SqliteDatabase(":memory:", OpenMode::OpenExisting_RO), std::invalid_argument);
 }
 
 //----------------------------------------------------------------

@@ -1,8 +1,6 @@
 #ifndef SQLITE_OVERLAY_SQLITEDATABASE_H
 #define	SQLITE_OVERLAY_SQLITEDATABASE_H
 
-#include <sqlite3.h>
-
 #include <string>
 #include <memory>
 #include <vector>
@@ -10,14 +8,14 @@
 #include <optional>
 #include <type_traits>
 
+#include <sqlite3.h>
+
 #include <Sloppy/Utils.h>
 
 #include "SqlStatement.h"
 #include "SqliteExceptions.h"
 #include "Defs.h"
 #include "Changelog.h"
-
-using namespace std;
 
 namespace SqliteOverlay
 {
@@ -33,7 +31,7 @@ namespace SqliteOverlay
    *
    * \returns a string with a column constraint clause for use in a CREATE TABLE statement.
    */
-  string buildColumnConstraint(
+  std::string buildColumnConstraint(
       ConflictClause uniqueConflictClause,   ///< unless set to `NotUsed` include a UNIQUE constraint and define what shall happen in violation
       ConflictClause notNullConflictClause   ///< unless set to `NotUsed` include a NOT NULL constraint and define what shall happen in violation
       );
@@ -46,17 +44,17 @@ namespace SqliteOverlay
    * \returns a string with a column constraint clause for use in a CREATE TABLE statement.
    */
   template <typename T>
-  string buildColumnConstraint(
+  std::string buildColumnConstraint(
       ConflictClause uniqueConflictClause,   ///< unless set to `NotUsed` include a UNIQUE constraint and define what shall happen in violation
       ConflictClause notNullConflictClause,   ///< unless set to `NotUsed` include a NOT NULL constraint and define what shall happen in violation
       const T& defaultVal   ///< if `true`, we add a placeholder "?" for the default column value
       )
   {
-    string result = buildColumnConstraint(uniqueConflictClause, notNullConflictClause);
+    std::string result = buildColumnConstraint(uniqueConflictClause, notNullConflictClause);
 
     if (!(result.empty())) result += " ";
 
-    result += "DEFAULT " + to_string(defaultVal);
+    result += "DEFAULT " + std::to_string(defaultVal);
 
     return result;
   }
@@ -68,10 +66,10 @@ namespace SqliteOverlay
    *
    * \returns a string with a column constraint clause for use in a CREATE TABLE statement.
    */
-  string buildColumnConstraint(
+  std::string buildColumnConstraint(
       ConflictClause uniqueConflictClause,   ///< unless set to `NotUsed` include a UNIQUE constraint and define what shall happen in violation
       ConflictClause notNullConflictClause,   ///< unless set to `NotUsed` include a NOT NULL constraint and define what shall happen in violation
-      const string& defaulVal   ///< if `true`, we add a placeholder "?" for the default column value
+      const std::string& defaulVal   ///< if `true`, we add a placeholder "?" for the default column value
       );
 
   /** \brief Creates a column constraint string for CREATE TABLE statements
@@ -81,7 +79,7 @@ namespace SqliteOverlay
    *
    * \returns a string with a column constraint clause for use in a CREATE TABLE statement.
    */
-  string buildColumnConstraint(
+  std::string buildColumnConstraint(
       ConflictClause uniqueConflictClause,   ///< unless set to `NotUsed` include a UNIQUE constraint and define what shall happen in violation
       ConflictClause notNullConflictClause,   ///< unless set to `NotUsed` include a NOT NULL constraint and define what shall happen in violation
       const char* defaulVal   ///< if `true`, we add a placeholder "?" for the default column value
@@ -97,11 +95,11 @@ namespace SqliteOverlay
    *
    * \returns a string with a foreign key clause for use in a CREATE TABLE statement.
    */
-  string buildForeignKeyClause(
-      const string& referedTable,   ///< the name of the table that this column refers to
+  std::string buildForeignKeyClause(
+      const std::string& referedTable,   ///< the name of the table that this column refers to
       ConsistencyAction onDelete,   ///< the action to be taken if the refered row is being deleted
       ConsistencyAction onUpdate,   ///< the action to be taken if the refered row is updated
-      string referedColumn="id"   ///< the name of the column we're pointing to in the refered table
+      std::string referedColumn="id"   ///< the name of the column we're pointing to in the refered table
       );
 
   //----------------------------------------------------------------------------
@@ -112,7 +110,7 @@ namespace SqliteOverlay
    * Test case: not yet
    *
    */
-  ColumnAffinity string2Affinity(const string& colType);
+  ColumnAffinity string2Affinity(const std::string& colType);
 
   //----------------------------------------------------------------------------
 
@@ -139,8 +137,11 @@ namespace SqliteOverlay
   class SqliteDatabase
   {
   public:
-    /** \brief Default ctor, creates a blank in-memory database and calls
-     * `populateTables()` and `populateViews()` on it.
+    /** \brief Default ctor, creates a blank in-memory database.
+     *
+     * \note `populateTables()` and `populateViews()` are NOT CALLED from
+     * this constructor. Since they are virtual methods that should be refined
+     * by derived classes, the base class ctor is not able to properly call them!
      *
      * Test case: not yet
      *
@@ -149,12 +150,9 @@ namespace SqliteOverlay
 
     /** \brief Standard dtor for creating or opening a database file.
      *
-     * We can optionally call `populateTables()` and `populateViews()` on
-     * the new database connection (ignored if we're read-only). Database
-     * population is executed with a dedicated transaction which is rolled
-     * back if something goes wrong. So if we're open an existing database
-     * and anything bad happens, the database is guaranteed to remain
-     * untouched if this ctor throws.
+     * \note `populateTables()` and `populateViews()` are NOT CALLED from
+     * this constructor. Since they are virtual methods that should be refined
+     * by derived classes, the base class ctor is not able to properly call them!
      *
      * \throws std::invalid_argument if the filename is empty or if a
      * parameter combination makes no sense (e.g., read-only access to a
@@ -168,9 +166,8 @@ namespace SqliteOverlay
      *
      */
     SqliteDatabase(
-        string dbFileName, ///< the name of the database file to open or create
-        OpenMode om,   ///< the opening mode (e.g., read-only)
-        bool populate   ///< set to `true` to call `populateTables()` and `populateViews()` (ignored if read-only)
+        std::string dbFilename, ///< the name of the database file to open or create
+        OpenMode om   ///< the opening mode (e.g., read-only)
         );
 
     /** \brief Dtor; closes the database connections and cleans up table cache
@@ -232,7 +229,7 @@ namespace SqliteOverlay
      *
      */
     SqlStatement prepStatement(
-        const string& sqlText   ///< the SQL text for which to create the statement
+        const std::string& sqlText   ///< the SQL text for which to create the statement
         ) const;
 
     /** \brief Executes a SQL statement that isn't expected to return any data.
@@ -252,7 +249,7 @@ namespace SqliteOverlay
      *
      */
     void execNonQuery(
-        const string& sqlStatement   ///< the SQL statement to execute
+        const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
     /** \brief Executes a SQL statement that isn't expected to return any data.
@@ -289,7 +286,7 @@ namespace SqliteOverlay
      *
      */
     SqlStatement execContentQuery(
-        const string& sqlStatement   ///< the SQL statement to execute
+        const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
     /** \brief Executes a SQL statement by calling `step()` once and returns the value
@@ -315,7 +312,7 @@ namespace SqliteOverlay
      *
      */
     int execScalarQueryInt(
-        const string& sqlStatement   ///< the SQL statement to execute
+        const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
     /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
@@ -360,8 +357,8 @@ namespace SqliteOverlay
      * Test case: yes, but only with partial exception testing
      *
      */
-    optional<int> execScalarQueryIntOrNull(
-        const string& sqlStatement   ///< the SQL statement to execute
+    std::optional<int> execScalarQueryIntOrNull(
+        const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
     /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
@@ -382,7 +379,7 @@ namespace SqliteOverlay
      * Test case: yes, but only with partial exception testing
      *
      */
-    optional<int> execScalarQueryIntOrNull(
+    std::optional<int> execScalarQueryIntOrNull(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
         ) const;
 
@@ -409,7 +406,7 @@ namespace SqliteOverlay
      *
      */
     long execScalarQueryLong(
-        const string& sqlStatement   ///< the SQL statement to execute
+        const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
     /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
@@ -454,8 +451,8 @@ namespace SqliteOverlay
      * Test case: yes, but only with partial exception testing
      *
      */
-    optional<long> execScalarQueryLongOrNull(
-        const string& sqlStatement   ///< the SQL statement to execute
+    std::optional<long> execScalarQueryLongOrNull(
+        const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
     /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
@@ -476,7 +473,7 @@ namespace SqliteOverlay
      * Test case: yes, but only with partial exception testing
      *
      */
-    optional<long> execScalarQueryLongOrNull(
+    std::optional<long> execScalarQueryLongOrNull(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
         ) const;
 
@@ -501,7 +498,7 @@ namespace SqliteOverlay
      *
      */
     double execScalarQueryDouble(
-        const string& sqlStatement   ///< the SQL statement to execute
+        const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
     /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
@@ -546,8 +543,8 @@ namespace SqliteOverlay
      * Test case: yes, but only with partial exception testing
      *
      */
-    optional<double> execScalarQueryDoubleOrNull(
-        const string& sqlStatement   ///< the SQL statement to execute
+    std::optional<double> execScalarQueryDoubleOrNull(
+        const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
     /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
@@ -568,7 +565,7 @@ namespace SqliteOverlay
      * Test case: yes, but only with partial exception testing
      *
      */
-    optional<double> execScalarQueryDoubleOrNull(
+    std::optional<double> execScalarQueryDoubleOrNull(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
         ) const;
 
@@ -592,8 +589,8 @@ namespace SqliteOverlay
      * Test case: yes, but only with partial exception testing
      *
      */
-    string execScalarQueryString(
-        const string& sqlStatement   ///< the SQL statement to execute
+    std::string execScalarQueryString(
+        const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
     /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
@@ -615,7 +612,7 @@ namespace SqliteOverlay
      * Test case: yes, but only with partial exception testing
      *
      */
-    string execScalarQueryString(
+    std::string execScalarQueryString(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
         ) const;
 
@@ -638,8 +635,8 @@ namespace SqliteOverlay
      * Test case: yes, but only with partial exception testing
      *
      */
-    optional<string> execScalarQueryStringOrNull(
-        const string& sqlStatement   ///< the SQL statement to execute
+    std::optional<std::string> execScalarQueryStringOrNull(
+        const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
     /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
@@ -660,7 +657,7 @@ namespace SqliteOverlay
      * Test case: yes, but only with partial exception testing
      *
      */
-    optional<string> execScalarQueryStringOrNull(
+    std::optional<std::string> execScalarQueryStringOrNull(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
         ) const;
 
@@ -702,8 +699,8 @@ namespace SqliteOverlay
      *
      */
     void viewCreationHelper(
-        const string& viewName,   ///< the name for the new view
-        const string& selectStmt   ///< the SQL statement that represents the view's contents
+        const std::string& viewName,   ///< the name for the new view
+        const std::string& selectStmt   ///< the SQL statement that represents the view's contents
         ) const;
 
     /** \brief Convenience function for creating a new index that combines several columns
@@ -722,8 +719,8 @@ namespace SqliteOverlay
      *
      */
     void indexCreationHelper(
-        const string& tabName,   ///< the table on which to create the new index
-        const string& idxName,   ///< the name of the new index
+        const std::string& tabName,   ///< the table on which to create the new index
+        const std::string& idxName,   ///< the name of the new index
         const Sloppy::StringList& colNames,   ///< a list of column names that shall be ANDed for the index
         bool isUnique=false   ///< determines whether the index shall enforce unique combinations of the column values
         ) const;
@@ -744,9 +741,9 @@ namespace SqliteOverlay
      *
      */
     void indexCreationHelper(
-        const string& tabName,   ///< the table on which to create the new index
-        const string& idxName,   ///< the name of the new index
-        const string& colName,   ///< the name of the column which should serve as an index
+        const std::string& tabName,   ///< the table on which to create the new index
+        const std::string& idxName,   ///< the name of the new index
+        const std::string& colName,   ///< the name of the column which should serve as an index
         bool isUnique=false   ///< determines whether the index shall enforce unique column values
         ) const;
 
@@ -766,8 +763,8 @@ namespace SqliteOverlay
      *
      */
     void indexCreationHelper(
-        const string& tabName,   ///< the table on which to create the new index
-        const string& colName,   ///< the name of the column which should serve as an index
+        const std::string& tabName,   ///< the table on which to create the new index
+        const std::string& colName,   ///< the name of the column which should serve as an index
         bool isUnique=false   ///< determines whether the index shall enforce unique column values
         ) const;
 
@@ -793,7 +790,7 @@ namespace SqliteOverlay
      *
      */
     bool hasTable(
-        const string& name,   ///< the name to search for (case-sensitive)
+        const std::string& name,   ///< the name to search for (case-sensitive)
         bool isView=false   ///< `false`: search among all tables (default); `true`: search among all views
         ) const;
 
@@ -803,7 +800,7 @@ namespace SqliteOverlay
      *
      */
     bool hasView(
-        const string& name   ///< the name to search for (case-sensitive)
+        const std::string& name   ///< the name to search for (case-sensitive)
         ) const;
 
     /** \returns the ID of the last inserted row
@@ -868,8 +865,8 @@ namespace SqliteOverlay
      *
      */
     bool copyTable(
-        const string& srcTabName,   ///< name of the source table for the copy-operation
-        const string& dstTabName,   ///< name of the destination table (may not yet exist)
+        const std::string& srcTabName,   ///< name of the source table for the copy-operation
+        const std::string& dstTabName,   ///< name of the destination table (may not yet exist)
         bool copyStructureOnly=false   ///< `true`: copy on the table structure/schema; `false`: deep copy the table's contents
         ) const;
 
@@ -892,7 +889,7 @@ namespace SqliteOverlay
      *
      */
     bool backupToFile(
-        const string& dstFileName   ///< the name of the database file to copy the contents to
+        const std::string& dstFileName   ///< the name of the database file to copy the contents to
         ) const;
 
     /** \brief Copies the content of a database file into the current database
@@ -914,7 +911,7 @@ namespace SqliteOverlay
      *
      */
     bool restoreFromFile(
-        const string& srcFileName    ///< the name of the database file to read from
+        const std::string& srcFileName    ///< the name of the database file to read from
         );
 
     /** \returns `true` if the database contents have been modified by this or any other database connection
@@ -1057,7 +1054,7 @@ namespace SqliteOverlay
     {
       static_assert (std::is_base_of_v<SqliteDatabase, DB_CLASS>);
 
-      string fn = filename();
+      std::string fn = filename();
       if (fn.empty())
       {
         throw std::invalid_argument("duplicateConnection(): called on a temporary or in-memory database");
@@ -1065,7 +1062,7 @@ namespace SqliteOverlay
 
       OpenMode om = readOnly ? OpenMode::OpenExisting_RO : OpenMode::OpenExisting_RW;
 
-      return DB_CLASS{fn, om, false};
+      return DB_CLASS{fn, om};
     }
 
     /** \brief Function for creating a new, empty key-value-table in the database
@@ -1075,7 +1072,7 @@ namespace SqliteOverlay
      * \returns a KeyValueTab instance for the newly created table
      */
     KeyValueTab createNewKeyValueTab(
-        const string& tabName   ///< the table name
+        const std::string& tabName   ///< the table name
         );
 
     /** \returns a string containing the path to the database file (empty for in-memory databases)
@@ -1085,7 +1082,7 @@ namespace SqliteOverlay
      *
      * Test case: implicitly as part of the `operator==()` and of `duplicateConnection()`
      */
-    string filename() const;
+    std::string filename() const;
 
     /** \brief Overloaded operator for "is equal", compares the path
      * to the database file and the raw `sqlite3*` handle.
@@ -1151,7 +1148,7 @@ namespace SqliteOverlay
     // a queue of changes
     bool isChangeLogEnabled{false};
     ChangeLogList changeLog;
-    mutex changeLogMutex;
+    std::mutex changeLogMutex;
     ChangeLogCallbackContext logCallbackContext;
   };
 

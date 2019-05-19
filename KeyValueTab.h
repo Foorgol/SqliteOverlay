@@ -43,7 +43,7 @@ namespace SqliteOverlay
      */
     KeyValueTab (
         const SqliteDatabase& _db,   ///< the database that contains the table
-        const string& _tabName   ///< the table name
+        const std::string& _tabName   ///< the table name
         );
 
     /** Empty dtor */
@@ -65,7 +65,7 @@ namespace SqliteOverlay
      */
     template<typename T>
     void set(
-        const string& key,   ///< the key's name
+        const std::string& key,   ///< the key's name
         const T& val   ///< the value to be assigned to the key
         )
     {
@@ -93,7 +93,7 @@ namespace SqliteOverlay
      */
     template<typename T>
     void get(
-        const string& key,   ///< the key's name
+        const std::string& key,   ///< the key's name
         T& outVal   ///< reference to which the key's value will be assigned
         )
     {
@@ -113,8 +113,8 @@ namespace SqliteOverlay
      */
     template<typename T>
     void get(
-        const string& key,   ///< the key's name
-        optional<T>& outVal   ///< reference to which the key's value will be assigned
+        const std::string& key,   ///< the key's name
+        std::optional<T>& outVal   ///< reference to which the key's value will be assigned
         )
     {
       valSelectStatement.reset(true);
@@ -132,25 +132,25 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the key doesn't exist
      */
-    string operator[](const string& key);
+    std::string operator[](const std::string& key);
 
     /** \returns the value of a key as an integer
      *
      * \throws NoDataException if the key doesn't exist
      */
-    int getInt(const string& key);
+    int getInt(const std::string& key);
 
     /** \returns the value of a key as a long
      *
      * \throws NoDataException if the key doesn't exist
      */
-    long getLong(const string& key);
+    long getLong(const std::string& key);
 
     /** \returns the value of a key as a double
      *
      * \throws NoDataException if the key doesn't exist
      */
-    double getDouble(const string& key);
+    double getDouble(const std::string& key);
 
     /** \returns the value of a key as a bool
      *
@@ -159,13 +159,13 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the key doesn't exist
      */
-    double getBool(const string& key);
+    double getBool(const std::string& key);
 
     /** \returns the value of a key as a UTCTimestamp
      *
      * \throws NoDataException if the key doesn't exist
      */
-    UTCTimestamp getUTCTimestamp(const string& key);
+    UTCTimestamp getUTCTimestamp(const std::string& key);
 
     /** \returns the value of a key as a JSON object
      *
@@ -174,27 +174,27 @@ namespace SqliteOverlay
      * \throws nlohmann::json::parse_error if the key didn't contain valid JSON data
      *
      */
-    nlohmann::json getJson(const string& key);
+    nlohmann::json getJson(const std::string& key);
 
     /** \returns the value of a key as an optional string that
      * is empty ("empty optional", not "empty string"!) if the key doesn't exist
      */
-    optional<string> getString2(const string& key);
+    std::optional<std::string> getString2(const std::string& key);
 
     /** \returns the value of a key as an optional integer that
      * is empty if the key doesn't exist
      */
-    optional<int> getInt2(const string& key);
+    std::optional<int> getInt2(const std::string& key);
 
     /** \returns the value of a key as an optional long that
      * is empty if the key doesn't exist
      */
-    optional<long> getLong2(const string& key);
+    std::optional<long> getLong2(const std::string& key);
 
     /** \returns the value of a key as an optional double that
      * is empty if the key doesn't exist
      */
-    optional<double> getDouble2(const string& key);
+    std::optional<double> getDouble2(const std::string& key);
 
     /** \returns the value of a key as an optional bool that
      * is empty if the key doesn't exist
@@ -202,20 +202,20 @@ namespace SqliteOverlay
      * \note We simply convert to int and compare with 0. If the value is
      * 0, we return `false` and in all other cases `true`.
      */
-    optional<bool> getBool2(const string& key);
+    std::optional<bool> getBool2(const std::string& key);
 
     /** \returns the value of a key as an optional UTCTimestamp that
      * is empty if the key doesn't exist
      */
-    optional<UTCTimestamp> getUTCTimestamp2(const string& key);
+    std::optional<UTCTimestamp> getUTCTimestamp2(const std::string& key);
 
     /** \returns the value of a key as an optional JSON object that
      * is empty if the key doesn't exist
      */
-    optional<nlohmann::json> getJson2(const string& key);
+    std::optional<nlohmann::json> getJson2(const std::string& key);
 
     // boolean queries
-    bool hasKey(const string& key) const;
+    bool hasKey(const std::string& key) const;
 
     /** \brief Checks whether a key/value-pair satisfies a given constraint.
      *
@@ -228,9 +228,9 @@ namespace SqliteOverlay
      * \returns `true` if the key and its value satisfy the requested constraint.
      */
     bool checkConstraint(
-        const string& keyName,    ///< the name of the key
+        const std::string& keyName,    ///< the name of the key
         Sloppy::ValueConstraint c,     ///< the constraint to check
-        string* errMsg = nullptr  ///< an optional pointer to a string for returning a human-readable error message
+        std::string* errMsg = nullptr  ///< an optional pointer to a string for returning a human-readable error message
         );
 
     /** \returns the number of entries (which is: the number of keys) in the table
@@ -243,15 +243,15 @@ namespace SqliteOverlay
      * with the given exists when we return from this call. Means:
      * we don't throw if the key didn't exist in the first place...
      */
-    void remove(const string& key);
+    void remove(const std::string& key);
 
     /** \returns a list of all keys in the table
      */
-    vector<string> allKeys() const;
+    std::vector<std::string> allKeys() const;
 
   private:
-    reference_wrapper<const SqliteDatabase> db;
-    string tabName;
+    std::reference_wrapper<const SqliteDatabase> db;
+    std::string tabName;
     DbTab tab;
     SqlStatement valSelectStatement;
     SqlStatement valUpdateStatement;

@@ -49,7 +49,7 @@ namespace SqliteOverlay
      */
     DbTab (
         const SqliteDatabase& db,   ///< the database that contains the table
-        const string& tabName,   ///< the table's name (case sensitive)
+        const std::string& tabName,   ///< the table's name (case sensitive)
         bool forceNameCheck   ///< `true`: check whether a table of the provided name exists
         );
 
@@ -66,7 +66,7 @@ namespace SqliteOverlay
 
     /** \returns the name of the table we're linked to
      */
-    const string& name() const
+    const std::string& name() const
     {
       return tabName;
     }
@@ -153,7 +153,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    optional<TabRow> get2(
+    std::optional<TabRow> get2(
         const int id   ///< the rowid of the requested row
         ) const;
 
@@ -172,7 +172,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    optional<TabRow> get2(
+    std::optional<TabRow> get2(
         const WhereClause& w   ///< the WHERE clause that identifies the row
         ) const;
 
@@ -189,7 +189,7 @@ namespace SqliteOverlay
      */
     template<typename T>
     TabRow getSingleRowByColumnValue(
-        const string& col,   ///< the column name
+        const std::string& col,   ///< the column name
         const T& val   ///< the value to search for in the column
         ) const
     {
@@ -224,8 +224,8 @@ namespace SqliteOverlay
      *
      */
     template<typename T>
-    optional<TabRow> getSingleRowByColumnValue2(
-        const string& col,   ///< the column name
+    std::optional<TabRow> getSingleRowByColumnValue2(
+        const std::string& col,   ///< the column name
         const T& val   ///< the value to search for in the column
         ) const
     {
@@ -238,7 +238,7 @@ namespace SqliteOverlay
       catch (NoDataException& e)
       {
         // return an empty optional if no such column exists
-        return optional<TabRow>{};
+        return std::optional<TabRow>{};
       }
       catch (...)
       {
@@ -246,7 +246,7 @@ namespace SqliteOverlay
         throw;
       }
 
-      return optional<TabRow>{};   // we should never reach this point...
+      return std::optional<TabRow>{};   // we should never reach this point...
     }
 
     /** \returns the first row that contains NULL in a given column
@@ -261,7 +261,7 @@ namespace SqliteOverlay
      *
      */
     TabRow getSingleRowByColumnValueNull(
-        const string& col   ///< the name of the column that should be searched for a NULL value
+        const std::string& col   ///< the name of the column that should be searched for a NULL value
         ) const;
 
     /** \returns an 'optional<TabRow>' that contains the first row that contains NULL
@@ -274,8 +274,8 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    optional<TabRow> getSingleRowByColumnValueNull2(
-        const string& col   ///< the name of the column that should be searched for a NULL value
+    std::optional<TabRow> getSingleRowByColumnValueNull2(
+        const std::string& col   ///< the name of the column that should be searched for a NULL value
         ) const;
 
     /**
@@ -316,7 +316,7 @@ namespace SqliteOverlay
      *
      */
     TabRow getSingleRowByWhereClause(
-        const string& w   /// a string that should be appended after the keyword "WHERE" in the SQL statement
+        const std::string& w   /// a string that should be appended after the keyword "WHERE" in the SQL statement
         ) const;
 
     /**
@@ -331,7 +331,7 @@ namespace SqliteOverlay
      * empty if the WHERE clause didn't produce any results.
      *
      */
-    optional<TabRow> getSingleRowByWhereClause2(
+    std::optional<TabRow> getSingleRowByWhereClause2(
         const WhereClause& w   ///< the WHERE clause that identifies the row
         ) const;
 
@@ -351,8 +351,8 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    optional<TabRow> getSingleRowByWhereClause2(
-        const string& w   /// a string that should be appended after the keyword "WHERE" in the SQL statement
+    std::optional<TabRow> getSingleRowByWhereClause2(
+        const std::string& w   /// a string that should be appended after the keyword "WHERE" in the SQL statement
         ) const;
 
     /** \brief Retrieves a (potentially empty) list of all `TabRow` instances that match a given WHERE clause
@@ -371,7 +371,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    vector<TabRow> getRowsByWhereClause(
+    std::vector<TabRow> getRowsByWhereClause(
         const WhereClause& w   ///< the WHERE clause for the query
         ) const;
 
@@ -386,8 +386,8 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    vector<TabRow> getRowsByWhereClause(
-        const string& w   /// a string that should be appended after the keyword "WHERE" in the SQL statement
+    std::vector<TabRow> getRowsByWhereClause(
+        const std::string& w   /// a string that should be appended after the keyword "WHERE" in the SQL statement
         ) const;
 
     /** \brief Retrieves a (potentially empty) list of all `TabRow` instances that
@@ -407,8 +407,8 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    vector<TabRow> getRowsByColumnValueNull(
-        const string& col   ///< the name of the column that should be searched for NULL values
+    std::vector<TabRow> getRowsByColumnValueNull(
+        const std::string& col   ///< the name of the column that should be searched for NULL values
         ) const;
 
     /** \brief Retrieves a (potentially empty) list of all `TabRow` instances that
@@ -429,8 +429,8 @@ namespace SqliteOverlay
      *
      */
     template<typename T>
-    vector<TabRow> getRowsByColumnValue(
-        const string& col,   ///< the name of the column
+    std::vector<TabRow> getRowsByColumnValue(
+        const std::string& col,   ///< the name of the column
         const T& val   ///< the column value that should be matched
         ) const
     {
@@ -444,7 +444,7 @@ namespace SqliteOverlay
       {
         stmt = db.get().prepStatement(cachedSelectSql + col + "=?");
       } catch (SqlStatementCreationError) {
-        return vector<TabRow>{};
+        return std::vector<TabRow>{};
       }
 
       stmt.bind(1, val);
@@ -460,7 +460,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    vector<TabRow> getAllRows() const;
+    std::vector<TabRow> getAllRows() const;
 
     /** \brief Deletes all rows that match a given WHERE clause
      *
@@ -498,7 +498,7 @@ namespace SqliteOverlay
      */
     template<typename T>
     int deleteRowsByColumnValue(
-        const string& col,   ///< the column name
+        const std::string& col,   ///< the column name
         const T& val    ///< the column value that identifies the matching rows
         ) const
     {
@@ -542,7 +542,7 @@ namespace SqliteOverlay
      *
      */
     bool addColumn(
-        const string& colName,   ///< the name of the new column
+        const std::string& colName,   ///< the name of the new column
         ColumnDataType type   ///< the basic column type
         ) const
     {
@@ -552,7 +552,7 @@ namespace SqliteOverlay
         return false;
       }
 
-      string constraints = buildColumnConstraint(ConflictClause::NotUsed, ConflictClause::NotUsed);
+      std::string constraints = buildColumnConstraint(ConflictClause::NotUsed, ConflictClause::NotUsed);
 
       // forward any exceptions to the caller
       //
@@ -577,7 +577,7 @@ namespace SqliteOverlay
      */
     template<typename T>
     bool addColumn(
-        const string& colName,   ///< the name of the new column
+        const std::string& colName,   ///< the name of the new column
         ColumnDataType type,   ///< the basic column type
         ConflictClause notNullConflictClause,   ///< NotUsed = column may contain NULL values
         const T& defaultValue ///< the default value for the new column; mandatory if "NOT NULL" is set
@@ -589,7 +589,7 @@ namespace SqliteOverlay
         return false;
       }
 
-      string constraints = buildColumnConstraint(ConflictClause::NotUsed, notNullConflictClause, defaultValue);
+      std::string constraints = buildColumnConstraint(ConflictClause::NotUsed, notNullConflictClause, defaultValue);
 
       // forward any exceptions to the caller
       addColumn_exec(colName, type, constraints);
@@ -614,13 +614,13 @@ namespace SqliteOverlay
      */
     template<typename T>
     bool addColumn_foreignKey(
-        const string& colName,   ///< the name of the new column
-        const string& referedTabName,   ///< the name of the referred table
-        const string& referedColName,   ///< the name of the refered to column (we use 'id' if empty)
+        const std::string& colName,   ///< the name of the new column
+        const std::string& referedTabName,   ///< the name of the referred table
+        const std::string& referedColName,   ///< the name of the refered to column (we use 'id' if empty)
         ConsistencyAction onDelete,   ///< what to do if the refered row is deleted
         ConsistencyAction onUpdate,   ///< what to do if the refered data is updated
         ConflictClause notNullConflictClause,   ///< NotUsed = column may contain NULL values
-        const optional<T>& defaultValue ///< the (optional) default value for the new column; mandatory if "NOT NULL" is set
+        const std::optional<T>& defaultValue ///< the (optional) default value for the new column; mandatory if "NOT NULL" is set
         ) const
     {
       // check if the column exists
@@ -635,7 +635,7 @@ namespace SqliteOverlay
       // if the table has been created with the TableCreator, a referable
       // column named "id" which is an alias for "rowid" has automatically
       // been created.
-      const string refCol{referedColName.empty() ? "id" : referedColName};
+      const std::string refCol{referedColName.empty() ? "id" : referedColName};
 
       // determine the type of the referenced column, unless it's `id`
       ColumnDataType colType{ColumnDataType::Integer};
@@ -660,7 +660,7 @@ namespace SqliteOverlay
       }
 
       // build a foreign key constraint
-      string constraints{};
+      std::string constraints{};
       if (defaultValue.has_value())
       {
         constraints = buildColumnConstraint(ConflictClause::NotUsed, notNullConflictClause, defaultValue.value());
@@ -691,9 +691,9 @@ namespace SqliteOverlay
      */
     template<typename T>
     bool addColumn_foreignKey(
-        const string& colName,   ///< the name of the new column
-        const string& referedTabName,   ///< the name of the referred table
-        const string& referedColName,   ///< the name of the refered to column (we use 'id' if empty)
+        const std::string& colName,   ///< the name of the new column
+        const std::string& referedTabName,   ///< the name of the referred table
+        const std::string& referedColName,   ///< the name of the refered to column (we use 'id' if empty)
         ConsistencyAction onDelete,   ///< what to do if the refered row is deleted
         ConsistencyAction onUpdate,   ///< what to do if the refered data is updated
         ConflictClause notNullConflictClause,   ///< NotUsed = column may contain NULL values
@@ -703,14 +703,14 @@ namespace SqliteOverlay
       return addColumn_foreignKey(
             colName, referedTabName, referedColName,
             onDelete, onUpdate,
-            notNullConflictClause, optional<T>{defaultValue}
+            notNullConflictClause, std::optional<T>{defaultValue}
             );
     }
 
     bool addColumn_foreignKey(
-        const string& colName,   ///< the name of the new column
-        const string& referedTabName,   ///< the name of the referred table
-        const string& referedColName,   ///< the name of the refered to column (we use 'id' if empty)
+        const std::string& colName,   ///< the name of the new column
+        const std::string& referedTabName,   ///< the name of the referred table
+        const std::string& referedColName,   ///< the name of the refered to column (we use 'id' if empty)
         ConsistencyAction onDelete,   ///< what to do if the refered row is deleted
         ConsistencyAction onUpdate,   ///< what to do if the refered data is updated
         ConflictClause notNullConflictClause,   ///< NotUsed = column may contain NULL values
@@ -720,7 +720,7 @@ namespace SqliteOverlay
       return addColumn_foreignKey(
             colName, referedTabName, referedColName,
             onDelete, onUpdate,
-            notNullConflictClause, optional<string>{string{defaultValue}}
+            notNullConflictClause, std::optional<std::string>{std::string{defaultValue}}
             );
     }
 
@@ -736,9 +736,9 @@ namespace SqliteOverlay
      *
      */
     bool addColumn_foreignKey(
-        const string& colName,   ///< the name of the new column
-        const string& referedTabName,   ///< the name of the referred table
-        const string& referedColName,   ///< the name of the refered to column (we use 'id' if empty)
+        const std::string& colName,   ///< the name of the new column
+        const std::string& referedTabName,   ///< the name of the referred table
+        const std::string& referedColName,   ///< the name of the refered to column (we use 'id' if empty)
         ConsistencyAction onDelete,   ///< what to do if the refered row is deleted
         ConsistencyAction onUpdate   ///< what to do if the refered data is updated
         ) const
@@ -746,7 +746,7 @@ namespace SqliteOverlay
       return addColumn_foreignKey(
             colName, referedTabName, referedColName,
             onDelete, onUpdate,
-            ConflictClause::NotUsed, optional<int>{}  // the optional<int> is just an empty dummy value
+            ConflictClause::NotUsed, std::optional<int>{}  // the optional<int> is just an empty dummy value
             );
     }
 
@@ -775,8 +775,8 @@ namespace SqliteOverlay
      *
      * \returns a list of rowid that violate the constraint; if empty, all rows comply with the constraint
      */
-    vector<int> checkConstraint(
-          const string& colName,   ///< the name of the column to check
+    std::vector<int> checkConstraint(
+          const std::string& colName,   ///< the name of the column to check
           Sloppy::ValueConstraint c,  ///< the constraint to check the column content against
           int firstRowId = -1
         ) const;
@@ -786,7 +786,7 @@ namespace SqliteOverlay
      */
     template<typename T>
     SingleColumnIterator<T> singleColumnIterator(
-          const string& colName,   ///< the column that shall be iterated over
+          const std::string& colName,   ///< the column that shall be iterated over
           int minRowId = -1,   ///< return only rows with a rowid greater or equal to this values
           int maxRowId = -1   ///< return only rows with a rowid less or equal to this values
           )
@@ -799,7 +799,7 @@ namespace SqliteOverlay
      */
     template<typename T>
     SingleColumnIterator<T> singleColumnIterator(
-          const string& colName,   ///< the column that shall be iterated over
+          const std::string& colName,   ///< the column that shall be iterated over
           const WhereClause& w   ///< a WHERE clause that narrows down the number of returned rows; the WHERE can include conditions on other columns than just 'colName', of course
           )
     {
@@ -824,15 +824,15 @@ namespace SqliteOverlay
 
   protected:
     void addColumn_exec(
-        const string& colName,
+        const std::string& colName,
         ColumnDataType colType,
-        const string& constraints
+        const std::string& constraints
         ) const;
 
-    vector<TabRow> statementResultsToVector(SqlStatement& stmt) const;
+    std::vector<TabRow> statementResultsToVector(SqlStatement& stmt) const;
 
   private:
-    string cachedSelectSql;
+    std::string cachedSelectSql;
   };
 
   /** \brief An iterator-like class that allows for easy iteration over
@@ -876,8 +876,8 @@ namespace SqliteOverlay
      */
     SingleColumnIterator(
         const SqliteDatabase& db,   ///< the database that contains the table
-        const string& tabName,   ///< the table that contains the column
-        const string& colName,   ///< the column that shall be iterated over
+        const std::string& tabName,   ///< the table that contains the column
+        const std::string& colName,   ///< the column that shall be iterated over
         int minRowId = -1,   ///< return only rows with a rowid greater or equal to this values
         int maxRowId = -1   ///< return only rows with a rowid less or equal to this values
         )
@@ -902,7 +902,7 @@ namespace SqliteOverlay
      */
     SingleColumnIterator(
         const DbTab& tab,   ///< the table that contains the column
-        const string& colName,   ///< the column that shall be iterated over
+        const std::string& colName,   ///< the column that shall be iterated over
         int minRowId = -1,   ///< return only rows with a rowid greater or equal to this values
         int maxRowId = -1   ///< return only rows with a rowid less or equal to this values
         )
@@ -919,7 +919,7 @@ namespace SqliteOverlay
      */
     SingleColumnIterator(
         const DbTab& tab,   ///< the table that contains the column
-        const string& colName,   ///< the column that shall be iterated over
+        const std::string& colName,   ///< the column that shall be iterated over
         const WhereClause& w   ///< a WHERE clause that narrows down the number of returned rows; the WHERE can include conditions on other columns than just 'colName', of course
         )
       :SingleColumnIterator(tab.dbRef(), tab.name(), colName, w) {}
@@ -936,8 +936,8 @@ namespace SqliteOverlay
      */
     SingleColumnIterator(
         const SqliteDatabase& db,   ///< the database that contains the table
-        const string& tabName,   ///< the table that contains the column
-        const string& colName,   ///< the column that shall be iterated over
+        const std::string& tabName,   ///< the table that contains the column
+        const std::string& colName,   ///< the column that shall be iterated over
         const WhereClause& w   ///< a WHERE clause that narrows down the number of returned rows; the WHERE can include conditions on other columns than just 'colName', of course
         )
     {
@@ -1016,9 +1016,9 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
      */
-    optional<T> get2() const
+    std::optional<T> get2() const
     {
-      optional<T> result;
+      std::optional<T> result;
       stmt.get(1, result);
       return result;
     }
@@ -1035,12 +1035,12 @@ namespace SqliteOverlay
   protected:
     void init(
         const SqliteDatabase& db,   ///< the database that contains the table
-        const string& tabName,   ///< the table that contains the column
-        const string& colName,   ///< the column that shall be iterated over
+        const std::string& tabName,   ///< the table that contains the column
+        const std::string& colName,   ///< the column that shall be iterated over
         const WhereClause& w   ///< any applicable row filter
         )
     {
-      string sql = "SELECT rowid," + colName + " FROM " +  tabName;
+      std::string sql = "SELECT rowid," + colName + " FROM " +  tabName;
       if (!w.isEmpty())
       {
         sql += " WHERE " + w.getWherePartWithPlaceholders();
@@ -1096,7 +1096,7 @@ namespace SqliteOverlay
      */
     TabRowIterator(
         const SqliteDatabase& _db,   ///< the database that contains the table
-        const string& _tabName,   ///< the table that contains the column
+        const std::string& _tabName,   ///< the table that contains the column
         int minRowId = -1,   ///< return only rows with a rowid greater or equal to this values
         int maxRowId = -1   ///< return only rows with a rowid less or equal to this values
         );
@@ -1141,7 +1141,7 @@ namespace SqliteOverlay
      */
     TabRowIterator(
         const SqliteDatabase& _db,   ///< the database that contains the table
-        const string& _tabName,   ///< the table that contains the column
+        const std::string& _tabName,   ///< the table that contains the column
         const WhereClause& w   ///< a WHERE clause that narrows down the number of returned rows; the WHERE can include conditions on other columns than just 'colName', of course
         );
 
@@ -1216,9 +1216,9 @@ namespace SqliteOverlay
 
   private:
     SqlStatement stmt;
-    unique_ptr<TabRow> curRow;
-    reference_wrapper<const SqliteDatabase> db;
-    string tabName;
+    std::unique_ptr<TabRow> curRow;
+    std::reference_wrapper<const SqliteDatabase> db;
+    std::string tabName;
   };
 }
 #endif	/* DBTAB_H */

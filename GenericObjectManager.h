@@ -32,7 +32,7 @@ namespace SqliteOverlay
 
     //----------------------------------------------------------------------------
 
-    GenericObjectManager (const DatabaseClass& _db, const string& tabName)
+    GenericObjectManager (const DatabaseClass& _db, const std::string& tabName)
       :db(_db), tab{db, tabName, true}
     {
       static_assert (std::is_base_of_v<SqliteDatabase, DB_CLASS>, "DB classes must be derived from SqliteDatabase");
@@ -55,65 +55,65 @@ namespace SqliteOverlay
     //----------------------------------------------------------------------------
 
   protected:
-    reference_wrapper<const DB_CLASS> db;
+    std::reference_wrapper<const DB_CLASS> db;
     DbTab tab;
 
     template<class T, typename ValType>
-    vector<T> getObjectsByColumnValue(const DbTab& objectTab, const string& colName, const ValType& val) const
+    std::vector<T> getObjectsByColumnValue(const DbTab& objectTab, const std::string& colName, const ValType& val) const
     {
       const auto& resultVector = objectTab.getRowsByColumnValue(colName, val);
       return vector2Objects<T>(resultVector);
     }
 
     template<class T, typename ValType>
-    vector<T> getObjectsByColumnValue(const string& colName, const ValType& val) const
+    std::vector<T> getObjectsByColumnValue(const std::string& colName, const ValType& val) const
     {
       return getObjectsByColumnValue<T>(tab, colName, val);
     }
 
     template<class T>
-    vector<T> getObjectsByWhereClause(const DbTab& objectTab, const WhereClause& w) const
+    std::vector<T> getObjectsByWhereClause(const DbTab& objectTab, const WhereClause& w) const
     {
       const auto& resultVector = objectTab.getRowsByWhereClause(w);
       return vector2Objects<T>(resultVector);
     }
 
     template<class T>
-    vector<T> getObjectsByWhereClause(const WhereClause& w) const
+    std::vector<T> getObjectsByWhereClause(const WhereClause& w) const
     {
       return getObjectsByWhereClause<T>(tab, w);
     }
 
     template<class T>
-    vector<T> getObjectsByWhereClause(const DbTab& objectTab, const string& w) const
+    std::vector<T> getObjectsByWhereClause(const DbTab& objectTab, const std::string& w) const
     {
       const auto& resultVector = objectTab.getRowsByWhereClause(w);
       return vector2Objects<T>(resultVector);
     }
 
     template<class T>
-    vector<T> getObjectsByWhereClause(const string& w) const
+    std::vector<T> getObjectsByWhereClause(const std::string& w) const
     {
       return getObjectsByWhereClause<T>(tab, w);
     }
 
     template<class T>
-    vector<T> getAllObjects(const DbTab& objectTab) const
+    std::vector<T> getAllObjects(const DbTab& objectTab) const
     {
       const auto& resultVector = objectTab.getAllRows();
       return vector2Objects<T>(resultVector);
     }
 
     template<class T>
-    vector<T> getAllObjects() const
+    std::vector<T> getAllObjects() const
     {
       return getAllObjects<T>(tab);
     }
 
     template<class T>
-    vector<T> vector2Objects(const vector<TabRow>& rows) const
+    std::vector<T> vector2Objects(const std::vector<TabRow>& rows) const
     {
-      vector<T> result;
+      std::vector<T> result;
       for_each(rows.begin(), rows.end(), [&](const TabRow& r)
       {
         result.push_back(T{db, r});
@@ -122,61 +122,61 @@ namespace SqliteOverlay
     }
 
     template<class T, typename ValType>
-    optional<T> getSingleObjectByColumnValue(const DbTab& objectTab, const string& colName, const ValType& val) const
+    std::optional<T> getSingleObjectByColumnValue(const DbTab& objectTab, const std::string& colName, const ValType& val) const
     {
       try
       {
         TabRow r = objectTab.getSingleRowByColumnValue(colName, val);
         return T{db, r};
       } catch (NoDataException e) {
-        return optional<T>{};
+        return std::optional<T>{};
       }
 
       // throw all other execeptions, e.g. BUSY
     }
 
     template<class T, typename ValType>
-    optional<T> getSingleObjectByColumnValue(const string& colName, const ValType& val) const
+    std::optional<T> getSingleObjectByColumnValue(const std::string& colName, const ValType& val) const
     {
       return getSingleObjectByColumnValue<T>(tab, colName, val);
     }
 
 
     template<class T>
-    optional<T> getSingleObjectByWhereClause(const DbTab& objectTab, const WhereClause& w) const
+    std::optional<T> getSingleObjectByWhereClause(const DbTab& objectTab, const WhereClause& w) const
     {
       try
       {
         TabRow r = objectTab.getSingleRowByWhereClause(w);
         return T{db, r};
       } catch (NoDataException e) {
-        return optional<T>{};
+        return std::optional<T>{};
       }
 
       // throw all other execeptions, e.g. BUSY
     }
 
     template<class T>
-    optional<T> getSingleObjectByWhereClause(const WhereClause& w) const
+    std::optional<T> getSingleObjectByWhereClause(const WhereClause& w) const
     {
       return getSingleObjectByWhereClause<T>(tab, w);
     }
 
     template<class T>
-    optional<T> getSingleObjectByWhereClause(const DbTab& objectTab, const string& w) const
+    std::optional<T> getSingleObjectByWhereClause(const DbTab& objectTab, const std::string& w) const
     {
       try
       {
         TabRow r = objectTab.getSingleRowByWhereClause(w);
         return T{db, r};
       } catch (NoDataException e) {
-        return optional<T>{};
+        return std::optional<T>{};
       }
 
       // throw all other execeptions, e.g. BUSY
     }
     template<class T>
-    optional<T> getSingleObjectByWhereClause(const string& w) const
+    std::optional<T> getSingleObjectByWhereClause(const std::string& w) const
     {
       return getSingleObjectByWhereClause<T>(tab, w);
     }
@@ -194,20 +194,20 @@ namespace SqliteOverlay
      * rows in a custom table that matched a specific column-value-pair.
      */
     template<class T>
-    vector<T> resolveMappingAndGetObjects(
-        const string& mappingTabName,   ///< the name of the table that contains the references and the key column
-        const string& keyColumnName,   ///< the column in that table that contains the key
+    std::vector<T> resolveMappingAndGetObjects(
+        const std::string& mappingTabName,   ///< the name of the table that contains the references and the key column
+        const std::string& keyColumnName,   ///< the column in that table that contains the key
         int keyColumnValue,   ///< the value that the result rows should match
-        const string& mappedIdColumnName   ///< the name of the column that holds the requested object IDs
+        const std::string& mappedIdColumnName   ///< the name of the column that holds the requested object IDs
         ) const
     {
-      string sql = "SELECT " + mappedIdColumnName + " FROM " + mappingTabName + " WHERE ";
-      sql += keyColumnName + " = " + to_string(keyColumnValue);
+      std::string sql = "SELECT " + mappedIdColumnName + " FROM " + mappingTabName + " WHERE ";
+      sql += keyColumnName + " = " + std::to_string(keyColumnValue);
 
       auto stmt = db.get().prepStatement(sql);
       stmt.step();
 
-      vector<T> result;
+      std::vector<T> result;
       while (stmt.hasData())
       {
         auto obj = T(db.get(), stmt.getInt(0));
@@ -222,31 +222,31 @@ namespace SqliteOverlay
      * it to instantiate a new database object of type T
      */
     template<class T>
-    optional<T> getSingleReferencedObject(const TabRow& r, const string& refColumnName) const
+    std::optional<T> getSingleReferencedObject(const TabRow& r, const std::string& refColumnName) const
     {
       auto objId = r.getInt2(refColumnName);
-      return (objId.has_value()) ? T(db.get(), objId.value()) : optional<T>{};
+      return (objId.has_value()) ? T(db.get(), objId.value()) : std::optional<T>{};
     }
 
     /** \brief Takes the value of a given column in a row that is the first match in a WHERE clause
      * and uses that column to instantiate a new database object of type T
      */
     template<class T>
-    optional<T> getSingleReferencedObject(const DbTab& srcTab, const WhereClause& w, const string& refColumnName) const
+    std::optional<T> getSingleReferencedObject(const DbTab& srcTab, const WhereClause& w, const std::string& refColumnName) const
     {
-      optional<TabRow> row = srcTab.getSingleRowByWhereClause2(w);
+      std::optional<TabRow> row = srcTab.getSingleRowByWhereClause2(w);
       if (row.has_value())
       {
         return getSingleReferencedObject(row.value(), refColumnName);
       }
-      return optional<TabRow>{};
+      return std::optional<TabRow>{};
     }
 
     /** \brief Takes the value of a given column in a row that is the first match in a WHERE clause
      * and uses that column to instantiate a new database object of type T
      */
     template<class T>
-    optional<T> getSingleReferencedObject(const WhereClause& w, const string& refColumnName) const
+    std::optional<T> getSingleReferencedObject(const WhereClause& w, const std::string& refColumnName) const
     {
       return getSingleReferencedObject<T>(tab, w, refColumnName);
     }

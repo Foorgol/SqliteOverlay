@@ -141,7 +141,7 @@ SampleDB DatabaseTestScenario::getScenario01()
 {
   prepScenario01();
 
-  return SampleDB(getSqliteFileName(), SqliteOverlay::OpenMode::OpenExisting_RW, false);
+  return SampleDB(getSqliteFileName(), SqliteOverlay::OpenMode::OpenExisting_RW);
 }
 
 //----------------------------------------------------------------------------

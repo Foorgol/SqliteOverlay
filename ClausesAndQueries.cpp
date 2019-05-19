@@ -5,6 +5,8 @@
 #include "ClausesAndQueries.h"
 #include "SqlStatement.h"
 
+using namespace std;
+
 namespace SqliteOverlay {
 
   SqlStatement ColumnValueClause::getInsertStmt(const SqliteDatabase& db, const string& tabName) const

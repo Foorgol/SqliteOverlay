@@ -20,6 +20,8 @@
 
 #include "TableCreator.h"
 
+using namespace std;
+
 namespace SqliteOverlay
 {
 

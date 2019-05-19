@@ -63,27 +63,27 @@ namespace SqliteOverlay
   //----------------------------------------------------------------------------
 
   SqliteDatabase::SqliteDatabase()
-    :SqliteDatabase(":memory:", OpenMode::OpenOrCreate_RW, true)
+    :SqliteDatabase(":memory:", OpenMode::OpenOrCreate_RW)
   {}
 
   //----------------------------------------------------------------------------
 
-  SqliteDatabase::SqliteDatabase(string dbFileName, OpenMode om, bool populate)
+  SqliteDatabase::SqliteDatabase(string dbFilename, OpenMode om)
   {
     // check if the filename is valid
-    if (dbFileName.empty())
+    if (dbFilename.empty())
     {
       throw invalid_argument("Invalid database file name");
     }
 
     // check if we're only creating a memory database
-    bool isInMem = (dbFileName == ":memory:");
+    bool isInMem = (dbFilename == ":memory:");
 
     // check if the file exists
     if (!isInMem)
     {
       struct stat buffer;
-      bool hasFile = (stat(dbFileName.c_str(), &buffer) == 0);
+      bool hasFile = (stat(dbFilename.c_str(), &buffer) == 0);
 
       if (!hasFile && ((om == OpenMode::OpenExisting_RO) || (om == OpenMode::OpenExisting_RW)))
       {
@@ -122,7 +122,7 @@ namespace SqliteOverlay
     }
 
     // try to open the database
-    int err = sqlite3_open_v2(dbFileName.c_str(), &dbPtr, oFlags, nullptr);
+    int err = sqlite3_open_v2(dbFilename.c_str(), &dbPtr, oFlags, nullptr);
     if (dbPtr == nullptr)
     {
       throw std::runtime_error("No memory for allocating sqlite instance");
@@ -141,21 +141,12 @@ namespace SqliteOverlay
     // Explicitly enable support for foreign keys
     // and disable synchronous writes for better performance.
     //
-    // If requested, populate tables and views.
-    //
     // Should anything go wrong, close the connection and
     // re-throw the original exception
     try
     {
       execNonQuery("PRAGMA foreign_keys = ON");
       enforceSynchronousWrites(false);
-      if (populate && (om != OpenMode::OpenExisting_RO))
-      {
-        Transaction t = Transaction(this, TransactionType::Deferred, TransactionDtorAction::Rollback);
-        populateTables();
-        populateViews();
-        t.commit();
-      }
       resetDirtyFlag();
     }
     catch (...)

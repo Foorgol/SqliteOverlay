@@ -18,6 +18,8 @@
 #include "DbTab.h"
 #include "TabRow.h"
 
+using namespace std;
+
 namespace SqliteOverlay
 {
 

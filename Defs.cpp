@@ -1,6 +1,8 @@
 
 #include "Defs.h"
 
+using namespace std;
+
 namespace std
 {
   using namespace SqliteOverlay;

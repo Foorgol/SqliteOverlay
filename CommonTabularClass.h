@@ -38,33 +38,33 @@ namespace SqliteOverlay
      */
     ColInfo (
         int colId,   ///< the zero-based column id
-        const string& colName,   ///< the column name
-        const string& colType   ///< the column type as used in the "CREATE TABLE" statement
+        const std::string& colName,   ///< the column name
+        const std::string& colType   ///< the column type as used in the "CREATE TABLE" statement
         );
 
     /** \returns the column's zero-based ID */
     int id () const;
 
     /** \returns the column's name */
-    string name () const;
+    std::string name () const;
 
     /** \returns the column's declared type, as provided in the CREATE TABLE statement */
-    string declType() const;
+    std::string declType() const;
 
     /** \returns the column's type (or more precise: the column's type affinity) */
     ColumnAffinity affinity () const;
     
   private:
     int _id;
-    string _name;
-    string _declType;
+    std::string _name;
+    std::string _declType;
     ColumnAffinity _affinity;
     
   };
   
   /** \brief Convenience definition for a list of column descriptions
    */
-  typedef vector<ColInfo> ColInfoList;
+  typedef std::vector<ColInfo> ColInfoList;
   
   /** \brief A class that encapsulates common functions for tables and views.
    */
@@ -82,7 +82,7 @@ namespace SqliteOverlay
      */
     CommonTabularClass (
         const SqliteDatabase& _db,   ///< pointer to the database that contains the table / the view
-        const string& _tabName,   ///< the table's / view's name (case sensitive)
+        const std::string& _tabName,   ///< the table's / view's name (case sensitive)
         bool _isView,   ///< `true`: the name identifies a view; `false`: the name identifies a table
         bool forceNameCheck   ///< `true`: check whether a table/view of the provided name exists
         );
@@ -112,7 +112,7 @@ namespace SqliteOverlay
      *
      */
     ColumnAffinity colAffinity(
-        const string& colName   ///< the name of the column to get the type for
+        const std::string& colName   ///< the name of the column to get the type for
         ) const;
 
     /** \returns the column's declared type as provided in the CREATE TABLE statement
@@ -122,8 +122,8 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    string colDeclType(
-        const string& colName   ///< the name of the column to get the type for
+    std::string colDeclType(
+        const std::string& colName   ///< the name of the column to get the type for
         ) const;
 
     /** \returns the name for a given zero-based column id or an empty string
@@ -134,7 +134,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    string cid2name(
+    std::string cid2name(
         int cid   ///< the zero-based ID of the column to get the name for
         ) const;
 
@@ -146,7 +146,7 @@ namespace SqliteOverlay
      *
      */
     int name2cid(
-        const string& colName   ///< the name of the column to get the ID for
+        const std::string& colName   ///< the name of the column to get the ID for
         ) const;
 
     /** \returns `true` if the table has a column of the given name (case-sensitive)
@@ -154,7 +154,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    bool hasColumn(const string& colName) const;
+    bool hasColumn(const std::string& colName) const;
 
     /** \returns `true` if the table has a column of the given zero-based ID
      *
@@ -194,7 +194,7 @@ namespace SqliteOverlay
      *
      */
     int getMatchCountForWhereClause(
-        const string& where   ///< everything after "WHERE ..." in the SELECT statement
+        const std::string& where   ///< everything after "WHERE ..." in the SELECT statement
         ) const;
 
     /** \returns the number of rows in which a given column contains a given value
@@ -210,7 +210,7 @@ namespace SqliteOverlay
      */
     template<typename T>
     int getMatchCountForColumnValue(
-        const string& col,   ///< the column name
+        const std::string& col,   ///< the column name
         const T& val   ///< the column value
         ) const
     {
@@ -219,7 +219,7 @@ namespace SqliteOverlay
         throw std::invalid_argument("getMatchCountForColumnValue(): empty column name");
       }
 
-      string sql = sqlColumnCount + col + "=?";
+      std::string sql = sqlColumnCount + col + "=?";
       try
       {
         SqlStatement stmt = db.get().prepStatement(sql);
@@ -245,7 +245,7 @@ namespace SqliteOverlay
      *
      */
     int getMatchCountForColumnValueNull(
-        const string& col  ///< the column name
+        const std::string& col  ///< the column name
         ) const;
 
     /** \returns the number of rows in the table
@@ -268,19 +268,19 @@ namespace SqliteOverlay
     /**
      * the handle to the (parent) database
      */
-    reference_wrapper<const SqliteDatabase> db;
+    std::reference_wrapper<const SqliteDatabase> db;
     
     /**
      * the name of the associated table or view
      */
-    string tabName;
+    std::string tabName;
     
     /**
      * a tag whether we are a view or a tab
      */
     bool isView;
 
-    string sqlColumnCount;
+    std::string sqlColumnCount;
 
   private:
 

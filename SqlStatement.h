@@ -15,7 +15,6 @@
 #include "Defs.h"
 #include "SqliteExceptions.h"
 
-using namespace std;
 using namespace Sloppy::DateTime;
 using namespace Sloppy::Logger;
 
@@ -43,7 +42,7 @@ namespace SqliteOverlay
      */
     SqlStatement(
         sqlite3* dbPtr,   ///< the pointer to the raw database connection for which the statement should be created
-        const string& sqlTxt   ///< the statement's SQL text
+        const std::string& sqlTxt   ///< the statement's SQL text
         );
 
     /** \brief Dtor, finalizes the statment if it hasn't been finalized already
@@ -85,7 +84,7 @@ namespace SqliteOverlay
       // Thus, we construct a "fake false" that depends on `T` and
       // that is therefore only triggered if we actually instantiate
       // this template.s
-      static_assert (!is_same<T,T>::value, "SqlStatement: call to bind() with a unsupported value type!");
+      static_assert (!std::is_same<T,T>::value, "SqlStatement: call to bind() with a unsupported value type!");
     }
 
     /** \brief Binds an int value to a placeholder in the statement
@@ -145,7 +144,7 @@ namespace SqliteOverlay
      */
     void bind(
         int argPos,   ///< the placeholder to bind to
-        const string& val   ///< the value to bind to the placeholder
+        const std::string& val   ///< the value to bind to the placeholder
         ) const;
 
     /** \brief Binds a *zero-terminated* C-string to a placeholder in the statement
@@ -453,7 +452,7 @@ namespace SqliteOverlay
      * Test case: yes, but without implicit conversion and only with partial exception testing
      *
      */
-    string getString(
+    std::string getString(
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
@@ -559,7 +558,7 @@ namespace SqliteOverlay
      * Test case: not yet
      *
      */
-    string getColName(
+    std::string getColName(
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
@@ -603,7 +602,7 @@ namespace SqliteOverlay
      * Test case: yes, implicitly in the `bind` test case
      *
      */
-    string getExpandedSQL() const;
+    std::string getExpandedSQL() const;
 
     /** \brief Catches all calls to `get()` with unsupported
      * value types at compile time.
@@ -618,7 +617,7 @@ namespace SqliteOverlay
       // Thus, we construct a "fake false" that depends on `T` and
       // that is therefore only triggered if we actually instantiate
       // this template.s
-      static_assert (!is_same<T,T>::value, "SqlStatement: call to get() with a unsupported value type!");
+      static_assert (!std::is_same<T,T>::value, "SqlStatement: call to get() with a unsupported value type!");
     }
 
     /** \brief Retrieves the value of a column in the statement result as an int value (32 bit)
@@ -688,7 +687,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void get(int colId, string& result) const
+    void get(int colId, std::string& result) const
     {
       result = getString(colId);
     }
@@ -762,7 +761,7 @@ namespace SqliteOverlay
      *
      */
     template<typename T>
-    void get(int colId, optional<T>& result) const
+    void get(int colId, std::optional<T>& result) const
     {
       T tmp;
 
@@ -840,7 +839,7 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2>
-    tuple<T1, T2> tupleGet(int col1, int col2) const
+    std::tuple<T1, T2> tupleGet(int col1, int col2) const
     {
       T1 r1;
       get(col1, r1);
@@ -861,7 +860,7 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2, typename T3>
-    tuple<T1, T2, T3> tupleGet(int col1, int col2, int col3) const
+    std::tuple<T1, T2, T3> tupleGet(int col1, int col2, int col3) const
     {
       T1 r1;
       get(col1, r1);
@@ -885,7 +884,7 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2, typename T3, typename T4>
-    tuple<T1, T2, T3, T4> tupleGet(int col1, int col2, int col3, int col4) const
+    std::tuple<T1, T2, T3, T4> tupleGet(int col1, int col2, int col3, int col4) const
     {
       T1 r1;
       get(col1, r1);

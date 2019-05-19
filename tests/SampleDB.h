@@ -24,8 +24,8 @@ public:
   virtual void populateViews();
   
   SampleDB() : SqliteDatabase() {};
-  SampleDB(string sqliteFilename, SqliteOverlay::OpenMode om, bool populate)
-    : SqliteDatabase(sqliteFilename, om, populate) {};
+  SampleDB(std::string sqliteFilename, SqliteOverlay::OpenMode om)
+    : SqliteDatabase(sqliteFilename, om) {};
   
 private:
 };

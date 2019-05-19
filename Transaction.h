@@ -121,7 +121,7 @@ namespace SqliteOverlay
   private:
     const SqliteDatabase* db;
     TransactionDtorAction dtorAct;
-    string savepointName;
+    std::string savepointName;
     bool isFinished;
   };
 

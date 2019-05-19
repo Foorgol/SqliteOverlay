@@ -63,8 +63,8 @@ TEST_F(DatabaseTestScenario, BackupCopy)
 
   // a rough comparison of the two databases (only
   // one column of t1)
-  SqliteDatabase src{getSqliteFileName(), OpenMode::OpenExisting_RO, false};
-  SqliteDatabase cpy{bckFileName, OpenMode::OpenExisting_RO, false};
+  SqliteDatabase src{getSqliteFileName(), OpenMode::OpenExisting_RO};
+  SqliteDatabase cpy{bckFileName, OpenMode::OpenExisting_RO};
   DbTab t1Src(src, "t1", true);
   DbTab t1Dst(cpy, "t1", true);
   auto srcIter = t1Src.tabRowIterator();

@@ -27,6 +27,7 @@
 #include "TableCreator.h"
 
 namespace bfs = boost::filesystem;
+using namespace std;
 
 namespace SqliteOverlay
 {

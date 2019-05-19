@@ -50,7 +50,7 @@ namespace SqliteOverlay
      */
     TabRow (
         const SqliteDatabase& db,   ///< the database that contains the table
-        const string& _tabName,  ///< the table name
+        const std::string& _tabName,  ///< the table name
         int _rowId,   ///< the ID of the row, has to be in a column named "id"
         bool skipCheck = false   ///< if `true` the validity of the ID (read: the actual existence of the row) will *not* be checked
         );
@@ -71,7 +71,7 @@ namespace SqliteOverlay
      */
     TabRow (
         const SqliteDatabase& db,   ///< the database that contains the table
-        const string& _tabName,  ///< the table name
+        const std::string& _tabName,  ///< the table name
         const WhereClause& where   ///< the WHERE clause that identifies the row
         );
 
@@ -148,7 +148,7 @@ namespace SqliteOverlay
      */
     template<typename T>
     void update(
-        const string& colName,   ///< the name of the column to modify
+        const std::string& colName,   ///< the name of the column to modify
         const T& newVal   ///< the new value for that column
         ) const
     {
@@ -191,7 +191,7 @@ namespace SqliteOverlay
      *
      */
     void updateToNull(
-        const string& colName   ///< the name of the column to modify
+        const std::string& colName   ///< the name of the column to modify
         ) const;
 
     /** \returns a string with the contents of a given column
@@ -209,8 +209,8 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    string operator[](
-        const string& colName   ///< the name of the column to query
+    std::string operator[](
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column in various types
@@ -230,7 +230,7 @@ namespace SqliteOverlay
      */
     template<typename T>
     T get(
-        const string& colName   ///< the name of the column to query
+        const std::string& colName   ///< the name of the column to query
         ) const
     {
       if (colName.empty())
@@ -239,7 +239,7 @@ namespace SqliteOverlay
       }
 
       SqlStatement stmt;
-      string sql = "SELECT " + colName + cachedWhereStatementForRow;
+      std::string sql = "SELECT " + colName + cachedWhereStatementForRow;
       try
       {
         stmt = db.get().prepStatement(sql);
@@ -277,7 +277,7 @@ namespace SqliteOverlay
      *
      */
     int getInt(
-        const string& colName   ///< the name of the column to query
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column as an integer
@@ -296,7 +296,7 @@ namespace SqliteOverlay
      *
      */
     long getLong(
-        const string& colName   ///< the name of the column to query
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column as an integer
@@ -315,7 +315,7 @@ namespace SqliteOverlay
      *
      */
     double getDouble(
-        const string& colName   ///< the name of the column to query
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column as a timestamp in local time
@@ -334,7 +334,7 @@ namespace SqliteOverlay
      *
      */
     LocalTimestamp getLocalTime(
-        const string& colName,   ///< the name of the column to query
+        const std::string& colName,   ///< the name of the column to query
         boost::local_time::time_zone_ptr tzp   ///< pointer to the timezone info for constructing the LocalTimestamp object
         ) const;
 
@@ -354,7 +354,7 @@ namespace SqliteOverlay
      *
      */
     UTCTimestamp getUTCTime(
-        const string& colName   ///< the name of the column to query
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column as a JSON object
@@ -375,7 +375,7 @@ namespace SqliteOverlay
      *
      */
     nlohmann::json getJson(
-        const string& colName   ///< the name of the column to query
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column as a date
@@ -397,7 +397,7 @@ namespace SqliteOverlay
      *
      */
     greg::date getDate(
-        const string& colName   ///< the name of the column to query
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column as an integer or NULL if the column was empty
@@ -413,8 +413,8 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    optional<int> getInt2(
-        const string& colName   ///< the name of the column to query
+    std::optional<int> getInt2(
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column as a long integer or NULL if the column was empty
@@ -430,8 +430,8 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    optional<long> getLong2(
-        const string& colName   ///< the name of the column to query
+    std::optional<long> getLong2(
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column as a double or NULL if the column was empty
@@ -447,8 +447,8 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    optional<double> getDouble2(
-        const string& colName   ///< the name of the column to query
+    std::optional<double> getDouble2(
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column as a string or NULL if the column was empty
@@ -464,8 +464,8 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    optional<string> getString2(
-        const string& colName   ///< the name of the column to query
+    std::optional<std::string> getString2(
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column as a LocalTimestamp
@@ -482,8 +482,8 @@ namespace SqliteOverlay
      * Test case: not yet
      *
      */
-    optional<LocalTimestamp> getLocalTime2(
-        const string& colName,   ///< the name of the column to query
+    std::optional<LocalTimestamp> getLocalTime2(
+        const std::string& colName,   ///< the name of the column to query
         boost::local_time::time_zone_ptr tzp   ///< pointer to the local time zone description
         ) const;
 
@@ -498,8 +498,8 @@ namespace SqliteOverlay
      * \throws NoDataException if the query didn't return any data (e.g., invalid column name
      * or row has been deleted in the meantime)
      */
-    optional<UTCTimestamp> getUTCTime2(
-        const string& colName   ///< the name of the column to query
+    std::optional<UTCTimestamp> getUTCTime2(
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column as a JSON object
@@ -513,8 +513,8 @@ namespace SqliteOverlay
      * \throws NoDataException if the query didn't return any data (e.g., invalid column name
      * or row has been deleted in the meantime)
      */
-    optional<nlohmann::json> getJson2(
-        const string& colName   ///< the name of the column to query
+    std::optional<nlohmann::json> getJson2(
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \returns the contents of a given column as a date
@@ -531,8 +531,8 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    optional<greg::date> getDate2(
-        const string& colName   ///< the name of the column to query
+    std::optional<greg::date> getDate2(
+        const std::string& colName   ///< the name of the column to query
         ) const;
 
     /** \brief Overload operator for "is equal", compares table name,
@@ -595,9 +595,9 @@ namespace SqliteOverlay
      */
     template<typename T1, typename T2>
     void multiGetByRef(
-        const string& colName1,   ///< name of the first column to get
+        const std::string& colName1,   ///< name of the first column to get
         T1& out1,   ///< reference for storing the value of the first column
-        const string& colName2,   ///< name of the second column to get
+        const std::string& colName2,   ///< name of the second column to get
         T2& out2   ///< reference for storing the value of the second column
         ) const
     {
@@ -620,11 +620,11 @@ namespace SqliteOverlay
      */
     template<typename T1, typename T2, typename T3>
     void multiGetByRef(
-        const string& colName1,
+        const std::string& colName1,
         T1& out1,
-        const string& colName2,
+        const std::string& colName2,
         T2& out2,
-        const string& colName3,
+        const std::string& colName3,
         T3& out3
         ) const
     {
@@ -647,13 +647,13 @@ namespace SqliteOverlay
      */
     template<typename T1, typename T2, typename T3, typename T4>
     void multiGetByRef(
-        const string& colName1,
+        const std::string& colName1,
         T1& out1,
-        const string& colName2,
+        const std::string& colName2,
         T2& out2,
-        const string& colName3,
+        const std::string& colName3,
         T3& out3,
-        const string& colName4,
+        const std::string& colName4,
         T4& out4
         ) const
     {
@@ -675,9 +675,9 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2>
-    tuple<T1,T2> multiGetAsTuple(
-        const string& colName1,
-        const string& colName2
+    std::tuple<T1,T2> multiGetAsTuple(
+        const std::string& colName1,
+        const std::string& colName2
         ) const
     {
       SqlStatement stmt = getSelectStatementWithColumnChecking(colName1, colName2);
@@ -698,10 +698,10 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2, typename T3>
-    tuple<T1,T2, T3> multiGetAsTuple(
-        const string& colName1,
-        const string& colName2,
-        const string& colName3
+    std::tuple<T1,T2, T3> multiGetAsTuple(
+        const std::string& colName1,
+        const std::string& colName2,
+        const std::string& colName3
         ) const
     {
       SqlStatement stmt = getSelectStatementWithColumnChecking(colName1, colName2, colName3);
@@ -722,11 +722,11 @@ namespace SqliteOverlay
      *
      */
     template<typename T1, typename T2, typename T3, typename T4>
-    tuple<T1,T2, T3, T4> multiGetAsTuple(
-        const string& colName1,
-        const string& colName2,
-        const string& colName3,
-        const string& colName4
+    std::tuple<T1,T2, T3, T4> multiGetAsTuple(
+        const std::string& colName1,
+        const std::string& colName2,
+        const std::string& colName3,
+        const std::string& colName4
         ) const
     {
       SqlStatement stmt = getSelectStatementWithColumnChecking(colName1, colName2, colName3, colName4);
@@ -747,13 +747,13 @@ namespace SqliteOverlay
      * \returns `true` if the constraint is satisfied, 'false' otherwise.
      */
     bool checkConstraint(
-        const string& colName,   ///< the name of the column to check
+        const std::string& colName,   ///< the name of the column to check
         Sloppy::ValueConstraint c,   ///< the constraint to check the column content against
-        string* errMsg = nullptr   ///< optional pointer to a string in which an english error message in case of a constraint violation is stored
+        std::string* errMsg = nullptr   ///< optional pointer to a string in which an english error message in case of a constraint violation is stored
         ) const;
 
   protected:
-    void genCommaSepString(string& target, const string& element) const
+    void genCommaSepString(std::string& target, const std::string& element) const
     {
       if (element.empty()) return;
       if (!target.empty()) target += ",";
@@ -761,7 +761,7 @@ namespace SqliteOverlay
     }
 
     template<typename T, typename... Targs>
-    void genCommaSepString(string& target, const T& element, Targs... FuncArgs) const
+    void genCommaSepString(std::string& target, const T& element, Targs... FuncArgs) const
     {
       genCommaSepString(target, element);
       genCommaSepString(target, FuncArgs...);
@@ -770,9 +770,9 @@ namespace SqliteOverlay
     template<typename... Targs>
     SqlStatement getSelectStatementWithColumnChecking(Targs... FuncArgs) const
     {
-      string colNames;
+      std::string colNames;
       genCommaSepString(colNames, FuncArgs...);
-      string sql = "SELECT " + colNames + cachedWhereStatementForRow;
+      std::string sql = "SELECT " + colNames + cachedWhereStatementForRow;
 
       SqlStatement stmt;
       try
@@ -794,19 +794,19 @@ namespace SqliteOverlay
     /**
      * the handle to the (parent) database
      */
-    reference_wrapper<const SqliteDatabase> db;
+    std::reference_wrapper<const SqliteDatabase> db;
     
     /**
      * the name of the associated table
      */
-    string tabName;
+    std::string tabName;
     
     /**
      * the unique index of the data row
      */
     int rowId;
 
-    string cachedWhereStatementForRow;
+    std::string cachedWhereStatementForRow;
     Sloppy::estring cachedUpdateStatementForRow;
   };
 

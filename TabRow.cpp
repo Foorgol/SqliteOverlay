@@ -19,6 +19,8 @@
 #include "CommonTabularClass.h"
 #include "ClausesAndQueries.h"
 
+using namespace std;
+
 namespace SqliteOverlay
 {
 
