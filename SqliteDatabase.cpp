@@ -16,7 +16,6 @@ using namespace std;
 
 namespace SqliteOverlay
 {
-
   bool SqliteDatabase::copyDatabaseContents(sqlite3 *srcHandle, sqlite3 *dstHandle)
   {
     // check parameters
@@ -1033,7 +1032,5 @@ namespace SqliteOverlay
     // Rule 5, numeric affinity is the default
     return ColumnAffinity::Numeric;
   }
-
-
 
 }

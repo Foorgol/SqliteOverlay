@@ -206,12 +206,19 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
+  string Transaction::getFinishSql(bool isCommit) const
+  {
+    // create the SQL command for committing a
+    // transaction or an inner savepoint
+    if (isCommit)
+    {
+      return savepointName.empty() ? "COMMIT" : ("RELEASE SAVEPOINT " + savepointName);
+    }
 
-    
-//----------------------------------------------------------------------------
-    
-    
-//----------------------------------------------------------------------------
+    // create the SQL command for rolling back a
+    // transaction or an inner savepoint
+    return savepointName.empty() ? "ROLLBACK" : ("ROLLBACK TO SAVEPOINT " + savepointName);
+  }
     
     
 //----------------------------------------------------------------------------

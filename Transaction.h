@@ -123,8 +123,9 @@ namespace SqliteOverlay
     TransactionDtorAction dtorAct;
     string savepointName;
     bool isFinished;
+    string getFinishSql(bool isCommit) const;
   };
-  
+
 }
 #endif	/* SQLITE_OVERLAY_TRANSACTION_H */
 
