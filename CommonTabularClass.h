@@ -15,6 +15,8 @@
 
 #include <vector>
 
+#include <Sloppy/CSV.h>
+
 #include "SqliteDatabase.h"
 #include "ClausesAndQueries.h"
 #include "SqlStatement.h"
@@ -263,6 +265,49 @@ namespace SqliteOverlay
     {
       return db.get();
     }
+
+    /** \brief Exports the contents of the table or view as CSV data.
+     *
+     * \note The implementation of this function is not optimized for large quantities of data.
+     *
+     * \warning If the SQL statement does not yield any data rows, we'll return a completely empty
+     * table WITHOUT headers, even if the inclusion of headers was requested by the caller!
+     *
+     * \throws InvalidColumnException if any of the result columns contains BLOB data because
+     * that can't be properly exported to CSV.
+     *
+     * \throws InvalidColumnException if any of the result columns has an invalid name (not unique,
+     * contains commas or contains quotation marks) and headers names shall be included in the CSV table.
+     *
+     * \returns a (potentially empty) CSV_Table instance with the contents of the table / view
+     */
+    Sloppy::CSV_Table toCSV(
+        bool includeHeaders   ///< include column headers in the first CSV table row yes/no
+        ) const;
+
+    /** \brief Exports the contents of the table or view as CSV data.
+     *
+     * \note The implementation of this function is not optimized for large quantities of data.
+     *
+     * \warning If the SQL statement does not yield any data rows, we'll return a completely empty
+     * table WITHOUT headers, even if the inclusion of headers was requested by the caller!
+     *
+     * \throws InvalidColumnException if any of the result columns contains BLOB data because
+     * that can't be properly exported to CSV.
+     *
+     * \throws InvalidColumnException if any of the result columns has an invalid name (not unique,
+     * contains commas or contains quotation marks) and headers names shall be included in the CSV table.
+     *
+     * \throws SqlStatementCreationError if the construction of the underlying SQL statement failed, for
+     * instance due to invalid column names provided by the caller.
+     *
+     * \returns a (potentially empty) CSV_Table instance with the contents of the table / view
+     */
+    Sloppy::CSV_Table toCSV(
+        std::vector<std::string> colNames,   ///< list of columns that shall be exported (empty = all columns)
+        WhereClause w,   ///< where clause that limits the rows that shall be exported (empty = all rows)
+        bool includeHeaders   ///< include column headers in the first CSV table row yes/no
+        ) const;
 
   protected:
     /**

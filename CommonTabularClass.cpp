@@ -286,7 +286,8 @@ namespace SqliteOverlay
       throw std::invalid_argument("Empty string for match count by WHERE clause");
     }
 
-    string sql = "SELECT COUNT(*) FROM " + tabName + " WHERE " + where;
+    //string sql = "SELECT COUNT(*) FROM " + tabName + " WHERE " + where;
+    string sql = sqlColumnCount + where;
 
     return db.get().execScalarQueryInt(sql);
   }
@@ -297,6 +298,51 @@ namespace SqliteOverlay
   int CommonTabularClass::length() const
   {
     return db.get().execScalarQueryInt("SELECT COUNT(*) FROM " + tabName);
+  }
+
+  //----------------------------------------------------------------------------
+
+  Sloppy::CSV_Table CommonTabularClass::toCSV(bool includeHeaders) const
+  {
+    const string sql = "SELECT * FROM " + tabName;
+    auto stmt = db.get().prepStatement(sql);
+    return stmt.toCSV(includeHeaders);
+  }
+
+  //----------------------------------------------------------------------------
+
+  Sloppy::CSV_Table CommonTabularClass::toCSV(std::vector<string> colNames, WhereClause w, bool includeHeaders) const
+  {
+    Sloppy::estring sql{"SELECT "};
+    if (colNames.empty())
+    {
+      // get all columns in case of an empty column list
+      sql += "*";
+    } else {
+      // create a comma-separated list of column names
+      auto it = colNames.cbegin();
+      sql += *it;
+      ++it;
+      for (; it != colNames.cend(); ++it)
+      {
+        sql += "," + *it;
+      }
+    }
+
+    sql += " FROM " + tabName;
+
+    SqlStatement stmt;
+    if (!w.isEmpty())
+    {
+      // create a statement with WHERE clause
+      sql += " WHERE " + w.getWherePartWithPlaceholders(true);
+      stmt = w.createStatementAndBindValuesToPlaceholders(db.get(), sql);
+    } else {
+      // create a plain statement that retrieves all rows
+      stmt = db.get().prepStatement(sql);
+    }
+
+    return stmt.toCSV(includeHeaders);
   }
 
 //----------------------------------------------------------------------------

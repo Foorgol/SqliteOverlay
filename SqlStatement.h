@@ -11,6 +11,7 @@
 #include <Sloppy/Memory.h>
 #include <Sloppy/Logger/Logger.h>
 #include <Sloppy/json_fwd.hpp>
+#include <Sloppy/CSV.h>
 
 #include "Defs.h"
 #include "SqliteExceptions.h"
@@ -98,7 +99,7 @@ namespace SqliteOverlay
      *
      */
     void bind(
-        int argPos,   ///< the placeholder to bind to
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
         int val   ///< the value to bind to the placeholder
         ) const;
 
@@ -113,7 +114,7 @@ namespace SqliteOverlay
      *
      */
     void bind(
-        int argPos,   ///< the placeholder to bind to
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
         long val   ///< the value to bind to the placeholder
         ) const;
 
@@ -128,7 +129,7 @@ namespace SqliteOverlay
      *
      */
     void bind(
-        int argPos,   ///< the placeholder to bind to
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
         double val   ///< the value to bind to the placeholder
         ) const;
 
@@ -143,7 +144,7 @@ namespace SqliteOverlay
      *
      */
     void bind(
-        int argPos,   ///< the placeholder to bind to
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
         const std::string& val   ///< the value to bind to the placeholder
         ) const;
 
@@ -161,7 +162,7 @@ namespace SqliteOverlay
      *
      */
     void bind(
-        int argPos,   ///< the placeholder to bind to
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
         const char* val   ///< the value to bind to the placeholder
         ) const;
 
@@ -176,7 +177,7 @@ namespace SqliteOverlay
      *
      */
     void bind(
-        int argPos,   ///< the placeholder to bind to
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
         bool val   ///< the value to bind to the placeholder
         ) const
     {
@@ -194,7 +195,7 @@ namespace SqliteOverlay
      *
      */
     void bind(
-        int argPos,   ///< the placeholder to bind to
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
         const LocalTimestamp& val   ///< the value to bind to the placeholder
         ) const
     {
@@ -212,7 +213,7 @@ namespace SqliteOverlay
      *
      */
     void bind(
-        int argPos,   ///< the placeholder to bind to
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
         const UTCTimestamp& val   ///< the value to bind to the placeholder
         ) const
     {
@@ -233,7 +234,7 @@ namespace SqliteOverlay
      *
      */
     void bind(
-        int argPos,   ///< the placeholder to bind to
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
         const void* ptr,   ///< a pointer to blob data
         size_t nBytes   ///< number of bytes in the blob data
         ) const;
@@ -252,7 +253,7 @@ namespace SqliteOverlay
      *
      */
     void bind(
-        int argPos,   ///< the placeholder to bind to
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
         const Sloppy::MemView& v   ///< the buffer that shall be stored
         ) const
     {
@@ -274,7 +275,7 @@ namespace SqliteOverlay
      *
      */
     void bind(
-        int argPos,   ///< the placeholder to bind to
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
         const nlohmann::json& v   ///< the JSON object that shall be stored
         ) const;
 
@@ -289,7 +290,7 @@ namespace SqliteOverlay
      *
      */
     void bindNull(
-        int argPos   ///< the placeholder to bind to
+        int argPos   ///< the placeholder to bind to (1-based if you use "?")
         ) const;
 
     /** \brief Executes the next step of the SQL statement
@@ -592,7 +593,7 @@ namespace SqliteOverlay
      * The function is useful if statements failed (e.g., because the database was busy) and they
      * should not be retried later. Finalizing the statement then releases the associated locks.
      *
-     * Test case: yes,implicitly in the dtor and in the transactio test cases
+     * Test case: yes,implicitly in the dtor and in the transaction test cases
      */
     void forceFinalize();
 
@@ -901,6 +902,43 @@ namespace SqliteOverlay
       return make_tuple(r1, r2, r3, r4);
     }
 
+    /** \returns the number of data columns in the result data set or -1 if the statement
+     * does not contain any data.
+     *
+     * \note You must call `step()` at least once before this function returns a reasonable
+     * value. If `hasData()` is `false` then this function always returns -1.
+     */
+    int nDataColumns() const { return resultColCount; }
+
+    /** \brief Exports all data that is yielded by this statement as a CSV_Table; the statement
+     * will be fully "exhausted": internally we call `step()` until the statement is finalized.
+     *
+     * If `step()` has been called before on this statement, we return everything from the
+     * current row (= before the next `step()`) until the statement is finalized.
+     *
+     * In order to leave the statement in a consistent state we will always (force-)finalize
+     * the statement before we return, even if an error or an exception occurs.
+     *
+     * \note The implementation of this function is not optimized for large quantities of data.
+     *
+     * \warning If the SQL statement does not yield any data rows, we'll return a completely empty
+     * table WITHOUT headers, even if the inclusion of headers was requested by the caller!
+     *
+     * \throws InvalidColumnException if any of the result columns contains BLOB data because
+     * that can't be properly exported to CSV.
+     *
+     * \throws InvalidColumnException if any of the result columns has an invalid name (not unique,
+     * contains commas or contains quotation marks) and headers names shall be included in the CSV table.
+     *
+     * \throws NoDataException if the statement was already finalized when calling this function.
+     *
+     * \returns a (potentially empty) CSV_Table instance with the results of the statement
+     */
+    Sloppy::CSV_Table toCSV(
+        bool includeHeaders   ///< include column headers in the first CSV table row yes/no
+        );
+
+
 
   protected:
     /** \brief "Guard function" that checks preconditions for
@@ -918,11 +956,11 @@ namespace SqliteOverlay
         ) const;
 
   private:
-    sqlite3_stmt* stmt;
-    bool _hasData;
+    sqlite3_stmt* stmt{nullptr};
+    bool _hasData{false};
     bool _isDone;
-    int resultColCount;
-    int stepCount;
+    int resultColCount{-1};
+    int stepCount{0};
   };
 }
 

@@ -459,7 +459,9 @@ namespace SqliteOverlay {
     /** \returns a string that contains the SQL text that you would expect after the `WHERE` in
      * a SELECT statement, for instance; all column values are represented by `?`-placeholders.
      */
-    std::string getWherePartWithPlaceholders() const;
+    std::string getWherePartWithPlaceholders(
+        bool includeOrderByAndLimit   ///< if `true`, a potentially defined `ORDER BY` and `LIMIT' statement is appended to the `WHERE` part
+        ) const;
 
   private:
     std::string orderBy;

@@ -822,6 +822,41 @@ namespace SqliteOverlay
           const WhereClause& w   ///< a WHERE clause that narrows down the number of returned rows; the WHERE can include conditions on other columns than just 'colName', of course
           );
 
+    /** \brief Imports data from a CSV table
+     *
+     * \pre The provided CSV table has to contain column headers.
+     *
+     * \pre The CSV table's column headers must exactly match the SQLite column names.
+     *
+     * \note The import is executed in a dedicated transaction. Either all rows or
+     * nothing will be imported.
+     *
+     * This is a very, very dumb wrapper function: it blindly takes the column names
+     * of the CSV table, copies them into an SQL statement, binds the column values
+     * to it and executes an INSERT.
+     *
+     * We don't catch any SQLite exceptions here. If the CSV data violates table
+     * constraints, for instance, the caller has to deal with it.
+     *
+     * \warning If the CSV data is provided by an untrusted user, be EXTREMELY
+     * CAREFUL and at least sanitize / check the column names before the import.
+     * Otherwise you might risk SQL injections.
+     *
+     * \throws std::invalid_argument if the provided CSV table does not contain column headers
+     *
+     * \throws BusyException if we could not acquire the database lock for the insertion.
+     *
+     * \throws SqlStatementCreationError if the CSV table contained invalid column names.
+     *
+     * \throws ConstraintFailedException if the CSV data violated a constraint (e.g., foreign key relations)
+     *
+     * \throws GenericSqliteException if anything else goes wrong
+     *
+     * \returns the number of inserted rows (should always be identical to the number
+     * of data rows in the CSV table)
+     */
+    int importCSV(const Sloppy::CSV_Table& csvTab, TransactionType tt = TransactionType::Immediate) const;
+
   protected:
     void addColumn_exec(
         const std::string& colName,
@@ -1043,7 +1078,7 @@ namespace SqliteOverlay
       std::string sql = "SELECT rowid," + colName + " FROM " +  tabName;
       if (!w.isEmpty())
       {
-        sql += " WHERE " + w.getWherePartWithPlaceholders();
+        sql += " WHERE " + w.getWherePartWithPlaceholders(false);
       }
       sql += " ORDER BY rowid ASC";
 

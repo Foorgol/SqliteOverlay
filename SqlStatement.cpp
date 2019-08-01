@@ -16,7 +16,7 @@ using namespace Sloppy::DateTime;
 namespace SqliteOverlay
 {
   SqlStatement::SqlStatement()
-    :stmt(nullptr), _hasData(false), _isDone(true), resultColCount(-1), stepCount(0)
+    :_isDone(true)
   {
 
   }
@@ -24,7 +24,7 @@ namespace SqliteOverlay
   //----------------------------------------------------------------------------
 
   SqlStatement::SqlStatement(sqlite3* dbPtr, const string& sqlTxt)
-    :stmt(nullptr), _hasData(false), _isDone(false), resultColCount(-1), stepCount(0)
+    :_isDone(false)
   {
     if (dbPtr == nullptr)
     {
@@ -110,7 +110,8 @@ namespace SqliteOverlay
 
     if (_hasData)
     {
-      resultColCount = sqlite3_column_count(stmt);
+      //resultColCount = sqlite3_column_count(stmt);
+      resultColCount = sqlite3_data_count(stmt);
     } else {
       resultColCount = -1;
     }
@@ -324,6 +325,90 @@ namespace SqliteOverlay
   void SqlStatement::get(int colId, nlohmann::json& result) const
   {
     result = getJson(colId);
+  }
+
+  //----------------------------------------------------------------------------
+
+  Sloppy::CSV_Table SqlStatement::toCSV(bool includeHeaders)
+  {
+    if (isDone())
+    {
+      throw NoDataException{"SqlStatement::toCSV(): called on finalized statement"};
+    }
+
+    try
+    {
+      // if we haven't stepped to far, do this now in order to
+      // determine the number of columns
+      if (stepCount == 0) step();
+
+      Sloppy::CSV_Table csvTab;
+
+      if (!hasData() || (resultColCount < 1))
+      {
+        forceFinalize();
+        return csvTab;  // no data ==> empty table
+      }
+
+      // add headers, if requested
+      if (includeHeaders)
+      {
+        std::vector<string> headers;
+        for (int colId = 0; colId < resultColCount; ++colId)
+        {
+          headers.push_back(sqlite3_column_name(stmt, colId));
+        }
+
+        if (!csvTab.setHeader(headers))
+        {
+          forceFinalize();
+          throw InvalidColumnException{"SqlStatement::toCSV(): invalid column name(s) for CSV-export"};
+        }
+      }
+
+      // iterate over rows and columns
+      for ( ; _hasData; step())
+      {
+        Sloppy::CSV_Row r;
+        for (int colId = 0; colId < resultColCount; ++colId)
+        {
+          switch (int2ColumnDataType(sqlite3_column_type(stmt, colId)))
+          {
+          case ColumnDataType::Integer:
+            r.append(static_cast<long>(sqlite3_column_int64(stmt, colId)));
+            break;
+
+          case ColumnDataType::Text:
+            r.append(reinterpret_cast<const char*>(sqlite3_column_text(stmt, colId)));
+            break;
+
+          case ColumnDataType::Null:
+            r.append();
+            break;
+
+          case ColumnDataType::Float:
+            r.append(sqlite3_column_double(stmt, colId));
+            break;
+
+          default:
+            forceFinalize();
+            throw InvalidColumnException{"SqlStatement::toCSV(): invalid column data type for CSV-export (probably BLOB)"};
+          }
+        }
+
+        if (!csvTab.append(std::move(r)))
+        {
+          forceFinalize();
+          throw InvalidColumnException{"SqlStatement::toCSV(): inconsistent result column count in SQL statement"};
+        }
+      }
+
+      return csvTab;
+
+    } catch (...) {
+      forceFinalize();
+      throw;
+    }
   }
 
   //----------------------------------------------------------------------------

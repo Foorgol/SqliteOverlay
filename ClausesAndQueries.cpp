@@ -141,7 +141,7 @@ namespace SqliteOverlay {
 
     // prepare a select statement for the provided table name
     // with a specific where clause
-    Sloppy::estring sql{"SELECT %1 FROM %2 WHERE %3 %4"};
+    Sloppy::estring sql{"SELECT %1 FROM %2 WHERE %3"};
     if (countOnly)
     {
       sql.arg("COUNT(*)");
@@ -150,14 +150,7 @@ namespace SqliteOverlay {
       sql.arg("rowid");
     }
     sql.arg(tabName);
-    sql.arg(getWherePartWithPlaceholders());
-
-    sql.arg(orderBy);   // removes the "%4" if orderBy is empty
-
-    if (limit > 0)
-    {
-      sql += " LIMIT " + to_string(limit);
-    }
+    sql.arg(getWherePartWithPlaceholders(true));
 
     return createStatementAndBindValuesToPlaceholders(db, sql);
   }
@@ -173,7 +166,7 @@ namespace SqliteOverlay {
 
     Sloppy::estring sql{"DELETE FROM %1 WHERE %2"};
     sql.arg(tabName);
-    sql.arg(getWherePartWithPlaceholders());
+    sql.arg(getWherePartWithPlaceholders(false));
 
     return createStatementAndBindValuesToPlaceholders(db, sql);
   }
@@ -211,6 +204,8 @@ namespace SqliteOverlay {
     if (_limit > 0) limit = _limit;
   }
 
+  //----------------------------------------------------------------------------
+
   void WhereClause::clear()
   {
     CommonClause::clear();
@@ -220,7 +215,7 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  string WhereClause::getWherePartWithPlaceholders() const
+  string WhereClause::getWherePartWithPlaceholders(bool includeOrderByAndLimit) const
   {
     string w;
 
@@ -244,6 +239,15 @@ namespace SqliteOverlay {
         w += (curCol.op.empty()) ? "=" : curCol.op;
         w += "?";
       }
+    }
+
+    if (includeOrderByAndLimit && !orderBy.empty())
+    {
+      w += " " + orderBy;
+    }
+    if (includeOrderByAndLimit && (limit > 0))
+    {
+      w += " LIMIT " + to_string(limit);
     }
 
     return w;

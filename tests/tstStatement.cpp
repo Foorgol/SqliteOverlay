@@ -505,3 +505,62 @@ TEST_F(DatabaseTestScenario, TemplateGetterOptional)
   ASSERT_EQ(1, plainInt);
   ASSERT_FALSE(i.has_value());
 }
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, ExportCSV1)
+{
+  auto db = getScenario01();
+
+  // easy case:
+  // export the whole table
+  auto stmt = db.prepStatement("SELECT rowid, i, f, s FROM t1");
+  auto csv = stmt.toCSV(true);
+  ASSERT_TRUE(csv.hasHeaders());
+  ASSERT_EQ(4, csv.nCols());
+  ASSERT_EQ("rowid", csv.getHeader(0));
+  ASSERT_EQ("i", csv.getHeader(1));
+  ASSERT_EQ("f", csv.getHeader(2));
+  ASSERT_EQ("s", csv.getHeader(3));
+  ASSERT_EQ(5, csv.size());
+  auto& r0 = csv.get(1);
+  ASSERT_EQ(2, r0[0].get<long>());  // rowid
+  ASSERT_FALSE(r0[1].has_value());  // NULL in i
+  ASSERT_EQ(666.66, r0[2].get<double>());  // double in f
+  ASSERT_EQ("Hi", r0[3].get<string>());
+
+  // make sure the statement is finalized
+  ASSERT_TRUE(stmt.isDone());
+
+  // throw if applied to finalized statements
+  ASSERT_THROW(stmt.toCSV(true), NoDataException);
+
+  // export only partial tables / query data because
+  // step() has already been called
+  stmt = db.prepStatement("SELECT rowid, i, f, s FROM t1");
+  stmt.step();  // now on row 1
+  stmt.step();  // now on row 2
+  csv = stmt.toCSV(false);
+  ASSERT_FALSE(csv.hasHeaders());
+  ASSERT_EQ(4, csv.size());
+  auto& r1 = csv.get(0);
+  ASSERT_EQ(2, r1[0].get<long>());  // rowid
+  ASSERT_FALSE(r1[1].has_value());  // NULL in i
+  ASSERT_EQ(666.66, r1[2].get<double>());  // double in f
+  ASSERT_EQ("Hi", r1[3].get<string>());
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, ExportCSV2)
+{
+  auto db = getScenario01();
+
+  // use a dummy statement that doesn't produce any data
+  auto stmt = db.prepStatement("SELECT rowid, i FROM t1 WHERE rowid > 1000");
+  auto csv = stmt.toCSV(true);
+  ASSERT_EQ(0, csv.size());
+  ASSERT_EQ(0, csv.nCols());
+  ASSERT_FALSE(csv.hasHeaders());   // no data rows ==> no headers, even if requested!
+  ASSERT_TRUE(stmt.isDone());
+}

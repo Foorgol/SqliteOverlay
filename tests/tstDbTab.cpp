@@ -8,6 +8,7 @@
 #include "ClausesAndQueries.h"
 #include "DbTab.h"
 #include "TabRow.h"
+#include "TableCreator.h"
 
 using namespace SqliteOverlay;
 
@@ -388,6 +389,7 @@ TEST_F(DatabaseTestScenario, DbTab_HasRow)
 }
 
 //----------------------------------------------------------------
+
 TEST_F(DatabaseTestScenario, DbTab_AddColumn)
 {
   auto db = getScenario01();
@@ -493,4 +495,194 @@ TEST(DbTabTests, ConstraintChecks)
   DbTab t2{db, "t2", false};
   badId = t2.checkConstraint("x", Sloppy::ValueConstraint::Numeric);
   ASSERT_TRUE(badId.empty());
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, DbTab_ExportCSV1)
+{
+  auto db = getScenario01();
+  DbTab t1{db,"t1", false};
+
+  // export all rows and columns
+  auto csv = t1.toCSV(true);
+  ASSERT_TRUE(csv.hasHeaders());
+  ASSERT_EQ(4, csv.nCols());
+  ASSERT_EQ(5, csv.size());
+
+  ASSERT_EQ("i", csv.getHeader(0));
+  ASSERT_EQ("f", csv.getHeader(1));
+  ASSERT_EQ("s", csv.getHeader(2));
+  ASSERT_EQ("d", csv.getHeader(3));
+  auto& r0 = csv.get(1);
+  ASSERT_FALSE(r0[0].has_value());  // NULL in i
+  ASSERT_EQ(666.66, r0[1].get<double>());  // double in f
+  ASSERT_EQ("Hi", r0[2].get<string>());
+
+  // export only columns "rowid" and "i"
+  csv = t1.toCSV({"rowid", "i"}, WhereClause{}, true);
+  ASSERT_TRUE(csv.hasHeaders());
+  ASSERT_EQ(2, csv.nCols());
+  ASSERT_EQ(5, csv.size());
+  ASSERT_EQ("rowid", csv.getHeader(0));
+  ASSERT_EQ("i", csv.getHeader(1));
+  ASSERT_EQ(1, csv.get(0, "rowid").get<long>());  // rowid
+  ASSERT_EQ(42, csv.get(0, "i").get<long>());  // i
+
+  // export all standard columns, but only with rowid > 3
+  WhereClause w;
+  w.addCol("rowid", ">", 3);
+  csv = t1.toCSV({}, w, false);
+  ASSERT_FALSE(csv.hasHeaders());
+  ASSERT_EQ(4, csv.nCols());
+  ASSERT_EQ(2, csv.size());
+  ASSERT_EQ(84, csv.get(0, 0).get<long>());  // i of rowid 4 in CSV row 0
+  ASSERT_EQ(42.42, csv.get(1, 1).get<double>());  // f of rowid 5 in CSV row 1
+
+  // export only column "f", in descending rowid order, limited to 2
+  w.clear();
+  w.addCol("rowid", "<", 1000);  // dummy
+  w.setOrderColumn_Desc("rowid");
+  w.setLimit(2);
+  csv = t1.toCSV({"f"}, w, true);
+  ASSERT_TRUE(csv.hasHeaders());
+  ASSERT_EQ(1, csv.nCols());
+  ASSERT_EQ(2, csv.size());
+  ASSERT_EQ("f", csv.getHeader(0));
+  ASSERT_EQ(42.42, csv.get(0, 0).get<double>());  // f of rowid 5 in CSV row 0
+  ASSERT_FALSE(csv.get(1,0).has_value());  // f of rowid 4 in CSV row 1
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, DbTab_ExportCSV2)
+{
+  auto db = getScenario01();
+  DbTab t1{db,"t1", false};
+
+  // invalid column specs
+  ASSERT_THROW(t1.toCSV({"sdfökljsfd", "slkdjf"}, WhereClause{}, true), SqlStatementCreationError);
+
+  // empty result set
+  WhereClause w;
+  w.addCol("rowid", ">", 1000);
+  auto csv = t1.toCSV({}, w, true);
+  ASSERT_FALSE(csv.hasHeaders());
+  ASSERT_EQ(0, csv.nCols());
+  ASSERT_EQ(0, csv.size());
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, DbTab_ImportCSV1)
+{
+  auto db = getScenario01();
+  DbTab t1{db,"t1", false};
+  t1.clear();
+
+  Sloppy::CSV_Row r1;
+  r1.append(20);
+  r1.append(3.14);
+  r1.append("abc");
+  r1.append();
+
+  Sloppy::CSV_Row r2;
+  r2.append(40);
+  r2.append(6.28);
+  r2.append("xyz");
+  r2.append();
+
+  Sloppy::CSV_Table csv;
+  csv.append(r1);
+  csv.append(r2);
+  csv.setHeader(std::vector<std::string>{"i", "f", "s", "d"});
+
+  ASSERT_EQ(2, t1.importCSV(csv));
+  ASSERT_EQ(2, t1.length());
+  ASSERT_EQ(20, t1[1].getInt("i"));
+  ASSERT_EQ(3.14, t1[1].getDouble("f"));
+  ASSERT_EQ("abc", t1[1]["s"]);
+  ASSERT_FALSE(t1[1].getString2("d").has_value());
+  ASSERT_EQ(40, t1[2].getInt("i"));
+  ASSERT_EQ(6.28, t1[2].getDouble("f"));
+  ASSERT_EQ("xyz", t1[2]["s"]);
+  ASSERT_FALSE(t1[2].getString2("d").has_value());
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, DbTab_ImportCSV2)
+{
+  auto db = getScenario01();
+  DbTab t1{db,"t1", false};
+
+  Sloppy::CSV_Row r1;
+  r1.append(20);
+  r1.append(3.14);
+
+  Sloppy::CSV_Row r2;
+  r2.append(40);
+  r2.append();
+
+  Sloppy::CSV_Table csv;
+  csv.append(r1);
+  csv.append(r2);
+  csv.setHeader(std::vector<std::string>{"i", "f"});
+
+  ASSERT_EQ(2, t1.importCSV(csv));
+  ASSERT_EQ(7, t1.length());
+  ASSERT_EQ(20, t1[6].getInt("i"));
+  ASSERT_EQ(3.14, t1[6].getDouble("f"));
+  ASSERT_EQ(40, t1[7].getInt("i"));
+  ASSERT_FALSE(t1[7].getDouble2("f").has_value());
+
+  for (int i : {6, 7})
+  {
+    for (const string& s : {"d", "s"})
+    {
+      ASSERT_FALSE(t1[i].getString2(s).has_value());
+    }
+  }
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, DbTab_ImportCSV3)
+{
+  auto db = getScenario01();
+  DbTab t1{db,"t1", false};
+
+  Sloppy::CSV_Row r1;
+  r1.append(20);
+  r1.append(3.14);
+
+  Sloppy::CSV_Table csv;
+  ASSERT_EQ(0, t1.importCSV(csv));
+
+  csv.append(r1);
+  ASSERT_THROW(t1.importCSV(csv), std::invalid_argument);  // no headers
+
+  ASSERT_TRUE(csv.setHeader(std::vector<std::string>{"dfksjdf", "d"}));
+  ASSERT_THROW(t1.importCSV(csv), SqlStatementCreationError);  // invalid headers
+
+  TableCreator tc;
+  tc.addCol("i", ColumnDataType::Integer, ConflictClause::Abort, ConflictClause::Abort);
+  tc.createTableAndResetCreator(db, "x");
+  DbTab x{db, "x", false};
+
+  r1 = Sloppy::CSV_Row{};
+  r1.append();
+  csv = Sloppy::CSV_Table{};
+  ASSERT_TRUE(csv.setHeader(std::vector<std::string>{"i"}));
+  ASSERT_TRUE(csv.append(r1));
+  ASSERT_THROW(x.importCSV(csv), ConstraintFailedException);  // violation of NOT NULL
+
+  csv = Sloppy::CSV_Table{};
+  r1 = Sloppy::CSV_Row{};
+  r1.append(42);
+  csv = Sloppy::CSV_Table{};
+  ASSERT_TRUE(csv.setHeader(std::vector<std::string>{"i"}));
+  ASSERT_TRUE(csv.append(r1));
+  ASSERT_EQ(1, x.importCSV(csv));
+  ASSERT_THROW(x.importCSV(csv), ConstraintFailedException);  // violation of UNIQUE
 }

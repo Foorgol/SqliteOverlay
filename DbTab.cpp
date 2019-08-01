@@ -17,6 +17,7 @@
 
 #include "DbTab.h"
 #include "TabRow.h"
+#include "Transaction.h"
 
 using namespace std;
 
@@ -340,6 +341,80 @@ namespace SqliteOverlay
   TabRowIterator DbTab::tabRowIterator(const WhereClause& w)
   {
     return TabRowIterator(db.get(), tabName, w);
+  }
+
+  //----------------------------------------------------------------------------
+
+  int DbTab::importCSV(const Sloppy::CSV_Table& csvTab, TransactionType tt) const
+  {
+    if (csvTab.empty()) return 0;
+
+    if (!csvTab.hasHeaders())
+    {
+      throw std::invalid_argument{"DbTab::importCSV(): called with invalid CSV data (no column names)"};
+    }
+
+    // prepare an SQL string that contains all column names
+    // and a bind parameter for each column
+    //
+    // quote column names to provide a little more resistance against
+    // ugly / unsecure / dangerous strings provided by untrusted users
+    Sloppy::estring sql = "INSERT INTO " + tabName +
+                          " (\"" + csvTab.getHeader(0) + "\"%1) VALUES (?%2)";
+    string colNames;
+    string qMarks;
+    for (size_t colIdx = 1; colIdx < csvTab.nCols(); ++colIdx)
+    {
+      colNames += ",\"" + csvTab.getHeader(colIdx) + "\"";
+      qMarks += ",?";
+    }
+    sql.arg(colNames);
+    sql.arg(qMarks);
+    auto stmt = db.get().prepStatement(sql);
+
+    // lock the table
+    auto trans = db.get().startTransaction(tt);
+
+    // iterate over all data rows and import data one-by-one
+    size_t cnt{0};
+    for (auto rowIt = csvTab.cbegin(); rowIt != csvTab.cend(); ++rowIt)
+    {
+      stmt.reset(true);
+
+      // Note: SQLite bind parameters are 1-based while the
+      // CSV columns are 0-based!
+      for (size_t colIdx = 1; colIdx <= csvTab.nCols(); ++colIdx)
+      {
+        const auto& val = rowIt->get(colIdx - 1);  // 1-based --> 0-based
+
+        switch (val.valueType())
+        {
+        case Sloppy::CSV_Value::Type::Long:
+          stmt.bind(colIdx, val.get<long>());
+          break;
+
+        case Sloppy::CSV_Value::Type::String:
+          stmt.bind(colIdx, val.get<string>());
+          break;
+
+        case Sloppy::CSV_Value::Type::Double:
+          stmt.bind(colIdx, val.get<double>());
+          break;
+
+        case Sloppy::CSV_Value::Type::Null:
+          stmt.bindNull(colIdx);
+          break;
+        }
+      }
+
+      // the actual insertion
+      stmt.step();
+      ++cnt;
+    }
+
+    trans.commit();
+
+    return cnt;
   }
 
   //----------------------------------------------------------------------------
