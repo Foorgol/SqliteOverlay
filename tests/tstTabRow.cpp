@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
 
+#include <Sloppy/Crypto/Sodium.h>
+#include <Sloppy/Crypto/Crypto.h>
+
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"
 #include "ClausesAndQueries.h"
@@ -362,3 +365,41 @@ TEST(TabRowTests, ConstraintChecks)
   ASSERT_FALSE(r2.checkConstraint("x", Sloppy::ValueConstraint::Alpha));
   ASSERT_FALSE(r6.checkConstraint("x", Sloppy::ValueConstraint::Alpha));
 }
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, TabRow_Blob)
+{
+  static constexpr int BufSize = 1000000;
+
+  auto db = getScenario01();
+
+  // create 1M dummy data
+  auto* sodium = Sloppy::Crypto::SodiumLib::getInstance();
+  Sloppy::MemArray buf{BufSize};
+  sodium->randombytes_buf(buf);
+
+  TabRow r(db, "t1", 1);
+  ASSERT_EQ(1, r.id());
+
+  // assign the blob data to the "i" column
+  r.update("i", buf.view());
+
+  // retrieve the value
+  auto bufBack = r.getBlob("i");
+  ASSERT_FALSE(bufBack.empty());
+  ASSERT_EQ(BufSize, bufBack.size());
+
+  // compare both buffers; only succeeds if the buffers have equal size and content
+  ASSERT_TRUE(sodium->memcmp(buf.view(), bufBack.view()));
+
+  // test the "optional" variant
+  auto opt = r.getBlob2("i");
+  ASSERT_TRUE(opt.has_value());
+  ASSERT_TRUE(sodium->memcmp(buf.view(), opt->view()));
+  r.updateToNull("i");
+  ASSERT_THROW(r.getBlob("i"), NullValueException);
+  opt = r.getBlob2("i");
+  ASSERT_FALSE(opt.has_value());
+}
+

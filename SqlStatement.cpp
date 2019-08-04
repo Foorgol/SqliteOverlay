@@ -329,6 +329,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
+  void SqlStatement::get(int colId, Sloppy::MemArray& result) const
+  {
+    result = std::move(getBlob(colId));
+  }
+
+  //----------------------------------------------------------------------------
+
   Sloppy::CSV_Table SqlStatement::toCSV(bool includeHeaders)
   {
     if (isDone())

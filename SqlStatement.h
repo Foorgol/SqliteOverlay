@@ -746,6 +746,23 @@ namespace SqliteOverlay
      */
     void get(int colId, nlohmann::json& result) const;
 
+    /** \brief Retrieves the value of a column in the statement result as a BLOB object
+     *
+     * Uses an out-parameter instead of a direct return. The advantage is that multiple
+     * `get()` variants for int, double, string, ... can have the same signature style
+     * of `get(int, T&)` which allows for templating and overloading.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \throws nlohmann::json::parse_error if the column didn't contain valid JSON data
+     *
+     * Test case: yes
+     *
+     */
+    void get(int colId, Sloppy::MemArray& result) const;
+
     /** \brief Retrieves the value of a column in the statement result
      * with the possibility to catch and return NULL values.
      *

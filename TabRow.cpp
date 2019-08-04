@@ -160,7 +160,35 @@ namespace SqliteOverlay
     return get<string>(colName);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
+  Sloppy::MemArray TabRow::get(const string& colName) const
+  {
+    if (colName.empty())
+    {
+      throw std::invalid_argument("Column access: received empty column name");
+    }
+    SqlStatement stmt;
+    std::string sql = "SELECT " + colName + cachedWhereStatementForRow;
+    try
+    {
+      stmt = db.get().prepStatement(sql);
+    }
+    catch (SqlStatementCreationError)
+    {
+      throw std::invalid_argument("Column access: received invalid column name");
+    }
+    catch (...)
+    {
+      throw;
+    }
+
+    stmt.step();
+
+    return stmt.getBlob(0);
+  }
+
+  //----------------------------------------------------------------------------
 
   int TabRow::getInt(const string& colName) const
   {
@@ -174,11 +202,18 @@ namespace SqliteOverlay
     return get<long>(colName);
   }
 
-//----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   double TabRow::getDouble(const string& colName) const
   {
     return get<double>(colName);
+  }
+
+  //----------------------------------------------------------------------------
+
+  Sloppy::MemArray TabRow::getBlob(const string& colName) const
+  {
+    return get<Sloppy::MemArray>(colName);
   }
 
   //----------------------------------------------------------------------------
@@ -230,6 +265,13 @@ namespace SqliteOverlay
   optional<double> TabRow::getDouble2(const string& colName) const
   {
     return get<optional<double>>(colName);
+  }
+
+  //----------------------------------------------------------------------------
+
+  std::optional<Sloppy::MemArray> TabRow::getBlob2(const string& colName) const
+  {
+    return get<optional<Sloppy::MemArray>>(colName);
   }
 
 //----------------------------------------------------------------------------

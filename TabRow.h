@@ -261,6 +261,25 @@ namespace SqliteOverlay
       return outVal;
     }
 
+    /** \returns the contents of a given column as a binary blob of data
+     *
+     * \throws std::invalid argument if the column name was empty
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
+     * or row has been deleted in the meantime)
+     *
+     * \throws NullValueException if the column contained NULL
+     *
+     * Test case: yes, as part of the getXXX functions
+     *
+     */
+    Sloppy::MemArray get(
+        const std::string& colName   ///< the name of the column to query
+        ) const;
+
     /** \returns the contents of a given column as an integer
      *
      * \throws std::invalid argument if the column name was empty
@@ -280,7 +299,7 @@ namespace SqliteOverlay
         const std::string& colName   ///< the name of the column to query
         ) const;
 
-    /** \returns the contents of a given column as an integer
+    /** \returns the contents of a given column as a long integer
      *
      * \throws std::invalid argument if the column name was empty
      *
@@ -299,7 +318,7 @@ namespace SqliteOverlay
         const std::string& colName   ///< the name of the column to query
         ) const;
 
-    /** \returns the contents of a given column as an integer
+    /** \returns the contents of a given column as a double
      *
      * \throws std::invalid argument if the column name was empty
      *
@@ -315,6 +334,25 @@ namespace SqliteOverlay
      *
      */
     double getDouble(
+        const std::string& colName   ///< the name of the column to query
+        ) const;
+
+    /** \returns the contents of a given column as a BLOB
+     *
+     * \throws std::invalid argument if the column name was empty
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
+     * or row has been deleted in the meantime)
+     *
+     * \throws NullValueException if the column contained NULL
+     *
+     * Test case: yes
+     *
+     */
+    Sloppy::MemArray getBlob(
         const std::string& colName   ///< the name of the column to query
         ) const;
 
@@ -448,6 +486,23 @@ namespace SqliteOverlay
      *
      */
     std::optional<double> getDouble2(
+        const std::string& colName   ///< the name of the column to query
+        ) const;
+
+    /** \returns the contents of a given column as a BLOB or NULL if the column was empty
+     *
+     * \throws std::invalid argument if the column name was empty
+     *
+     * \throws BusyException if the database wasn't available for
+     * reading the column
+     *
+     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
+     * or row has been deleted in the meantime)
+     *
+     * Test case: yes
+     *
+     */
+    std::optional<Sloppy::MemArray> getBlob2(
         const std::string& colName   ///< the name of the column to query
         ) const;
 
