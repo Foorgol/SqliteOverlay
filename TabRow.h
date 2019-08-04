@@ -807,6 +807,32 @@ namespace SqliteOverlay
         std::string* errMsg = nullptr   ///< optional pointer to a string in which an english error message in case of a constraint violation is stored
         ) const;
 
+    /** \brief Exports all columns of the row as a CSV_Row
+     *
+     * \throws InvalidColumnException if any of the columns contains BLOB data because
+     * that can't be properly exported to CSV.
+     *
+     * \returns a CSV_Row instance containing a copy of the contents of the row
+     */
+    Sloppy::CSV_Row toCSV(
+        bool includeRowId   ///< if `true`, the first column of the CSV row will be `rowid`
+        ) const;
+
+    /** \brief Exports selected columns of the row as a CSV_Row
+     *
+     * \throws InvalidColumnException if any of the columns contains BLOB data because
+     * that can't be properly exported to CSV.
+     *
+     * \throws SqlStatementCreationError if the provided column list contained
+     * an invalid column name.
+     *
+     * \returns a CSV_Row instance containing a copy of the contents of the row; empty,
+     * if the provided column list is empty.
+     */
+    Sloppy::CSV_Row toCSV(
+        const std::vector<std::string>& colNames   ///< the list of columns that shall be exported
+        ) const;
+
   protected:
     void genCommaSepString(std::string& target, const std::string& element) const
     {

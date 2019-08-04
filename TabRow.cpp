@@ -353,6 +353,43 @@ namespace SqliteOverlay
     return Sloppy::checkConstraint(getString2(colName), c, errMsg);
   }
 
+  //----------------------------------------------------------------------------
+
+  Sloppy::CSV_Row TabRow::toCSV(bool includeRowId) const
+  {
+    string sql = "SELECT ";
+    if (includeRowId)
+    {
+      sql += "rowid,";
+    }
+
+    sql += "*" + cachedWhereStatementForRow;
+    auto stmt = db.get().prepStatement(sql);
+    stmt.step();
+
+    return stmt.toCSV_currentRowOnly();
+  }
+
+  //----------------------------------------------------------------------------
+
+  Sloppy::CSV_Row TabRow::toCSV(const std::vector<string>& colNames) const
+  {
+    if (colNames.empty()) return Sloppy::CSV_Row{};
+
+    auto it = colNames.cbegin();
+    std::string colList = *it;
+    ++it;
+    for (; it != colNames.cend(); ++it)
+    {
+      colList += "," + *it;
+    }
+
+    auto stmt = db.get().prepStatement("SELECT " + colList + cachedWhereStatementForRow);
+    stmt.step();
+
+    return stmt.toCSV_currentRowOnly();
+  }
+
 //----------------------------------------------------------------------------
 
 

@@ -403,3 +403,32 @@ TEST_F(DatabaseTestScenario, TabRow_Blob)
   ASSERT_FALSE(opt.has_value());
 }
 
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, TabRow_CSV)
+{
+  auto db = getScenario01();
+
+  TabRow r(db, "t1", 1);
+
+  auto csv = r.toCSV(true);
+  ASSERT_EQ(5, csv.size());
+  ASSERT_EQ(1, csv.get(0).get<long>());
+  ASSERT_EQ(42, csv.get(1).get<long>());
+  ASSERT_EQ(23.23, csv.get(2).get<double>());
+  ASSERT_EQ("Hallo", csv.get(3).get<string>());
+
+  csv = r.toCSV(false);
+  ASSERT_EQ(4, csv.size());
+  ASSERT_EQ(42, csv.get(0).get<long>());
+  ASSERT_EQ(23.23, csv.get(1).get<double>());
+  ASSERT_EQ("Hallo", csv.get(2).get<string>());
+
+  csv = r.toCSV({"rowid", "s"});
+  ASSERT_EQ(2, csv.size());
+  ASSERT_EQ(1, csv.get(0).get<long>());
+  ASSERT_EQ("Hallo", csv.get(1).get<string>());
+
+  csv = r.toCSV(vector<string>{});
+  ASSERT_EQ(0, csv.size());
+}

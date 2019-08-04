@@ -360,11 +360,7 @@ namespace SqliteOverlay
       // add headers, if requested
       if (includeHeaders)
       {
-        std::vector<string> headers;
-        for (int colId = 0; colId < resultColCount; ++colId)
-        {
-          headers.push_back(sqlite3_column_name(stmt, colId));
-        }
+        auto headers = columnHeaders();
 
         if (!csvTab.setHeader(headers))
         {
@@ -376,32 +372,7 @@ namespace SqliteOverlay
       // iterate over rows and columns
       for ( ; _hasData; step())
       {
-        Sloppy::CSV_Row r;
-        for (int colId = 0; colId < resultColCount; ++colId)
-        {
-          switch (int2ColumnDataType(sqlite3_column_type(stmt, colId)))
-          {
-          case ColumnDataType::Integer:
-            r.append(static_cast<long>(sqlite3_column_int64(stmt, colId)));
-            break;
-
-          case ColumnDataType::Text:
-            r.append(reinterpret_cast<const char*>(sqlite3_column_text(stmt, colId)));
-            break;
-
-          case ColumnDataType::Null:
-            r.append();
-            break;
-
-          case ColumnDataType::Float:
-            r.append(sqlite3_column_double(stmt, colId));
-            break;
-
-          default:
-            forceFinalize();
-            throw InvalidColumnException{"SqlStatement::toCSV(): invalid column data type for CSV-export (probably BLOB)"};
-          }
-        }
+        Sloppy::CSV_Row r = toCSV_currentRowOnly();
 
         if (!csvTab.append(std::move(r)))
         {
@@ -416,6 +387,62 @@ namespace SqliteOverlay
       forceFinalize();
       throw;
     }
+  }
+
+  //----------------------------------------------------------------------------
+
+  Sloppy::CSV_Row SqlStatement::toCSV_currentRowOnly() const
+  {
+    if ((resultColCount < 1) || !_hasData)
+    {
+      throw NoDataException{"SqlStatement::toCSV_currentRowOnly(): called on empty or finalized statement"};
+    }
+
+    Sloppy::CSV_Row r;
+    for (int colId = 0; colId < resultColCount; ++colId)
+    {
+      switch (int2ColumnDataType(sqlite3_column_type(stmt, colId)))
+      {
+      case ColumnDataType::Integer:
+        r.append(static_cast<long>(sqlite3_column_int64(stmt, colId)));
+        break;
+
+      case ColumnDataType::Text:
+        r.append(reinterpret_cast<const char*>(sqlite3_column_text(stmt, colId)));
+        break;
+
+      case ColumnDataType::Null:
+        r.append();
+        break;
+
+      case ColumnDataType::Float:
+        r.append(sqlite3_column_double(stmt, colId));
+        break;
+
+      default:
+        throw InvalidColumnException{"SqlStatement::toCSV_currentRowOnly(): invalid column data type for CSV-export (probably BLOB)"};
+      }
+    }
+
+    return r;
+  }
+
+  //----------------------------------------------------------------------------
+
+  std::vector<string> SqlStatement::columnHeaders() const
+  {
+    if (!_hasData)
+    {
+      throw NoDataException{"SqlStatement::columnHeaders(): called on empty or finalized statement"};
+    }
+
+    std::vector<string> headers;
+    for (int colId = 0; colId < resultColCount; ++colId)
+    {
+      headers.push_back(sqlite3_column_name(stmt, colId));
+    }
+
+    return headers;
   }
 
   //----------------------------------------------------------------------------

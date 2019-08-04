@@ -955,6 +955,32 @@ namespace SqliteOverlay
         bool includeHeaders   ///< include column headers in the first CSV table row yes/no
         );
 
+    /** \brief Exports the current data row as a CSV_Row; the statement itself is not modified
+     * (i.e., we do not call `step()` or 'forceFinalize()` on the statement at any time).
+     *
+     * \throws InvalidColumnException if any of the result columns contains BLOB data because
+     * that can't be properly exported to CSV.
+     *
+     * \throws NoDataException if the statement was already finalized when calling this function or if
+     * the statement didn't point to a data row or if the result set does not contain at least one column.
+     *
+     * \returns a CSV_Row instance with the results of the statement
+     */
+    Sloppy::CSV_Row toCSV_currentRowOnly() const;
+
+    /** \brief Returns a list of strings that contains the names of the
+     * column in the statement's result set.
+     *
+     * The statement has to point to a valid data row otherwise this
+     * function will fail.
+     *
+     * \throws NoDataException if the statement was already finalized when calling this function or if
+     * the statement didn't point to a data row.
+     *
+     * \returns a string list containing the column names
+     */
+    std::vector<std::string> columnHeaders() const;
+
 
 
   protected:
