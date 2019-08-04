@@ -61,7 +61,7 @@ namespace SqliteOverlay
     template<class T, typename ValType>
     std::vector<T> getObjectsByColumnValue(const DbTab& objectTab, const std::string& colName, const ValType& val) const
     {
-      const auto& resultVector = objectTab.getRowsByColumnValue(colName, val);
+      const auto resultVector = objectTab.getRowsByColumnValue(colName, val);
       return vector2Objects<T>(resultVector);
     }
 
@@ -74,7 +74,7 @@ namespace SqliteOverlay
     template<class T>
     std::vector<T> getObjectsByWhereClause(const DbTab& objectTab, const WhereClause& w) const
     {
-      const auto& resultVector = objectTab.getRowsByWhereClause(w);
+      const auto resultVector = objectTab.getRowsByWhereClause(w);
       return vector2Objects<T>(resultVector);
     }
 
@@ -87,7 +87,7 @@ namespace SqliteOverlay
     template<class T>
     std::vector<T> getObjectsByWhereClause(const DbTab& objectTab, const std::string& w) const
     {
-      const auto& resultVector = objectTab.getRowsByWhereClause(w);
+      const auto resultVector = objectTab.getRowsByWhereClause(w);
       return vector2Objects<T>(resultVector);
     }
 
@@ -100,7 +100,7 @@ namespace SqliteOverlay
     template<class T>
     std::vector<T> getAllObjects(const DbTab& objectTab) const
     {
-      const auto& resultVector = objectTab.getAllRows();
+      const auto resultVector = objectTab.getAllRows();
       return vector2Objects<T>(resultVector);
     }
 
