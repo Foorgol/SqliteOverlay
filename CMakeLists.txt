@@ -2,7 +2,9 @@ project(SqliteOverlay)
 cmake_minimum_required(VERSION 2.8)
 aux_source_directory(. SRC_LIST)
 
-set(BUILD_TESTS 1)
+# call cmake with "cmake -DBUILD_TESTS=OFF .." to
+# suppress the compilation of unit tests.
+option(BUILD_TESTS "Build unit tests" ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmakeModules/")
 find_package(SQLite3 REQUIRED)

@@ -24,7 +24,7 @@ namespace SqliteOverlay
   public:
     using DatabaseClass = DB_CLASS;
 
-    GenericObjectManager (const DatabaseClass& _db, DbTab _tab)
+    GenericObjectManager (const DatabaseClass& _db, const DbTab& _tab)
       :db(_db), tab(_tab)
     {
       static_assert (std::is_base_of_v<SqliteDatabase, DB_CLASS>, "DB classes must be derived from SqliteDatabase");

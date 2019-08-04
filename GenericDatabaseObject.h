@@ -26,7 +26,7 @@ namespace SqliteOverlay
       static_assert (std::is_base_of_v<SqliteDatabase, DB_CLASS>, "DB classes must be derived from SqliteDatabase");
     }
 
-    GenericDatabaseObject (DB_CLASS& _db, const TabRow& _row)
+    GenericDatabaseObject (const DB_CLASS& _db, const TabRow& _row)
       :db(_db), row(_row)
     {
       static_assert (std::is_base_of_v<SqliteDatabase, DB_CLASS>, "DB classes must be derived from SqliteDatabase");
