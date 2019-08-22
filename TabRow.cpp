@@ -63,11 +63,11 @@ namespace SqliteOverlay
       throw std::invalid_argument("TabRow ctor: empty or invalid parameters");
     }
 
-    WhereClause w{where};
-    w.setLimit(1);
+    //WhereClause w{where};
+    //w.setLimit(1);
     try
     {
-      SqlStatement stmt = w.getSelectStmt(db, tabName, false);
+      SqlStatement stmt = where.getSelectStmt(db, tabName, false);
       rowId = db.get().execScalarQueryInt(stmt);
     }
     catch (BusyException e)

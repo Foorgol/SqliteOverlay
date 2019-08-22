@@ -212,7 +212,14 @@ namespace SqliteOverlay
 
   TabRow DbTab::getSingleRowByWhereClause(const WhereClause& w) const
   {
-    return TabRow(db, tabName, w);
+    try
+    {
+      return TabRow(db, tabName, w);
+    }
+    catch (std::invalid_argument&)
+    {
+      throw NoDataException();
+    }
   }
 
   //----------------------------------------------------------------------------
