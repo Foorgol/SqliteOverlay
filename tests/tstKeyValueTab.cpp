@@ -28,6 +28,10 @@ TEST_F(DatabaseTestScenario, KeyValueTab_Creation)
   ASSERT_TRUE(t.hasColumn("V"));
 
   ASSERT_THROW(db.createNewKeyValueTab("kvt"), std::invalid_argument);
+
+  // this is a test that by default no statements
+  // are cached in the KeyValueTab instance
+  ASSERT_NO_THROW(db.close());
 }
 
 //----------------------------------------------------------------
@@ -226,4 +230,27 @@ TEST_F(DatabaseTestScenario, KeyValueTab_AllKeys)
   ASSERT_EQ(2, ak.size());
   ASSERT_TRUE((ak[0] == "k1") || (ak[1] == "k1"));
   ASSERT_TRUE((ak[0] == "k2") || (ak[1] == "k2"));
+}
+
+//----------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, KeyValueTab_Caching)
+{
+  auto db = getScenario01();
+  auto kvt = db.createNewKeyValueTab("kvt");
+
+  // enable caching
+  kvt.enableStatementCache(true);
+
+  // trigger a few queries so that we
+  // get pending, un-finalized statements
+  kvt.set("k1", 42);
+  ASSERT_EQ(42, kvt.getInt("k1"));
+
+  // a close() operation on the database should now fail
+  ASSERT_THROW(db.close(), BusyException);
+
+  // release all statements and succeed in closing the database
+  kvt.releaseDatabase();
+  ASSERT_NO_THROW(db.close());
 }

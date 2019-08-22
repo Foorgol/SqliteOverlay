@@ -50,24 +50,6 @@ namespace SqliteOverlay
       throw std::invalid_argument("KeyValueTab ctor: table " + tabName + " has no valid value column");
     }
 
-    // prepare the sql-text for looking up values once and for all
-    string sql = "SELECT " + string(VAL_COL_NAME) + " FROM " + tabName + " WHERE ";
-    sql += string(KEY_COL_NAME) + " = ?";
-    valSelectStatement = db.get().prepStatement(sql);
-
-    // prepare the sql-text for updating values once and for all
-    Sloppy::estring cmd{"UPDATE %1 SET %2=? WHERE %3=?"};
-    cmd.arg(tabName);
-    cmd.arg(VAL_COL_NAME);
-    cmd.arg(KEY_COL_NAME);
-    valUpdateStatement = db.get().prepStatement(cmd);
-
-    // prepare the sql-text for inserting values once and for all
-    cmd = string{"INSERT INTO %1 (%2,%3) VALUES (?,?)"};
-    cmd.arg(tabName);
-    cmd.arg(KEY_COL_NAME);
-    cmd.arg(VAL_COL_NAME);
-    valInsertStatement = db.get().prepStatement(cmd);
   }
 
   //----------------------------------------------------------------------------
@@ -108,7 +90,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  double KeyValueTab::getBool(const string& key)
+  bool KeyValueTab::getBool(const string& key)
   {
     bool result;
     get(key, result);
@@ -304,6 +286,114 @@ namespace SqliteOverlay
     }
 
     return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  void KeyValueTab::releaseDatabase()
+  {
+    valSelectStatement.reset();
+    valUpdateStatement.reset();
+    valInsertStatement.reset();
+  }
+
+  //----------------------------------------------------------------------------
+
+  void KeyValueTab::enableStatementCache(bool useCaching)
+  {
+    cacheStatements = useCaching;
+    if (!useCaching) releaseDatabase();
+  }
+
+  //----------------------------------------------------------------------------
+
+  void KeyValueTab::prepValueSelectStmt()
+  {
+    // prepare the sql-text for looking up values once and for all
+    static const string sql{"SELECT " + string(VAL_COL_NAME) + " FROM " + tabName +
+                            " WHERE " + string(KEY_COL_NAME) + " = ?"};
+
+    // do we need to create a new statement at all?
+    if (valSelectStatement)
+    {
+      valSelectStatement->reset(true);
+      return;
+    }
+
+    // prepare an empty dummy statement on the heap
+    valSelectStatement = std::make_unique<SqlStatement>();
+
+    // create the "true" select statement in a tmp variable
+    // on the stack
+    auto tmpStatement = db.get().prepStatement(sql);
+
+    // move "from stack to heap" ;)
+    //
+    // remember: statements are resource owners that
+    // do not support copying
+    *valSelectStatement = std::move(tmpStatement);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void KeyValueTab::prepValueUpdateStmt()
+  {
+    // prepare the sql-text for updating values once and for all
+    static const string sql{
+      "UPDATE " + tabName + " SET " + std::string{VAL_COL_NAME} + "=? " +
+      "WHERE " + std::string{KEY_COL_NAME} + "=?"
+    };
+
+    // do we need to create a new statement at all?
+    if (valUpdateStatement)
+    {
+      valUpdateStatement->reset(true);
+      return;
+    }
+
+    // prepare an empty dummy statement on the heap
+    valUpdateStatement = std::make_unique<SqlStatement>();
+
+    // create the "true" select statement in a tmp variable
+    // on the stack
+    auto tmpStatement = db.get().prepStatement(sql);
+
+    // move "from stack to heap" ;)
+    //
+    // remember: statements are resource owners that
+    // do not support copying
+    *valUpdateStatement = std::move(tmpStatement);
+  }
+
+  //----------------------------------------------------------------------------
+
+  void KeyValueTab::prepValueInsertStmt()
+  {
+    // prepare the sql-text for inserting values once and for all
+    static const string sql{
+      "INSERT INTO " + tabName + " (" + string{KEY_COL_NAME} + "," +
+      string{VAL_COL_NAME} + ") VALUES (?,?)"
+    };
+
+    // do we need to create a new statement at all?
+    if (valInsertStatement)
+    {
+      valInsertStatement->reset(true);
+      return;
+    }
+
+    // prepare an empty dummy statement on the heap
+    valInsertStatement = std::make_unique<SqlStatement>();
+
+    // create the "true" select statement in a tmp variable
+    // on the stack
+    auto tmpStatement = db.get().prepStatement(sql);
+
+    // move "from stack to heap" ;)
+    //
+    // remember: statements are resource owners that
+    // do not support copying
+    *valInsertStatement = std::move(tmpStatement);
   }
 
   //----------------------------------------------------------------------------

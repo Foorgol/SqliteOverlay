@@ -29,6 +29,18 @@
 
 namespace SqliteOverlay
 {
+  /** \brief A convience object that treats a given table as a key-value-store
+   * and eases creating and retrieval of keys and values.
+   *
+   * It uses fixed, predefined column names "K" and "V".
+   *
+   * It supports optional caching of common database queries. So if you expect
+   * a lot of queries, you should consider enabling the statement cache. But
+   * remember that an enabled cache results in persistent, pending, unfinalized
+   * statements that trigger errors when trying to close the underlying database.
+   *
+   * Caching is DISABLED by default.
+   */
   class KeyValueTab
   {
   public:    
@@ -71,15 +83,23 @@ namespace SqliteOverlay
     {
       if (hasKey(key))
       {
-        valUpdateStatement.reset(true);
-        valUpdateStatement.bind(1, val);
-        valUpdateStatement.bind(2, key);
-        valUpdateStatement.step();
+        prepValueUpdateStmt();
+        valUpdateStatement->bind(1, val);
+        valUpdateStatement->bind(2, key);
+        valUpdateStatement->step();
+
+        // delete the statement object if the user
+        // has disabled the statement caching
+        if (!cacheStatements) valUpdateStatement.reset();
       } else {
-        valInsertStatement.reset(true);
-        valInsertStatement.bind(1, key);
-        valInsertStatement.bind(2, val);
-        valInsertStatement.step();
+        prepValueInsertStmt();
+        valInsertStatement->bind(1, key);
+        valInsertStatement->bind(2, val);
+        valInsertStatement->step();
+
+        // delete the statement object if the user
+        // has disabled the statement caching
+        if (!cacheStatements) valInsertStatement.reset();
       }
     }
 
@@ -97,10 +117,14 @@ namespace SqliteOverlay
         T& outVal   ///< reference to which the key's value will be assigned
         )
     {
-      valSelectStatement.reset(true);
-      valSelectStatement.bind(1, key);
-      valSelectStatement.step();
-      valSelectStatement.get(0, outVal);
+      prepValueSelectStmt();
+      valSelectStatement->bind(1, key);
+      valSelectStatement->step();
+      valSelectStatement->get(0, outVal);
+
+      // delete the statement object if the user
+      // has disabled the statement caching
+      if (!cacheStatements) valSelectStatement.reset();
     }
 
     /** \brief Retrieves a value from the table and assigns it to
@@ -117,15 +141,20 @@ namespace SqliteOverlay
         std::optional<T>& outVal   ///< reference to which the key's value will be assigned
         )
     {
-      valSelectStatement.reset(true);
-      valSelectStatement.bind(1, key);
-      valSelectStatement.step();
-      if (!valSelectStatement.hasData())
+      prepValueSelectStmt();
+      valSelectStatement->bind(1, key);
+      valSelectStatement->step();
+
+      if (!(valSelectStatement->hasData()))
       {
         outVal.reset();
-        return;
+      } else {
+        valSelectStatement->get(0, outVal);
       }
-      valSelectStatement.get(0, outVal);
+
+      // delete the statement object if the user
+      // has disabled the statement caching
+      if (!cacheStatements) valSelectStatement.reset();
     }
 
     /** \returns the value of a key as a string
@@ -159,7 +188,7 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the key doesn't exist
      */
-    double getBool(const std::string& key);
+    bool getBool(const std::string& key);
 
     /** \returns the value of a key as a UTCTimestamp
      *
@@ -235,7 +264,7 @@ namespace SqliteOverlay
 
     /** \returns the number of entries (which is: the number of keys) in the table
      */
-    size_t size() const { return tab.length(); };
+    int size() const { return tab.length(); }
 
     /** \brief Removes an entry from the table
      *
@@ -249,13 +278,63 @@ namespace SqliteOverlay
      */
     std::vector<std::string> allKeys() const;
 
+    /** \brief Drops all stored statements and other links to the database so that
+     * the database is no longer "BUSY" due to unfinished prepared statements.
+     *
+     * You can be safely continue to use the object after calling this function
+     * at the (marginal?) cost that some query statements have to be re-created.
+     *
+     * \note Releasing the database does not automatically disable statement
+     * caching. It only drops the currently pending, cached statements, that's all.
+     * If caching is enabled and you continue to use the object, new statements
+     * will be created and cached.
+     */
+    void releaseDatabase();
+
+    /** \brief Enables or disables caching of common query statements; if caching
+     * is enabled, the object keeps some prepared, unfinished SQL statements open
+     * for faster look-ups.
+     *
+     * Disabling the caching implies the release of any pending statements just
+     * like a call to `releaseDatabase` would do.
+     *
+     * \warning Enabling the statement caching prevents the closing of the
+     * associated database connection. The reason is that dabase connections
+     * fail with BUSY if there pending unfinished connections.
+     *
+     * \warning Since we internally store a reference to the database connection
+     * you shouldn't use this object anymore after closing the associated database
+     * connection. Keep that in mind if you use a rather long-living instance
+     * of a KeyValueTab, e.g. in a GUI-widget.
+     */
+    void enableStatementCache(
+        bool useCaching   ///< `true`: caching enabled, `false`: caching disabled
+        );
+
+  protected:
+    /** \brief Either resets or creates/prepares a statement for a value select operation
+     * and stores it in `valSelectStatement`.
+     */
+    void prepValueSelectStmt();
+
+    /** \brief Either resets or creates/prepares a statement for a value update operation
+     * and stores it in `valUpdateStatement`.
+     */
+    void prepValueUpdateStmt();
+
+    /** \brief Either resets or creates/prepares a statement for a value insert operation
+     * and stores it in `valInsertStatement`.
+     */
+    void prepValueInsertStmt();
+
   private:
     std::reference_wrapper<const SqliteDatabase> db;
     std::string tabName;
     DbTab tab;
-    SqlStatement valSelectStatement;
-    SqlStatement valUpdateStatement;
-    SqlStatement valInsertStatement;
+    bool cacheStatements{false};
+    std::unique_ptr<SqlStatement> valSelectStatement;
+    std::unique_ptr<SqlStatement> valUpdateStatement;
+    std::unique_ptr<SqlStatement> valInsertStatement;
   };  
 
   //----------------------------------------------------------------------------

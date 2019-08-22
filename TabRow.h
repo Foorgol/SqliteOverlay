@@ -77,7 +77,7 @@ namespace SqliteOverlay
 
     /** \brief Empty default dtor
      */
-    virtual ~TabRow () {}
+    ~TabRow () {}
 
     /** \brief Copy operator, makes us point to the same row as 'other'
      *
