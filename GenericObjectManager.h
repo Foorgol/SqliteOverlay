@@ -18,6 +18,230 @@
 
 namespace SqliteOverlay
 {
+  template<class T, typename DbClass>
+  std::vector<T> rowVector2Objects(const DbClass& db, const std::vector<TabRow>& rows)
+  {
+    std::vector<T> result;
+    for_each(rows.begin(), rows.end(), [&](const TabRow& r)
+    {
+      result.push_back(T{db, r});
+    });
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  template<class T, typename DbClass, typename ValType>
+  std::vector<T> getObjectsByColumnValue(const DbClass& db, const DbTab& objectTab, const std::string& colName, const ValType& val)
+  {
+    const auto resultVector = objectTab.getRowsByColumnValue(colName, val);
+    return rowVector2Objects<T>(db, resultVector);
+  }
+
+  //----------------------------------------------------------------------------
+
+  template<class T, typename DbClass>
+  std::vector<T> getObjectsByWhereClause(const DbClass& db, const DbTab& objectTab, const WhereClause& w)
+  {
+    const auto resultVector = objectTab.getRowsByWhereClause(w);
+    return rowVector2Objects<T>(db, resultVector);
+  }
+
+  //----------------------------------------------------------------------------
+
+  template<class T, typename DbClass>
+  std::vector<T> getObjectsByWhereClause(const DbClass& db, const DbTab& objectTab, const std::string& w)
+  {
+    const auto resultVector = objectTab.getRowsByWhereClause(w);
+    return rowVector2Objects<T>(db, resultVector);
+  }
+
+  //----------------------------------------------------------------------------
+
+  template<class T, typename DbClass>
+  std::vector<T> getAllObjects(const DbClass& db, const DbTab& objectTab)
+  {
+    const auto resultVector = objectTab.getAllRows();
+    return rowVector2Objects<T>(db, resultVector);
+  }
+
+  //----------------------------------------------------------------------------
+
+  template<class T, typename DbClass, typename ValType>
+  std::optional<T> getSingleObjectByColumnValue(const DbClass& db, const DbTab& objectTab, const std::string& colName, const ValType& val)
+  {
+    try
+    {
+      TabRow r = objectTab.getSingleRowByColumnValue(colName, val);
+      return T{db, r};
+    } catch (NoDataException e) {
+      return std::optional<T>{};
+    }
+
+    // throw all other execeptions, e.g. BUSY
+  }
+
+  //----------------------------------------------------------------------------
+
+  template<class T, typename DbClass>
+  std::optional<T> getSingleObjectByWhereClause(const DbClass& db, const DbTab& objectTab, const WhereClause& w)
+  {
+    try
+    {
+      TabRow r = objectTab.getSingleRowByWhereClause(w);
+      return T{db, r};
+    } catch (NoDataException e) {
+      return std::optional<T>{};
+    }
+
+    // throw all other execeptions, e.g. BUSY
+  }
+
+  //----------------------------------------------------------------------------
+
+  template<class T, typename DbClass>
+  std::optional<T> getSingleObjectByWhereClause(const DbClass& db, const DbTab& objectTab, const std::string& w)
+  {
+    try
+    {
+      TabRow r = objectTab.getSingleRowByWhereClause(w);
+      return T{db, r};
+    } catch (NoDataException e) {
+      return std::optional<T>{};
+    }
+
+    // throw all other execeptions, e.g. BUSY
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** \brief Filters all rows that contain a given value in a given column; in
+   * all rows that match the given value in the given column, look up an integer
+   * in another given column; use that integer value as an ID for instanciating
+   * a database object of type T, most likely on a second table.
+   *
+   * Example: a table has the column "ObjType" and "RefId". With this function
+   * you can easily search for all rows in which "ObjType" equals "42" and then
+   * use the value in "RefId" to instantiate a new object of type T.
+   *
+   * \returns A list of database objects of type T whose IDs were retrieved from
+   * rows in a custom table that matched a specific column-value-pair.
+   */
+  template<class T, typename DbClass, typename ValType>
+  std::vector<T> filterAndDereference(
+      const DbClass& db,   ///< the specific, derived database we're operating on
+      const DbTab& srcTab,   ///< table that contains the to-be-filtered column and the column with the reference IDs
+      const std::string& filterColName,   ///< name of the column in `srcTab` that we should search in
+      const ValType& filterValue,   ///< the value to look for in column 'filterColName'
+      const std::string& referingCol   ///< the name of the column in `srcTab` that contains the reference IDs
+      )
+  {
+    return filterAndDereference(db, srcTab.name(), filterColName, filterValue, referingCol);
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** \brief Filters all rows that contain a given value in a given column; in
+   * all rows that match the given value in the given column, look up an integer
+   * in another given column; use that integer value as an ID for instanciating
+   * a database object of type T, most likely on a second table.
+   *
+   * Example: a table has the column "ObjType" and "RefId". With this function
+   * you can easily search for all rows in which "ObjType" equals "42" and then
+   * use the value in "RefId" to instantiate a new object of type T.
+   *
+   * \returns A list of database objects of type T whose IDs were retrieved from
+   * rows in a custom table that matched a specific column-value-pair.
+   */
+  template<class T, typename DbClass, typename ValType>
+  std::vector<T> filterAndDereference(
+      const DbClass& db,   ///< the specific, derived database we're operating on
+      const std::string srcTabName,   ///< table that contains the to-be-filtered column and the column with the reference IDs
+      const std::string& filterColName,   ///< name of the column in `srcTab` that we should search in
+      const ValType& filterValue,   ///< the value to look for in column 'filterColName'
+      const std::string& referingCol   ///< the name of the column in `srcTab` that contains the reference IDs
+      )
+  {
+    std::string sql{
+      "SELECT " + referingCol + " FROM " + srcTabName +
+      " WHERE " + filterColName + " = ?"
+    };
+
+    auto stmt = db.prepStatement(sql);
+    stmt.bind(1, filterValue);
+
+    std::vector<T> result;
+    for (stmt.step(); stmt.hasData(); ++stmt)
+    {
+      result.push_back(T{db, stmt.getInt(0)});
+    }
+
+    return result;
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** \brief Takes the value of a given column in a given row and uses
+   * it to instantiate a new database object of type T
+   */
+  template<class T, typename DbClass>
+  std::optional<T> getSingleReferencedObject(
+      const DbClass& db,   ///< the specific, derived database we're operating on
+      const TabRow& r,   ///< the row containing the reference ID
+      const std::string& refColumnName   ///< the name of the column containing the reference ID
+      )
+  {
+    auto objId = r.getInt2(refColumnName);
+    return (objId.has_value()) ? T(db, *objId) : std::optional<T>{};
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** \brief Looks up a single row using a WHERE clause and uses value from
+   * a given column in that row for instantiating a new database object of type T
+   */
+  template<class T, typename DbClass>
+  std::optional<T> getSingleReferencedObject(
+      const DbClass& db,   ///< the specific, derived database we're operating on
+      const DbTab& srcTab,   ///< the table on which we should run the WHERE clause
+      const WhereClause& w,   ///< the WHERE clause itself
+      const std::string& refColumnName  ///< the name of the column in `srcTab` that contains the reference IDs
+      )
+  {
+    std::optional<TabRow> row = srcTab.getSingleRowByWhereClause2(w);
+    if (row.has_value())
+    {
+      return getSingleReferencedObject(db, row.value(), refColumnName);
+    }
+    return std::optional<TabRow>{};
+  }
+
+  //----------------------------------------------------------------------------
+
+  /** \brief Looks up a single row using a column/value-pair and uses value from
+   * a given column in that row for instantiating a new database object of type T
+   */
+  template<class T, typename DbClass, typename ValType>
+  std::optional<T> getSingleReferencedObject(
+      const DbClass& db,   ///< the specific, derived database we're operating on
+      const DbTab& srcTab,   ///< the table on which we should run the WHERE clause
+      const std::string& filterCol,   ///< the column to be used for filtering
+      const ValType& filterVal,   ///< the value to search for in `filterCol`
+      const std::string& refColumnName  ///< the name of the column in `srcTab` that contains the reference IDs
+      )
+  {
+    std::optional<TabRow> row = srcTab.getSingleRowByColumnValue2(filterCol, filterVal);
+    if (row.has_value())
+    {
+      return getSingleReferencedObject(db, row.value(), refColumnName);
+    }
+    return std::optional<TabRow>{};
+  }
+
+  //----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
   template<class DB_CLASS = SqliteDatabase>
   class GenericObjectManager
   {
@@ -55,167 +279,71 @@ namespace SqliteOverlay
     //----------------------------------------------------------------------------
 
   protected:
-    std::reference_wrapper<const DB_CLASS> db;
+    const DB_CLASS& db;
     DbTab tab;
-
-    template<class T, typename ValType>
-    std::vector<T> getObjectsByColumnValue(const DbTab& objectTab, const std::string& colName, const ValType& val) const
-    {
-      const auto resultVector = objectTab.getRowsByColumnValue(colName, val);
-      return vector2Objects<T>(resultVector);
-    }
 
     template<class T, typename ValType>
     std::vector<T> getObjectsByColumnValue(const std::string& colName, const ValType& val) const
     {
-      return getObjectsByColumnValue<T>(tab, colName, val);
-    }
-
-    template<class T>
-    std::vector<T> getObjectsByWhereClause(const DbTab& objectTab, const WhereClause& w) const
-    {
-      const auto resultVector = objectTab.getRowsByWhereClause(w);
-      return vector2Objects<T>(resultVector);
+      return getObjectsByColumnValue<T>(db, tab, colName, val);
     }
 
     template<class T>
     std::vector<T> getObjectsByWhereClause(const WhereClause& w) const
     {
-      return getObjectsByWhereClause<T>(tab, w);
-    }
-
-    template<class T>
-    std::vector<T> getObjectsByWhereClause(const DbTab& objectTab, const std::string& w) const
-    {
-      const auto resultVector = objectTab.getRowsByWhereClause(w);
-      return vector2Objects<T>(resultVector);
+      return getObjectsByWhereClause<T>(db, tab, w);
     }
 
     template<class T>
     std::vector<T> getObjectsByWhereClause(const std::string& w) const
     {
-      return getObjectsByWhereClause<T>(tab, w);
-    }
-
-    template<class T>
-    std::vector<T> getAllObjects(const DbTab& objectTab) const
-    {
-      const auto resultVector = objectTab.getAllRows();
-      return vector2Objects<T>(resultVector);
+      return getObjectsByWhereClause<T>(db, tab, w);
     }
 
     template<class T>
     std::vector<T> getAllObjects() const
     {
-      return getAllObjects<T>(tab);
-    }
-
-    template<class T>
-    std::vector<T> vector2Objects(const std::vector<TabRow>& rows) const
-    {
-      std::vector<T> result;
-      for_each(rows.begin(), rows.end(), [&](const TabRow& r)
-      {
-        result.push_back(T{db, r});
-      });
-      return result;
-    }
-
-    template<class T, typename ValType>
-    std::optional<T> getSingleObjectByColumnValue(const DbTab& objectTab, const std::string& colName, const ValType& val) const
-    {
-      try
-      {
-        TabRow r = objectTab.getSingleRowByColumnValue(colName, val);
-        return T{db, r};
-      } catch (NoDataException e) {
-        return std::optional<T>{};
-      }
-
-      // throw all other execeptions, e.g. BUSY
+      return getAllObjects<T>(db, tab);
     }
 
     template<class T, typename ValType>
     std::optional<T> getSingleObjectByColumnValue(const std::string& colName, const ValType& val) const
     {
-      return getSingleObjectByColumnValue<T>(tab, colName, val);
-    }
-
-
-    template<class T>
-    std::optional<T> getSingleObjectByWhereClause(const DbTab& objectTab, const WhereClause& w) const
-    {
-      try
-      {
-        TabRow r = objectTab.getSingleRowByWhereClause(w);
-        return T{db, r};
-      } catch (NoDataException e) {
-        return std::optional<T>{};
-      }
-
-      // throw all other execeptions, e.g. BUSY
+      return getSingleObjectByColumnValue<T>(db, tab, colName, val);
     }
 
     template<class T>
     std::optional<T> getSingleObjectByWhereClause(const WhereClause& w) const
     {
-      return getSingleObjectByWhereClause<T>(tab, w);
+      return getSingleObjectByWhereClause<T>(db, tab, w);
     }
 
-    template<class T>
-    std::optional<T> getSingleObjectByWhereClause(const DbTab& objectTab, const std::string& w) const
-    {
-      try
-      {
-        TabRow r = objectTab.getSingleRowByWhereClause(w);
-        return T{db, r};
-      } catch (NoDataException e) {
-        return std::optional<T>{};
-      }
-
-      // throw all other execeptions, e.g. BUSY
-    }
     template<class T>
     std::optional<T> getSingleObjectByWhereClause(const std::string& w) const
     {
-      return getSingleObjectByWhereClause<T>(tab, w);
+      return getSingleObjectByWhereClause<T>(db, tab, w);
     }
 
     /** \brief Filters all rows that contain a given value in a given column; in
      * all rows that match the given value in the given column, look up an integer
      * in another given column; use that integer value as an ID for instanciating
-     * a database object of type T.
+     * a database object of type T, most likely on a second table.
      *
-     * Example: a table has the column "RefId" and "ObjType". With this function
+     * Example: a table has the column "ObjType" and "RefId". With this function
      * you can easily search for all rows in which "ObjType" equals "42" and then
      * use the value in "RefId" to instantiate a new object of type T.
      *
      * \returns A list of database objects of type T whose IDs were retrieved from
      * rows in a custom table that matched a specific column-value-pair.
      */
-    template<class T>
-    std::vector<T> resolveMappingAndGetObjects(
-        const std::string& mappingTabName,   ///< the name of the table that contains the references and the key column
-        const std::string& keyColumnName,   ///< the column in that table that contains the key
-        int keyColumnValue,   ///< the value that the result rows should match
-        const std::string& mappedIdColumnName   ///< the name of the column that holds the requested object IDs
+    template<class T, typename DbClass, typename ValType>
+    std::vector<T> filterAndDereference(
+        const std::string& filterColName,   ///< name of the column in "our" tab that we should search in
+        const ValType& filterValue,   ///< the value to look for in column 'filterColName'
+        const std::string& referingCol   ///< the name of the column in "our" tab that contains the reference IDs
         ) const
     {
-      std::string sql = "SELECT " + mappedIdColumnName + " FROM " + mappingTabName + " WHERE ";
-      sql += keyColumnName + " = " + std::to_string(keyColumnValue);
-
-      auto stmt = db.get().prepStatement(sql);
-      stmt.step();
-
-      std::vector<T> result;
-      while (stmt.hasData())
-      {
-        auto obj = T(db.get(), stmt.getInt(0));
-        result.push_back(obj);
-        stmt.step();
-      }
-
-      return result;
+      return filterAndDereference(db, tab, filterColName, filterValue, referingCol);
     }
 
     /** \brief Takes the value of a given column in a given row and uses
@@ -224,22 +352,7 @@ namespace SqliteOverlay
     template<class T>
     std::optional<T> getSingleReferencedObject(const TabRow& r, const std::string& refColumnName) const
     {
-      auto objId = r.getInt2(refColumnName);
-      return (objId.has_value()) ? T(db.get(), objId.value()) : std::optional<T>{};
-    }
-
-    /** \brief Takes the value of a given column in a row that is the first match in a WHERE clause
-     * and uses that column to instantiate a new database object of type T
-     */
-    template<class T>
-    std::optional<T> getSingleReferencedObject(const DbTab& srcTab, const WhereClause& w, const std::string& refColumnName) const
-    {
-      std::optional<TabRow> row = srcTab.getSingleRowByWhereClause2(w);
-      if (row.has_value())
-      {
-        return getSingleReferencedObject(row.value(), refColumnName);
-      }
-      return std::optional<TabRow>{};
+      return getSingleReferencedObject(db, r, refColumnName);
     }
 
     /** \brief Takes the value of a given column in a row that is the first match in a WHERE clause
@@ -248,9 +361,21 @@ namespace SqliteOverlay
     template<class T>
     std::optional<T> getSingleReferencedObject(const WhereClause& w, const std::string& refColumnName) const
     {
-      return getSingleReferencedObject<T>(tab, w, refColumnName);
+      return getSingleReferencedObject<T>(db, tab, w, refColumnName);
     }
 
+    /** \brief Looks up a single row using a column/value-pair and uses value from
+     * a given column in that row for instantiating a new database object of type T
+     */
+    template<class T, typename DbClass, typename ValType>
+    std::optional<T> getSingleReferencedObject(
+        const std::string& filterCol,   ///< the column to be used for filtering
+        const ValType& filterVal,   ///< the value to search for in `filterCol`
+        const std::string& refColumnName  ///< the name of the column in `srcTab` that contains the reference IDs
+        ) const
+    {
+      return getSingleReferencedObject(db, tab, filterCol, filterVal, refColumnName);
+    }
   };
 
 }

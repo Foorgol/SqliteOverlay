@@ -833,6 +833,13 @@ namespace SqliteOverlay
         const std::vector<std::string>& colNames   ///< the list of columns that shall be exported
         ) const;
 
+    /** \returns a reference to the underlying database instance
+     */
+    const SqliteDatabase& dbRef() const
+    {
+      return db.get();
+    }
+
   protected:
     void genCommaSepString(std::string& target, const std::string& element) const
     {
