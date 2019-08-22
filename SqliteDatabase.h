@@ -183,27 +183,56 @@ namespace SqliteOverlay
     /** \brief Disabled copy assignment */
     SqliteDatabase& operator=(const SqliteDatabase&) = delete;
 
-    /** \brief Move ctor, transfers all handles etc. to the destination object
+    /** \brief Move ctor
      *
-     * Test case: not yet
+     * \warning Do not move database objects (neither as
+     * source nor target) if they are shared between threads or
+     * mysterious things might happen.
+     *
+     * \note If the changelog was enabled before the move operation
+     * we try to flawlessly move that over to the new object. But
+     * this has not been well tested so far. Good luck.
+     */
+    SqliteDatabase(
+        SqliteDatabase&& other   ///< the exising object from we construct a new one
+        );
+
+    /** \brief Move assignment operator
+     *
+     * For the possible exceptions see also the description
+     * of `close()` because internally we call `close()` on
+     * the existing connection before overwriting it with the
+     * other connection.
+     *
+     * \warning Do not move database objects (neither as
+     * source nor target) if they are shared between threads or
+     * mysterious things might happen.
+     *
+     * \note If the changelog was enabled before the move operation
+     * we try to flawlessly move that over to the new object. But
+     * this has not been well tested so far. Good luck.
+     *
+     * \throws BusyException if the target instance could not
+     * successfully `close()` its connection.
+     *
+     * \throws BusyException if the target instance could not
+     * successfully `close()` its connection.
      *
      */
-    SqliteDatabase(SqliteDatabase&& other);
-
-    /** \brief Move assignment, transfers all handles etc. to the destination object
-     *
-     * Test case: not yet
-     *
-     */
-    SqliteDatabase& operator=(SqliteDatabase&&);
+    SqliteDatabase& operator=(
+        SqliteDatabase&&   ///< the source that shall be moved
+        );
 
 
-    /** \brief Closes the database connection. The instance shouldn't be
-     * used anymore after calling this function.
+    /** \brief Closes the database connection. The instance (or any
+     * dangling references to it) shouldn't be used anymore after calling this function.
      *
-     * \warning On success, this function also deletes all cached `DbTab` instances!
-     * In case you stored any pointers to 'DbTab' instances anywhere in your code
-     * these pointers become invalid after calling `close()` and the call was successful!
+     * \warning Pending transactions will be rolled back by calling `close()`!
+     *
+     * \throws BusyException if the database has still un-finalized prepared statements
+     * or ongoing backup operations pending.
+     *
+     * \throws GenericSqliteException if anything else should go wrong.
      *
      * Test case: partially, as part of the ctor tests
      *

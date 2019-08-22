@@ -285,43 +285,43 @@ namespace SqliteOverlay
     template<class T, typename ValType>
     std::vector<T> getObjectsByColumnValue(const std::string& colName, const ValType& val) const
     {
-      return getObjectsByColumnValue<T>(db, tab, colName, val);
+      return SqliteOverlay::getObjectsByColumnValue<T, DB_CLASS, ValType>(db, tab, colName, val);
     }
 
     template<class T>
     std::vector<T> getObjectsByWhereClause(const WhereClause& w) const
     {
-      return getObjectsByWhereClause<T>(db, tab, w);
+      return SqliteOverlay::getObjectsByWhereClause<T, DB_CLASS>(db, tab, w);
     }
 
     template<class T>
     std::vector<T> getObjectsByWhereClause(const std::string& w) const
     {
-      return getObjectsByWhereClause<T>(db, tab, w);
+      return SqliteOverlay::getObjectsByWhereClause<T, DB_CLASS>(db, tab, w);
     }
 
     template<class T>
     std::vector<T> getAllObjects() const
     {
-      return getAllObjects<T>(db, tab);
+      return SqliteOverlay::getAllObjects<T, DB_CLASS>(db, tab);
     }
 
     template<class T, typename ValType>
     std::optional<T> getSingleObjectByColumnValue(const std::string& colName, const ValType& val) const
     {
-      return getSingleObjectByColumnValue<T>(db, tab, colName, val);
+      return SqliteOverlay::getSingleObjectByColumnValue<T, DB_CLASS>(db, tab, colName, val);
     }
 
     template<class T>
     std::optional<T> getSingleObjectByWhereClause(const WhereClause& w) const
     {
-      return getSingleObjectByWhereClause<T>(db, tab, w);
+      return SqliteOverlay::getSingleObjectByWhereClause<T, DB_CLASS>(db, tab, w);
     }
 
     template<class T>
     std::optional<T> getSingleObjectByWhereClause(const std::string& w) const
     {
-      return getSingleObjectByWhereClause<T>(db, tab, w);
+      return SqliteOverlay::getSingleObjectByWhereClause<T, DB_CLASS>(db, tab, w);
     }
 
     /** \brief Filters all rows that contain a given value in a given column; in
@@ -336,14 +336,14 @@ namespace SqliteOverlay
      * \returns A list of database objects of type T whose IDs were retrieved from
      * rows in a custom table that matched a specific column-value-pair.
      */
-    template<class T, typename DbClass, typename ValType>
+    template<class T, typename ValType>
     std::vector<T> filterAndDereference(
         const std::string& filterColName,   ///< name of the column in "our" tab that we should search in
         const ValType& filterValue,   ///< the value to look for in column 'filterColName'
         const std::string& referingCol   ///< the name of the column in "our" tab that contains the reference IDs
         ) const
     {
-      return filterAndDereference(db, tab, filterColName, filterValue, referingCol);
+      return SqliteOverlay::filterAndDereference<T, DB_CLASS, ValType>(db, tab, filterColName, filterValue, referingCol);
     }
 
     /** \brief Takes the value of a given column in a given row and uses
@@ -352,7 +352,7 @@ namespace SqliteOverlay
     template<class T>
     std::optional<T> getSingleReferencedObject(const TabRow& r, const std::string& refColumnName) const
     {
-      return getSingleReferencedObject(db, r, refColumnName);
+      return SqliteOverlay::getSingleReferencedObject<T, DB_CLASS>(db, r, refColumnName);
     }
 
     /** \brief Takes the value of a given column in a row that is the first match in a WHERE clause
@@ -361,20 +361,20 @@ namespace SqliteOverlay
     template<class T>
     std::optional<T> getSingleReferencedObject(const WhereClause& w, const std::string& refColumnName) const
     {
-      return getSingleReferencedObject<T>(db, tab, w, refColumnName);
+      return SqliteOverlay::getSingleReferencedObject<T, DB_CLASS>(db, tab, w, refColumnName);
     }
 
     /** \brief Looks up a single row using a column/value-pair and uses value from
      * a given column in that row for instantiating a new database object of type T
      */
-    template<class T, typename DbClass, typename ValType>
+    template<class T, typename ValType>
     std::optional<T> getSingleReferencedObject(
         const std::string& filterCol,   ///< the column to be used for filtering
         const ValType& filterVal,   ///< the value to search for in `filterCol`
         const std::string& refColumnName  ///< the name of the column in `srcTab` that contains the reference IDs
         ) const
     {
-      return getSingleReferencedObject(db, tab, filterCol, filterVal, refColumnName);
+      return SqliteOverlay::getSingleReferencedObject<T, DB_CLASS, ValType>(db, tab, filterCol, filterVal, refColumnName);
     }
   };
 

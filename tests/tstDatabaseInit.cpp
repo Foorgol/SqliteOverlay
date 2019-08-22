@@ -3,6 +3,7 @@
 
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"
+#include "Changelog.h"
 
 using namespace SqliteOverlay;
 namespace bfs = boost::filesystem;
@@ -24,7 +25,8 @@ TEST_F(DatabaseTestScenario, DatabaseCtor)
   db.close();
   ASSERT_FALSE(db.isAlive());
 
-  // open an existing database
+  // open an existing database, implicitly tests
+  // basic move assignment
   ASSERT_THROW(SqliteDatabase(dbFileName, OpenMode::ForceNew), std::invalid_argument);
   db = SqliteDatabase{dbFileName, OpenMode::OpenExisting_RO};
   db.close();
@@ -49,7 +51,60 @@ TEST_F(DatabaseTestScenario, DatabaseCtor)
   ASSERT_THROW(SqliteDatabase(":memory:", OpenMode::OpenExisting_RO), std::invalid_argument);
 }
 
+TEST_F(DatabaseTestScenario, MoveOps)
+{
+  auto db = getScenario01();
+
+  // enable the changelog and execute an insert
+  db.enableChangeLog(true);
+  db.execContentQuery("INSERT INTO t1(i) VALUES (12345)");
+  ASSERT_EQ(1, db.getChangeLogLength());
+
+  // move-construct a new instance
+  SampleDB newDb{std::move(db)};
+  ASSERT_FALSE(db.isAlive());
+  ASSERT_EQ(0, db.getChangeLogLength());  // content has been moved
+  ASSERT_EQ(1, newDb.getChangeLogLength());
+
+  // execute another insert
+  newDb.execContentQuery("INSERT INTO t1(i) VALUES (9876)");
+
+  // the changelog should now have TWO entries!
+  ASSERT_EQ(2, newDb.getChangeLogLength());
+  auto cLog = newDb.getAllChangesAndClearQueue();
+  newDb.disableChangeLog(true);
+  ASSERT_EQ(2, cLog.size());
+  ASSERT_EQ(SqliteOverlay::RowChangeAction::Insert, cLog[0].action);
+  ASSERT_EQ(6, cLog[0].rowId);
+  ASSERT_EQ(SqliteOverlay::RowChangeAction::Insert, cLog[1].action);
+  ASSERT_EQ(7, cLog[1].rowId);
+
+  //
+  // Same for move assignment
+  //
+
+  newDb.enableChangeLog(true);
+  newDb.execContentQuery("INSERT INTO t1(i) VALUES (5656)");
+  ASSERT_EQ(1, newDb.getChangeLogLength());
+  db = std::move(newDb);
+  ASSERT_FALSE(newDb.isAlive());
+  ASSERT_EQ(0, newDb.getChangeLogLength());  // content has been moved
+  ASSERT_EQ(1, db.getChangeLogLength());
+
+  db.execContentQuery("INSERT INTO t1(i) VALUES (2222222)");
+
+  ASSERT_EQ(2, db.getChangeLogLength());
+  cLog = db.getAllChangesAndClearQueue();
+  db.disableChangeLog(true);
+  ASSERT_EQ(2, cLog.size());
+  ASSERT_EQ(SqliteOverlay::RowChangeAction::Insert, cLog[0].action);
+  ASSERT_EQ(8, cLog[0].rowId);
+  ASSERT_EQ(SqliteOverlay::RowChangeAction::Insert, cLog[1].action);
+  ASSERT_EQ(9, cLog[1].rowId);
+}
+
 //----------------------------------------------------------------
+
 /*
 TEST_F(DatabaseTestScenario, PopulateTablesAndViews)
 {

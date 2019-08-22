@@ -176,14 +176,40 @@ namespace SqliteOverlay
 
   SqliteDatabase& SqliteDatabase::operator=(SqliteDatabase&& other)
   {
+    // acquire both mutexes without causing a deadlock
+    // in multi-threaded environments
+    std::unique_lock<mutex> myLock(changeLogMutex, std::defer_lock);
+    std::unique_lock<mutex> otherLock(other.changeLogMutex, std::defer_lock);
+    std::lock(myLock, otherLock);
+
+    // close my own connection, if any
+    if (dbPtr)
+    {
+      close();
+    }
+
+    // reset the callback pointers for the transaction log
+    sqlite3_update_hook(other.dbPtr, nullptr, nullptr);
+
+    // now move all members over to this object
     dbPtr = other.dbPtr;
     other.dbPtr = nullptr;
 
-    // transfer the dirty counters; we don't need to
-    // reset them in 'other` because it becomes unusual
-    // anyway
     localChangeCounter_resetValue = other.localChangeCounter_resetValue;
-    externalChangeCounter_resetValue = other.localChangeCounter_resetValue;
+    externalChangeCounter_resetValue = other.externalChangeCounter_resetValue;
+    isChangeLogEnabled = other.isChangeLogEnabled;
+    other.isChangeLogEnabled = false;
+    changeLog = std::move(other.changeLog);
+
+    // initialize the pointers in the changeLogCallbackContext
+    logCallbackContext.logMutex = &changeLogMutex;
+    logCallbackContext.logPtr = &changeLog;
+
+    // re-enable the changelog if it was active before
+    if (isChangeLogEnabled)
+    {
+      setDataChangeNotificationCallback(changeLogCallback, &logCallbackContext);
+    }
 
     return *this;
   }
@@ -192,7 +218,31 @@ namespace SqliteOverlay
 
   SqliteDatabase::SqliteDatabase(SqliteDatabase&& other)
   {
-    operator=(std::move(other));
+    // acquire the other's mutex
+    std::unique_lock<mutex>(other.changeLogMutex);
+
+    // reset the callback pointers for the transaction log
+    sqlite3_update_hook(other.dbPtr, nullptr, nullptr);
+
+    // now move all members over to this object
+    dbPtr = other.dbPtr;
+    other.dbPtr = nullptr;
+
+    localChangeCounter_resetValue = other.localChangeCounter_resetValue;
+    externalChangeCounter_resetValue = other.externalChangeCounter_resetValue;
+    isChangeLogEnabled = other.isChangeLogEnabled;
+    other.isChangeLogEnabled = false;
+    changeLog = std::move(other.changeLog);
+
+    // initialize the pointers in the changeLogCallbackContext
+    logCallbackContext.logMutex = &changeLogMutex;
+    logCallbackContext.logPtr = &changeLog;
+
+    // re-enable the changelog if it was active before
+    if (isChangeLogEnabled)
+    {
+      setDataChangeNotificationCallback(changeLogCallback, &logCallbackContext);
+    }
   }
 
   //----------------------------------------------------------------------------
