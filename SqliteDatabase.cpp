@@ -974,7 +974,7 @@ namespace SqliteOverlay
 
     TableCreator tc;
     tc.addCol(KeyValueTab::KEY_COL_NAME, ColumnDataType::Text, ConflictClause::Rollback, ConflictClause::Rollback);
-    tc.addCol(KeyValueTab::VAL_COL_NAME, ColumnDataType::Null, ConflictClause::Rollback, ConflictClause::Rollback);
+    tc.addCol(KeyValueTab::VAL_COL_NAME, ColumnDataType::Null, ConflictClause::NotUsed, ConflictClause::Rollback);
     tc.createTableAndResetCreator(*this, tabName);
 
     // create an index with a unique name on the "key"-column
