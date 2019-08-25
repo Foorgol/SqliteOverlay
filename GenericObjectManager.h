@@ -70,13 +70,10 @@ namespace SqliteOverlay
   template<class T, typename DbClass, typename ValType>
   std::optional<T> getSingleObjectByColumnValue(const DbClass& db, const DbTab& objectTab, const std::string& colName, const ValType& val)
   {
-    try
-    {
-      TabRow r = objectTab.getSingleRowByColumnValue(colName, val);
-      return T{db, r};
-    } catch (NoDataException e) {
-      return std::optional<T>{};
-    }
+    auto r = objectTab.getSingleRowByColumnValue2(colName, val);
+
+    if (r) return T{db, *r};
+    return std::optional<T>{};
 
     // throw all other execeptions, e.g. BUSY
   }
@@ -86,13 +83,10 @@ namespace SqliteOverlay
   template<class T, typename DbClass>
   std::optional<T> getSingleObjectByWhereClause(const DbClass& db, const DbTab& objectTab, const WhereClause& w)
   {
-    try
-    {
-      TabRow r = objectTab.getSingleRowByWhereClause(w);
-      return T{db, r};
-    } catch (NoDataException e) {
-      return std::optional<T>{};
-    }
+    auto r = objectTab.getSingleRowByWhereClause2(w);
+
+    if (r) return T{db, *r};
+    return std::optional<T>{};
 
     // throw all other execeptions, e.g. BUSY
   }
@@ -102,13 +96,10 @@ namespace SqliteOverlay
   template<class T, typename DbClass>
   std::optional<T> getSingleObjectByWhereClause(const DbClass& db, const DbTab& objectTab, const std::string& w)
   {
-    try
-    {
-      TabRow r = objectTab.getSingleRowByWhereClause(w);
-      return T{db, r};
-    } catch (NoDataException e) {
-      return std::optional<T>{};
-    }
+    auto r = objectTab.getSingleRowByWhereClause2(w);
+
+    if (r) return T{db, *r};
+    return std::optional<T>{};
 
     // throw all other execeptions, e.g. BUSY
   }

@@ -115,11 +115,9 @@ TEST_F(DatabaseTestScenario, DbTab_Get2)
 
   // get2 with WHERE clauses
   WhereClause w;
-  r = t1.get2(w);  // empty clause
-  ASSERT_FALSE(r.has_value());
+  ASSERT_THROW(t1.get2(w), std::invalid_argument);  // empty clause
   w.addCol("sdkjf", "sdlfkj");
-  r = t1.get2(w);  // invalid clause
-  ASSERT_FALSE(r.has_value());
+  ASSERT_THROW(t1.get2(w), SqlStatementCreationError);  // invalid clause
   w.clear();
   w.addCol("rowid", 200);
   r = t1.get2(w);  // clause without matches
@@ -138,37 +136,39 @@ TEST_F(DatabaseTestScenario, DbTab_RowByColumnValue)
   ASSERT_EQ(4, r.id());
   r = t1.getSingleRowByColumnValue("f", 666.66);
   ASSERT_EQ(2, r.id());
-  for (const string& s : {"i", "lkjfd", " ", ""})
+  ASSERT_THROW(t1.getSingleRowByColumnValue("i", 1000), NoDataException);
+  for (const string& s : {"lkjfd", " ", ""})
   {
-    ASSERT_THROW(t1.getSingleRowByColumnValue(s, 1000), NoDataException);
+    ASSERT_THROW(t1.getSingleRowByColumnValue(s, 1000), SqlStatementCreationError);
   }
 
   // single row by column value with optional result
   auto r2 = t1.getSingleRowByColumnValue2("s", "Ho");
   ASSERT_TRUE(r2.has_value());
   ASSERT_EQ(4, r2->id());
-  for (const string& s : {"i", "lkjfd", " ", ""})
+  r2 = t1.getSingleRowByColumnValue2("i", 1000);
+  ASSERT_FALSE(r2.has_value());
+  for (const string& s : {"lkjfd", " ", ""})
   {
-    auto r3 = t1.getSingleRowByColumnValue2(s, 1000);
-    ASSERT_FALSE(r3.has_value());
+    ASSERT_THROW(t1.getSingleRowByColumnValue2(s, 1000), SqlStatementCreationError);
   }
 
   // single row by column value NULL
   r = t1.getSingleRowByColumnValueNull("i");
   ASSERT_EQ(2, r.id());
-  for (const string& s : {"s", "lkjfd", " ", ""})
+  ASSERT_THROW(t1.getSingleRowByColumnValueNull("s"), NoDataException);
+  for (const string& s : {"lkjfd", " ", ""})
   {
-    ASSERT_THROW(t1.getSingleRowByColumnValueNull(s), NoDataException);
+    ASSERT_THROW(t1.getSingleRowByColumnValueNull(s), SqlStatementCreationError);
   }
 
   // single row by column value NULL with optional result
   r2 = t1.getSingleRowByColumnValueNull2("i");
   ASSERT_TRUE(r2.has_value());
   ASSERT_EQ(2, r2->id());
-  for (const string& s : {"s", "lkjfd", " ", ""})
+  for (const string& s : {"lkjfd", " ", ""})
   {
-    auto r3 = t1.getSingleRowByColumnValueNull2(s);
-    ASSERT_FALSE(r3.has_value());
+    ASSERT_THROW(t1.getSingleRowByColumnValueNull2(s), SqlStatementCreationError);
   }
 }
 

@@ -563,6 +563,151 @@ namespace SqliteOverlay
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
+    //-----------------
+    /** \brief Retrieves the value of a column in the statement result as int value (32 bit)
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \returns the value in the requested result column as int or an empty optional in case of NULL
+     *
+     * Test case: yes, but without implicit conversion and only with partial exception testing
+     *
+     */
+    std::optional<int> getInt2(
+        int colId   ///< the zero-based column ID in the result row
+        ) const;
+
+    /** \brief Retrieves the value of a column in the statement result as long value (64 bit)
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws NullValueException if the column contains NULL
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \returns the value in the requested result column as long  or an empty optional in case of NULL
+     *
+     * Test case: yes
+     *
+     */
+    std::optional<long> getLong2(
+        int colId   ///< the zero-based column ID in the result row
+        ) const;
+
+    /** \brief Retrieves the value of a column in the statement result as double value
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws NullValueException if the column contains NULL
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \returns the value in the requested result column as double or an empty optional in case of NULL
+     *
+     * Test case: yes, but without implicit conversion and only with partial exception testing
+     *
+     */
+    std::optional<double> getDouble2(
+        int colId   ///< the zero-based column ID in the result row
+        ) const;
+
+    /** \brief Retrieves the value of a column in the statement result as string value
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws NullValueException if the column contains NULL
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \returns the value in the requested result column as string or an empty optional in case of NULL
+     *
+     * Test case: yes, but without implicit conversion and only with partial exception testing
+     *
+     */
+    std::optional<std::string> getString2(
+        int colId   ///< the zero-based column ID in the result row
+        ) const;
+
+    /** \brief Retrieves the value of a column in the statement result as LocalTimestamp instance;
+     * requires the cell content to be an integer with "seconds since epoch".
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws NullValueException if the column contains NULL
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \returns the value in the requested result column as LocalTimestamp or an empty optional in case of NULL
+     *
+     * Test case: yes
+     *
+     */
+    std::optional<LocalTimestamp> getLocalTime2(
+        int colId,   ///< the zero-based column ID in the result row
+        boost::local_time::time_zone_ptr tzp   ///< a pointer to the time zone for the local time
+        ) const;
+
+    /** \brief Retrieves the value of a column in the statement result as UTCTimestamp instance;
+     * requires the cell content to be an integer with "seconds since epoch".
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws NullValueException if the column contains NULL
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \returns the value in the requested result column as UTCTimestamp or an empty optional in case of NULL
+     *
+     * Test case: yes
+     *
+     */
+    std::optional<UTCTimestamp> getUTCTime2(
+        int colId   ///< the zero-based column ID in the result row
+        ) const;
+
+    /** \brief Retrieves the value of a column in the statement result as a data blob.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws NullValueException if the column contains NULL
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \throws All exceptions that the ctor of `Sloppy::MemArray` can produce (i. e., if we run out of memory)
+     *
+     * \returns the whole blob contents in one heap-allocated buffer or an empty optional in case of NULL
+     *
+     * Test case: yes
+     *
+     */
+    std::optional<Sloppy::MemArray> getBlob2(
+        int colId   ///< the zero-based column ID in the result row
+        ) const;
+
+    /** \brief Retrieves the value of a column in the statement result as a JSON object, assuming
+     * that the JSON data has been serialized as a normal string.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws NullValueException if the column contains NULL
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \throws nlohmann::json::parse_error if the column didn't contain valid JSON data
+     *
+     * \returns the value in the requested result column as a JSON object or an empty optional in case of NULL
+     *
+     * Test case: yes
+     *
+     */
+    std::optional<nlohmann::json> getJson2(
+        int colId   ///< the zero-based column ID in the result row
+        ) const;
+
+    //---------------
+
     /** \returns `true` if the requested column in the result row is empty (NULL)
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
@@ -639,6 +784,11 @@ namespace SqliteOverlay
       result = getInt(colId);
     }
 
+    void get(int colId, std::optional<int>& result) const
+    {
+      result = getInt2(colId);
+    }
+
     /** \brief Retrieves the value of a column in the statement result as a long value (64 bit)
      *
      * Uses an out-parameter instead of a direct return. The advantage is that multiple
@@ -655,6 +805,10 @@ namespace SqliteOverlay
     void get(int colId, long& result) const
     {
       result = getLong(colId);
+    }
+    void get(int colId, std::optional<long>& result) const
+    {
+      result = getLong2(colId);
     }
 
     /** \brief Retrieves the value of a column in the statement result as a double value (32 bit)
@@ -674,6 +828,10 @@ namespace SqliteOverlay
     {
       result = getDouble(colId);
     }
+    void get(int colId, std::optional<double>& result) const
+    {
+      result = getDouble2(colId);
+    }
 
     /** \brief Retrieves the value of a column in the statement result as a string
      *
@@ -691,6 +849,10 @@ namespace SqliteOverlay
     void get(int colId, std::string& result) const
     {
       result = getString(colId);
+    }
+    void get(int colId, std::optional<std::string>& result) const
+    {
+      result = getString2(colId);
     }
 
     /** \brief Retrieves the value of a column in the statement result as a bool value
@@ -728,6 +890,10 @@ namespace SqliteOverlay
     {
       result = getUTCTime(colId);
     }
+    void get(int colId, std::optional<UTCTimestamp>& result) const
+    {
+      result = getUTCTime2(colId);
+    }
 
     /** \brief Retrieves the value of a column in the statement result as a JSON object
      *
@@ -745,6 +911,10 @@ namespace SqliteOverlay
      *
      */
     void get(int colId, nlohmann::json& result) const;
+    void get(int colId, std::optional<nlohmann::json>& result)
+    {
+      result = getJson2(colId);
+    }
 
     /** \brief Retrieves the value of a column in the statement result as a BLOB object
      *
@@ -762,6 +932,10 @@ namespace SqliteOverlay
      *
      */
     void get(int colId, Sloppy::MemArray& result) const;
+    void get(int colId, std::optional<Sloppy::MemArray>& result)
+    {
+      result = getBlob2(colId);
+    }
 
     /** \brief Retrieves the value of a column in the statement result
      * with the possibility to catch and return NULL values.
@@ -996,6 +1170,15 @@ namespace SqliteOverlay
      */
     void assertColumnDataAccess(
         int colId   ///< the zero-based column ID that is to be checked
+        ) const;
+
+    /** \brief Just like `isNull` but without parameter validity checking
+     *
+     * For lib-internal use only.
+     *
+     */
+    bool isNull_NoGuards(
+        int colId   ///< the zero-based column ID in the result row
         ) const;
 
   private:

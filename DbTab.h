@@ -178,7 +178,9 @@ namespace SqliteOverlay
 
     /** \returns the first row that contains a given value in a given column
      *
-     * \throws NoDataException if no such row exists or if the column name was invalid
+     * \throws SqlStatementCreationError if the column name was invalid
+     *
+     * \throws NoDataException if no such row exists
      *
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *
@@ -197,7 +199,7 @@ namespace SqliteOverlay
       try {
         stmt = db.get().prepStatement(cachedSelectSql + col + "=?");
       } catch (SqlStatementCreationError) {
-        throw NoDataException();
+        throw;
       }
 
       stmt.bind(1, val);
@@ -216,6 +218,8 @@ namespace SqliteOverlay
     /** \returns an 'optional<TabRow>' that contains the first row that contains a given
      * value in a given column or that is empty if no such row exists
      *
+     * \throws SqlStatementCreationError if the column name was invalid
+     *
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
@@ -229,29 +233,31 @@ namespace SqliteOverlay
         const T& val   ///< the value to search for in the column
         ) const
     {
-      try
-      {
-        // try a regular lookup and let the compiler
-        // pick the best function (int, double, string, ...)
-        return getSingleRowByColumnValue(col, val);
-      }
-      catch (NoDataException& e)
-      {
-        // return an empty optional if no such column exists
-        return std::optional<TabRow>{};
-      }
-      catch (...)
-      {
-        // rethrow any other exceptio
+      SqlStatement stmt;
+      try {
+        stmt = db.get().prepStatement(cachedSelectSql + col + "=?");
+      } catch (SqlStatementCreationError) {
         throw;
       }
 
-      return std::optional<TabRow>{};   // we should never reach this point...
+      stmt.bind(1, val);
+
+      // don't use execScalarQueryInt here so that we can save some checks / calls
+      stmt.step();
+      if (!stmt.hasData())
+      {
+        return std::optional<TabRow>{};
+      }
+      int id = stmt.getInt(0);
+
+      return TabRow(db, tabName, id, true);
     }
 
     /** \returns the first row that contains NULL in a given column
      *
      * \throws NoDataException if no such row exists
+     *
+     * \throws SqlStatementCreationError if the column name was invalid
      *
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *
@@ -266,6 +272,8 @@ namespace SqliteOverlay
 
     /** \returns an 'optional<TabRow>' that contains the first row that contains NULL
      * in a given column or that is empty if no such row exists
+     *
+     * \throws SqlStatementCreationError if the column name was invalid
      *
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *

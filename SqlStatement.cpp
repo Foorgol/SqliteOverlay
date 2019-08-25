@@ -246,6 +246,11 @@ namespace SqliteOverlay
 
   nlohmann::json SqlStatement::getJson(int colId) const
   {
+    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
+    {
+      throw NullValueException();
+    }
+
     const string jsonData = getString(colId);
 
     return nlohmann::json::parse(jsonData);
@@ -265,6 +270,137 @@ namespace SqliteOverlay
   {
     assertColumnDataAccess(colId);
     return sqlite3_column_name(stmt, colId);
+  }
+
+  //----------------------------------------------------------------------------
+
+  std::optional<int> SqlStatement::getInt2(int colId) const
+  {
+    assertColumnDataAccess(colId);
+
+    if (isNull_NoGuards(colId))
+    {
+      return std::optional<int>{};
+    }
+
+    return sqlite3_column_int(stmt, colId);
+  }
+
+  //----------------------------------------------------------------------------
+
+  std::optional<long> SqlStatement::getLong2(int colId) const
+  {
+    assertColumnDataAccess(colId);
+
+    if (isNull_NoGuards(colId))
+    {
+      return std::optional<long>{};
+    }
+
+    return sqlite3_column_int64(stmt, colId);
+  }
+
+  //----------------------------------------------------------------------------
+
+  std::optional<double> SqlStatement::getDouble2(int colId) const
+  {
+    assertColumnDataAccess(colId);
+
+    if (isNull_NoGuards(colId))
+    {
+      return std::optional<double>{};
+    }
+
+    return sqlite3_column_double(stmt, colId);
+  }
+
+  //----------------------------------------------------------------------------
+
+  std::optional<string> SqlStatement::getString2(int colId) const
+  {
+    assertColumnDataAccess(colId);
+
+    if (isNull_NoGuards(colId))
+    {
+      return std::optional<string>{};
+    }
+
+    return string{reinterpret_cast<const char*>(sqlite3_column_text(stmt, colId))};
+  }
+
+  //----------------------------------------------------------------------------
+
+  std::optional<LocalTimestamp> SqlStatement::getLocalTime2(int colId, boost::local_time::time_zone_ptr tzp) const
+  {
+    assertColumnDataAccess(colId);
+
+    if (isNull_NoGuards(colId))
+    {
+      return std::optional<LocalTimestamp>{};
+    }
+
+    time_t rawTime = sqlite3_column_int64(stmt, colId);
+    return LocalTimestamp(rawTime, tzp);
+  }
+
+  //----------------------------------------------------------------------------
+
+  std::optional<UTCTimestamp> SqlStatement::getUTCTime2(int colId) const
+  {
+    assertColumnDataAccess(colId);
+
+    if (isNull_NoGuards(colId))
+    {
+      return std::optional<UTCTimestamp>{};
+    }
+
+    time_t rawTime = sqlite3_column_int64(stmt, colId);
+    return UTCTimestamp(rawTime);
+  }
+
+  //----------------------------------------------------------------------------
+
+  std::optional<Sloppy::MemArray> SqlStatement::getBlob2(int colId) const
+  {
+    assertColumnDataAccess(colId);
+
+    if (isNull_NoGuards(colId))
+    {
+      return std::optional<Sloppy::MemArray>{};
+    }
+
+    // get the number of bytes in the blob
+    size_t nBytes = sqlite3_column_bytes(stmt, colId);
+    if (nBytes == 0)
+    {
+      return Sloppy::MemArray{}; // empty blob
+    }
+
+    // wrap the data from SQLite into a MemView
+    const void* srcPtr = sqlite3_column_blob(stmt, colId);
+    if (srcPtr == nullptr)  // shouldn't happen after the previous check, but we want to be sure
+    {
+      return Sloppy::MemArray{}; // empty blob
+    }
+    Sloppy::MemView fakeView{static_cast<const char*>(srcPtr), nBytes};
+
+    return Sloppy::MemArray{fakeView};  // creates a deep copy
+  }
+
+  //----------------------------------------------------------------------------
+
+  std::optional<nlohmann::json> SqlStatement::getJson2(int colId) const
+  {
+    assertColumnDataAccess(colId);
+
+    if (isNull_NoGuards(colId))
+    {
+      return std::optional<nlohmann::json>{};
+    }
+
+    const string jsonData = getString(colId);
+
+    return nlohmann::json::parse(jsonData);
   }
 
   //----------------------------------------------------------------------------
@@ -461,6 +597,13 @@ namespace SqliteOverlay
       msg.arg(resultColCount);
       throw InvalidColumnException(msg);
     }
+  }
+
+  //----------------------------------------------------------------------------
+
+  bool SqlStatement::isNull_NoGuards(int colId) const
+  {
+    return (sqlite3_column_type(stmt, colId) == SQLITE_NULL);
   }
 
   //----------------------------------------------------------------------------

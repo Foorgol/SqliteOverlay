@@ -78,25 +78,7 @@ namespace SqliteOverlay
 
   optional<TabRow> DbTab::get2(const WhereClause& w) const
   {
-    try
-    {
-      TabRow r{db, tabName, w};
-
-      // if we survived this, the row exists
-      return r;
-    }
-    catch(std::invalid_argument& e)
-    {
-      // the row ID was invalid
-      return optional<TabRow>{};
-    }
-    catch (...)
-    {
-      // rethrow any other exception
-      throw;
-    }
-
-    return optional<TabRow>{};   // we should never reach this point...
+    return getSingleRowByWhereClause2(w);
   }
 
   //----------------------------------------------------------------------------
@@ -110,7 +92,7 @@ namespace SqliteOverlay
     }
     catch (SqlStatementCreationError)
     {
-      throw NoDataException();
+      throw;
     }
   }
 
@@ -118,24 +100,14 @@ namespace SqliteOverlay
 
   optional<TabRow> DbTab::getSingleRowByColumnValueNull2(const string& col) const
   {
-    try
-    {
-      // try a regular lookup and let the compiler
-      // pick the best function (int, double, string, ...)
-      return getSingleRowByColumnValueNull(col);
-    }
-    catch (NoDataException& e)
-    {
-      // return an empty optional if no such column exists
-      return optional<TabRow>{};
-    }
-    catch (...)
-    {
-      // rethrow any other exceptio
-      throw;
-    }
+    //
+    // No error handling here... BUSY etc. should be handled by the caller
+    //
 
-    return optional<TabRow>{};   // we should never reach this point...
+    auto stmt = db.get().prepStatement(cachedSelectSql + col + " IS NULL");
+    stmt.step();
+    if (!stmt.hasData()) return optional<TabRow>{};
+    return TabRow(db, tabName, stmt.getInt(0), true);
   }
 
   //----------------------------------------------------------------------------
@@ -242,26 +214,30 @@ namespace SqliteOverlay
 
   optional<TabRow> DbTab::getSingleRowByWhereClause2(const WhereClause& w) const
   {
-    try
-    {
-      return getSingleRowByWhereClause(w);
-    } catch (NoDataException)
+    auto stmt = w.getSelectStmt(db.get(), tabName, false);
+    stmt.step();
+    if (!(stmt.hasData()))
     {
       return optional<TabRow>{};
     }
+
+    return TabRow(db, tabName, stmt.getInt(0), true);
   }
 
   //----------------------------------------------------------------------------
 
   optional<TabRow> DbTab::getSingleRowByWhereClause2(const string& w) const
   {
-    try
-    {
-      return getSingleRowByWhereClause(w);
-    } catch (NoDataException)
+    string sql = cachedSelectSql + w + " LIMIT 1";
+
+    auto stmt = db.get().prepStatement(sql);
+    stmt.step();
+    if (!(stmt.hasData()))
     {
       return optional<TabRow>{};
     }
+
+    return TabRow(db, tabName, stmt.getInt(0), true);
   }
 
   //----------------------------------------------------------------------------
