@@ -261,9 +261,7 @@ namespace SqliteOverlay
 
   void KeyValueTab::remove(const string& key)
   {
-    Sloppy::estring sql = "DELETE FROM %1 WHERE %2=?";
-    sql.arg(tabName);
-    sql.arg(KEY_COL_NAME);
+    std::string sql{"DELETE FROM " + tabName + " WHERE " + KEY_COL_NAME + "=?"};
     auto stmt = db.get().prepStatement(sql);
     stmt.bind(1, key);
     stmt.step();
@@ -275,9 +273,7 @@ namespace SqliteOverlay
   {
     vector<string> result;
 
-    Sloppy::estring sql = "SELECT %1 FROM %2";
-    sql.arg(KEY_COL_NAME);
-    sql.arg(tabName);
+    std::string sql{"SELECT " + std::string{KEY_COL_NAME} + " FROM " + tabName};
     auto stmt = db.get().prepStatement(sql);
 
     for (stmt.step() ; stmt.hasData() ; stmt.step())

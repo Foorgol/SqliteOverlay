@@ -141,16 +141,22 @@ namespace SqliteOverlay {
 
     // prepare a select statement for the provided table name
     // with a specific where clause
-    Sloppy::estring sql{"SELECT %1 FROM %2 WHERE %3"};
+    //
+    // Although it would look nicer, we don't use arg() here
+    // because it is comparably slow and getSelectStmt() is
+    // called VERY often by client applications.
+    //
+    // So we simply concatenate strings here.
+    std::string sql{"SELECT "};
     if (countOnly)
     {
-      sql.arg("COUNT(*)");
+      sql += ("COUNT(*)");
     } else
     {
-      sql.arg("rowid");
+      sql += ("rowid");
     }
-    sql.arg(tabName);
-    sql.arg(getWherePartWithPlaceholders(true));
+    sql += " FROM " + tabName + " WHERE ";
+    sql += getWherePartWithPlaceholders(true);
 
     return createStatementAndBindValuesToPlaceholders(db, sql);
   }
@@ -164,9 +170,12 @@ namespace SqliteOverlay {
       throw std::invalid_argument("getDeleteStmt(): empty parameters");
     }
 
-    Sloppy::estring sql{"DELETE FROM %1 WHERE %2"};
-    sql.arg(tabName);
-    sql.arg(getWherePartWithPlaceholders(false));
+    // Although it would look nicer, we don't use arg() here
+    // because it is comparably slow.
+    // So we simply concatenate strings here.
+    //Sloppy::estring sql{"DELETE FROM %1 WHERE %2"};
+    std::string sql{"DELETE FROM " + tabName + " WHERE "};
+    sql += getWherePartWithPlaceholders(false);
 
     return createStatementAndBindValuesToPlaceholders(db, sql);
   }
