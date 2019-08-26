@@ -247,8 +247,8 @@ namespace SqliteOverlay
 
     //----------------------------------------------------------------------------
 
-    GenericObjectManager (const DatabaseClass& _db, const std::string& tabName)
-      :db(_db), tab{db, tabName, true}
+    GenericObjectManager (const DatabaseClass& _db, const std::string& tabName, bool forceNameCheck)
+      :db(_db), tab{db, tabName, forceNameCheck}
     {
       static_assert (std::is_base_of_v<SqliteDatabase, DB_CLASS>, "DB classes must be derived from SqliteDatabase");
     }
