@@ -118,6 +118,21 @@ namespace SqliteOverlay
         long val   ///< the value to bind to the placeholder
         ) const;
 
+    /** \brief Binds a long long value to a placeholder in the statement
+     *
+     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
+     * a specification how placeholders are defined in the SQLite language.
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
+     */
+    void bind(
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
+        long long val   ///< the value to bind to the placeholder
+        ) const;
+
     /** \brief Binds a double value to a placeholder in the statement
      *
      * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including

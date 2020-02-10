@@ -49,6 +49,26 @@ namespace SqliteOverlay {
         long val   ///< the value itself
         )
     {
+#if __SIZEOF_LONG__ == 8
+      longVals.push_back(val);
+      colVals.push_back(ColValInfo{colName, ColValType::Long, static_cast<int>(longVals.size()) - 1, ""});
+#else
+      intVals.push_back(val);
+      colVals.push_back(ColValInfo{colName, ColValType::Int, static_cast<int>(intVals.size()) - 1, ""});
+#endif
+    }
+
+    /** \brief Adds a long long int to the list of column values;
+     * uses the default operation "=" (equals) between column name and value.
+     *
+     * Test case: yes
+     *
+     */
+    inline void addCol(
+        const std::string& colName,   ///< the name of the column that should contain the value
+        long long val   ///< the value itself
+        )
+    {
       longVals.push_back(val);
       colVals.push_back(ColValInfo{colName, ColValType::Long, static_cast<int>(longVals.size()) - 1, ""});
     }
@@ -198,7 +218,11 @@ namespace SqliteOverlay {
     };
 
     std::vector<int> intVals;
+#if __SIZEOF_LONG__ == 8
     std::vector<long> longVals;
+#else
+    std::vector<long long> longVals;
+#endif
     std::vector<double> doubleVals;
     std::vector<std::string> stringVals;
 
@@ -302,6 +326,18 @@ namespace SqliteOverlay {
         const std::string& colName,   ///< the name of the column that should contain the value
         const std::string& op,   ///< the operator between column name and value
         long val   ///< the value itself
+        );
+
+    /** \brief Adds a long long integer to the list of column values with a custom
+     * operator (e.g., "!=") between column name and value.
+     *
+     * Test case: yes
+     *
+     */
+    void addCol(
+        const std::string& colName,   ///< the name of the column that should contain the value
+        const std::string& op,   ///< the operator between column name and value
+        long long val   ///< the value itself
         );
 
     /** \brief Adds a double to the list of column values with a custom

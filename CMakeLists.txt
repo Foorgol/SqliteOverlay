@@ -17,7 +17,7 @@ set(LIBS ${LIBS} ${Boost_LIBRARIES})
 add_definitions(-DBOOST_LOG_DYN_LINK=1)  # linking fails if this is not set
 
 # A path prefix for mapping MSYS2-directories to "raw" directories
-set(WIN_LOCAL_PREFIX "D:/PortablePrograms/msys64/usr/local")
+set(WIN_LOCAL_PREFIX "D:/msys64/usr/local")
 
 #
 # My lib of sloppyly implemented helper functions

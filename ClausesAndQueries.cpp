@@ -92,7 +92,17 @@ namespace SqliteOverlay {
     colVals[colVals.size() - 1].op = op;
   }
 
+  //----------------------------------------------------------------------------
+
   void WhereClause::addCol(const string& colName, const string& op, long val)
+  {
+    addCol(colName, val);
+    colVals[colVals.size() - 1].op = op;
+  }
+
+  //----------------------------------------------------------------------------
+
+  void WhereClause::addCol(const string& colName, const string& op, long long val)
   {
     addCol(colName, val);
     colVals[colVals.size() - 1].op = op;

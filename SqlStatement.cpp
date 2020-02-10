@@ -610,6 +610,8 @@ namespace SqliteOverlay
 
   void SqlStatement::bind(int argPos, int val) const
   {
+    static_assert (sizeof(int) == 4, "'int' has to be 32-bit!");
+
     int e = sqlite3_bind_int(stmt, argPos, val);
     if (e != SQLITE_OK)
     {
@@ -621,6 +623,23 @@ namespace SqliteOverlay
 
   void SqlStatement::bind(int argPos, long val) const
   {
+#if __SIZEOF_LONG__ == 8
+    int e = sqlite3_bind_int64(stmt, argPos, val);
+#else
+    int e = sqlite3_bind_int(stmt, argPos, val);
+#endif
+    if (e != SQLITE_OK)
+    {
+      throw GenericSqliteException{e, "call to bindInt64() of a SqlStatement"};
+    }
+  }
+
+  //----------------------------------------------------------------------------
+
+  void SqlStatement::bind(int argPos, long long val) const
+  {
+    static_assert (sizeof(long long) == 8, "'long long' has to be 64-bit!");
+
     int e = sqlite3_bind_int64(stmt, argPos, val);
     if (e != SQLITE_OK)
     {
