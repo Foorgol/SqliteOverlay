@@ -373,7 +373,7 @@ namespace SqliteOverlay
         switch (val.valueType())
         {
         case Sloppy::CSV_Value::Type::Long:
-          stmt.bind(colIdx, val.get<long>());
+          stmt.bind(colIdx, val.get<int64_t>());
           break;
 
         case Sloppy::CSV_Value::Type::String:

@@ -288,11 +288,11 @@ TEST_F(DatabaseTestScenario, StmtLimits)
     stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
     ASSERT_TRUE(stmt.step());
     ASSERT_EQ(i, stmt.getInt(0));
-    ASSERT_EQ(i, stmt.getLong(0));  // should work for int as well
+    ASSERT_EQ(i, stmt.getInt64(0));  // should work for int as well
   }
 
   // bind, update and retrieve LONG_MIN and LONG_MAX
-  for (long i : {LONG_MIN, LONG_MAX})
+  for (int64_t i : {LONG_MIN, LONG_MAX})
   {
     SqlStatement stmt{db.get(), "UPDATE t1 SET i = ? WHERE rowid=1"};
     stmt.bind(1, i);
@@ -307,7 +307,7 @@ TEST_F(DatabaseTestScenario, StmtLimits)
 
     stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
     ASSERT_TRUE(stmt.step());
-    ASSERT_EQ(i, stmt.getLong(0));
+    ASSERT_EQ(i, stmt.getInt64(0));
     ASSERT_NE(i, stmt.getInt(0));  // should NOT work for int
   }
 }
@@ -335,14 +335,14 @@ TEST_F(DatabaseTestScenario, StmtTime)
   ASSERT_TRUE(stmt.step());
   stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(rawRef, stmt.getLong(0));
+  ASSERT_EQ(rawRef, stmt.getInt64(0));
 
   // reset
   stmt = SqlStatement{db.get(), "UPDATE t1 SET i = 0 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
   stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(0, stmt.getLong(0));
+  ASSERT_EQ(0, stmt.getInt64(0));
 
   // storage of UTC time
   stmt = SqlStatement{db.get(), "UPDATE t1 SET i = ? WHERE rowid=1"};
@@ -350,7 +350,7 @@ TEST_F(DatabaseTestScenario, StmtTime)
   ASSERT_TRUE(stmt.step());
   stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(rawRef, stmt.getLong(0));
+  ASSERT_EQ(rawRef, stmt.getInt64(0));
 
   // retrieval of local time
   stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
@@ -413,7 +413,7 @@ TEST_F(DatabaseTestScenario, TemplateGetter)
   stmt.get(0, i);
   ASSERT_EQ(1, i);
 
-  long l{0};
+  int64_t l{0};
   stmt.get(1, l);
   ASSERT_EQ(42, l); // i column
 
@@ -462,7 +462,7 @@ TEST_F(DatabaseTestScenario, TemplateGetterOptional)
 
   optional<int> i;
   optional<double> d;
-  optional<long> l;
+  optional<int64_t> l;
   optional<string> s;
 
   auto stmt = db.prepStatement("SELECT rowid, a, b, c FROM t1 WHERE rowid=2");
@@ -524,7 +524,7 @@ TEST_F(DatabaseTestScenario, ExportCSV1)
   ASSERT_EQ("s", csv.getHeader(3));
   ASSERT_EQ(5, csv.size());
   auto& r0 = csv.get(1);
-  ASSERT_EQ(2, r0[0].get<long>());  // rowid
+  ASSERT_EQ(2, r0[0].get<int64_t>());  // rowid
   ASSERT_FALSE(r0[1].has_value());  // NULL in i
   ASSERT_EQ(666.66, r0[2].get<double>());  // double in f
   ASSERT_EQ("Hi", r0[3].get<string>());
@@ -544,7 +544,7 @@ TEST_F(DatabaseTestScenario, ExportCSV1)
   ASSERT_FALSE(csv.hasHeaders());
   ASSERT_EQ(4, csv.size());
   auto& r1 = csv.get(0);
-  ASSERT_EQ(2, r1[0].get<long>());  // rowid
+  ASSERT_EQ(2, r1[0].get<int64_t>());  // rowid
   ASSERT_FALSE(r1[1].has_value());  // NULL in i
   ASSERT_EQ(666.66, r1[2].get<double>());  // double in f
   ASSERT_EQ("Hi", r1[3].get<string>());

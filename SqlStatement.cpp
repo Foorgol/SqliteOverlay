@@ -155,7 +155,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  long SqlStatement::getLong(int colId) const
+  int64_t SqlStatement::getInt64(int colId) const
   {
     if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
     {
@@ -288,13 +288,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  std::optional<long> SqlStatement::getLong2(int colId) const
+  std::optional<int64_t> SqlStatement::getInt64_2(int colId) const
   {
     assertColumnDataAccess(colId);
 
     if (isNull_NoGuards(colId))
     {
-      return std::optional<long>{};
+      return std::optional<int64_t>{};
     }
 
     return sqlite3_column_int64(stmt, colId);
@@ -540,7 +540,7 @@ namespace SqliteOverlay
       switch (int2ColumnDataType(sqlite3_column_type(stmt, colId)))
       {
       case ColumnDataType::Integer:
-        r.append(static_cast<long>(sqlite3_column_int64(stmt, colId)));
+        r.append(static_cast<int64_t>(sqlite3_column_int64(stmt, colId)));
         break;
 
       case ColumnDataType::Text:
@@ -621,25 +621,8 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqlStatement::bind(int argPos, long val) const
+  void SqlStatement::bind(int argPos, int64_t val) const
   {
-#if __SIZEOF_LONG__ == 8
-    int e = sqlite3_bind_int64(stmt, argPos, val);
-#else
-    int e = sqlite3_bind_int(stmt, argPos, val);
-#endif
-    if (e != SQLITE_OK)
-    {
-      throw GenericSqliteException{e, "call to bindInt64() of a SqlStatement"};
-    }
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqlStatement::bind(int argPos, long long val) const
-  {
-    static_assert (sizeof(long long) == 8, "'long long' has to be 64-bit!");
-
     int e = sqlite3_bind_int64(stmt, argPos, val);
     if (e != SQLITE_OK)
     {

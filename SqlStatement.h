@@ -103,7 +103,7 @@ namespace SqliteOverlay
         int val   ///< the value to bind to the placeholder
         ) const;
 
-    /** \brief Binds a long value to a placeholder in the statement
+    /** \brief Binds a 64-bit int value to a placeholder in the statement
      *
      * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
      * a specification how placeholders are defined in the SQLite language.
@@ -113,24 +113,8 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void bind(
-        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
-        long val   ///< the value to bind to the placeholder
-        ) const;
-
-    /** \brief Binds a long long value to a placeholder in the statement
-     *
-     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
-     * a specification how placeholders are defined in the SQLite language.
-     *
-     * \throws GenericSqliteException incl. error code if anything goes wrong
-     *
-     * Test case: yes
-     *
-     */
-    void bind(
-        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
-        long long val   ///< the value to bind to the placeholder
+    void bind(int argPos,   ///< the placeholder to bind to (1-based if you use "?")
+        int64_t val   ///< the value to bind to the placeholder
         ) const;
 
     /** \brief Binds a double value to a placeholder in the statement
@@ -396,7 +380,7 @@ namespace SqliteOverlay
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
-    /** \brief Retrieves the value of a column in the statement result as long value (64 bit)
+    /** \brief Retrieves the value of a column in the statement result as a 64 bit integer value
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
@@ -409,7 +393,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    long getLong(
+    int64_t getInt64(
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
@@ -594,7 +578,7 @@ namespace SqliteOverlay
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
-    /** \brief Retrieves the value of a column in the statement result as long value (64 bit)
+    /** \brief Retrieves the value of a column in the statement result as 64-bit integer value
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
@@ -607,7 +591,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    std::optional<long> getLong2(
+    std::optional<int64_t> getInt64_2(
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
@@ -804,7 +788,7 @@ namespace SqliteOverlay
       result = getInt2(colId);
     }
 
-    /** \brief Retrieves the value of a column in the statement result as a long value (64 bit)
+    /** \brief Retrieves the value of a column in the statement result as a 64-bit integer value
      *
      * Uses an out-parameter instead of a direct return. The advantage is that multiple
      * `get()` variants for int, double, string, ... can have the same signature style
@@ -817,13 +801,13 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    void get(int colId, long& result) const
+    void get(int colId, int64_t& result) const
     {
-      result = getLong(colId);
+      result = getInt64(colId);
     }
-    void get(int colId, std::optional<long>& result) const
+    void get(int colId, std::optional<int64_t>& result) const
     {
-      result = getLong2(colId);
+      result = getInt64_2(colId);
     }
 
     /** \brief Retrieves the value of a column in the statement result as a double value (32 bit)

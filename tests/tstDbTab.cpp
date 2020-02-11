@@ -526,8 +526,8 @@ TEST_F(DatabaseTestScenario, DbTab_ExportCSV1)
   ASSERT_EQ(5, csv.size());
   ASSERT_EQ("rowid", csv.getHeader(0));
   ASSERT_EQ("i", csv.getHeader(1));
-  ASSERT_EQ(1, csv.get(0, "rowid").get<long>());  // rowid
-  ASSERT_EQ(42, csv.get(0, "i").get<long>());  // i
+  ASSERT_EQ(1, csv.get(0, "rowid").get<int64_t>());  // rowid
+  ASSERT_EQ(42, csv.get(0, "i").get<int64_t>());  // i
 
   // export all standard columns, but only with rowid > 3
   WhereClause w;
@@ -536,7 +536,7 @@ TEST_F(DatabaseTestScenario, DbTab_ExportCSV1)
   ASSERT_FALSE(csv.hasHeaders());
   ASSERT_EQ(4, csv.nCols());
   ASSERT_EQ(2, csv.size());
-  ASSERT_EQ(84, csv.get(0, 0).get<long>());  // i of rowid 4 in CSV row 0
+  ASSERT_EQ(84, csv.get(0, 0).get<int64_t>());  // i of rowid 4 in CSV row 0
   ASSERT_EQ(42.42, csv.get(1, 1).get<double>());  // f of rowid 5 in CSV row 1
 
   // export only column "f", in descending rowid order, limited to 2

@@ -299,7 +299,7 @@ namespace SqliteOverlay
         const std::string& colName   ///< the name of the column to query
         ) const;
 
-    /** \returns the contents of a given column as a long integer
+    /** \returns the contents of a given column as a 64-bit integer
      *
      * \throws std::invalid argument if the column name was empty
      *
@@ -314,7 +314,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    long getLong(
+    int64_t getInt64(
         const std::string& colName   ///< the name of the column to query
         ) const;
 
@@ -455,7 +455,7 @@ namespace SqliteOverlay
         const std::string& colName   ///< the name of the column to query
         ) const;
 
-    /** \returns the contents of a given column as a long integer or NULL if the column was empty
+    /** \returns the contents of a given column as a 64-bit integer or NULL if the column was empty
      *
      * \throws std::invalid argument if the column name was empty
      *
@@ -468,7 +468,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    std::optional<long> getLong2(
+    std::optional<int64_t> getInt64_2(
         const std::string& colName   ///< the name of the column to query
         ) const;
 

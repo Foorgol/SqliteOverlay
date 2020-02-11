@@ -429,12 +429,12 @@ namespace SqliteOverlay
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
-     * \returns the first value in the first result row as `long`
+     * \returns the first value in the first result row as a 64-bit integer
      *
      * Test case: yes, but only with partial exception testing
      *
      */
-    long execScalarQueryLong(
+    int64_t execScalarQueryLong(
         const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
@@ -452,12 +452,12 @@ namespace SqliteOverlay
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
-     * \returns the first value in the result row as `long`
+     * \returns the first value in the first result row as a 64-bit integer
      *
      * Test case: yes, but only with partial exception testing
      *
      */
-    long execScalarQueryLong(
+    int64_t execScalarQueryLong(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
         ) const;
 
@@ -474,13 +474,13 @@ namespace SqliteOverlay
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
-     * \returns an `optional<long>` containing the first value in the first result row; if the cell
+     * \returns an `optional<int64_t>` containing the first value in the first result row; if the cell
      * contained NULL the return value is empty.
      *
      * Test case: yes, but only with partial exception testing
      *
      */
-    std::optional<long> execScalarQueryLongOrNull(
+    std::optional<int64_t> execScalarQueryLongOrNull(
         const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
@@ -502,7 +502,7 @@ namespace SqliteOverlay
      * Test case: yes, but only with partial exception testing
      *
      */
-    std::optional<long> execScalarQueryLongOrNull(
+    std::optional<int64_t> execScalarQueryLongOrNull(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
         ) const;
 

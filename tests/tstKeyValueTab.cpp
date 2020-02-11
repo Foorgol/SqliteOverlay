@@ -112,7 +112,7 @@ TEST_F(DatabaseTestScenario, KeyValueTab_SettersAndGetters)
   ASSERT_TRUE(oi2.has_value());
 
   kvt.set("l", LONG_MAX);
-  auto ol = kvt.getLong2("l");
+  auto ol = kvt.getInt64_2("l");
   ASSERT_EQ(LONG_MAX, ol.value());
 
   // invalid key content returns default values

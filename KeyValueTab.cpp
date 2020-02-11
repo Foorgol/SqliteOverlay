@@ -72,9 +72,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  long KeyValueTab::getLong(const string& key)
+  int64_t KeyValueTab::getLong(const string& key)
   {
-    long result;
+    int64_t result;
     get(key, result);
     return result;
   }
@@ -135,9 +135,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  optional<long> KeyValueTab::getLong2(const string& key)
+  optional<int64_t> KeyValueTab::getInt64_2(const string& key)
   {
-    optional<long> result;
+    optional<int64_t> result;
     get(key, result);
     return result;
   }

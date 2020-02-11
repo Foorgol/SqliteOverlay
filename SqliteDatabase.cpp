@@ -351,9 +351,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  long SqliteDatabase::execScalarQueryLong(const string& sqlStatement) const
+  int64_t SqliteDatabase::execScalarQueryLong(const string& sqlStatement) const
   {
-    optional<long> v = execScalarQueryLongOrNull(sqlStatement);
+    optional<int64_t> v = execScalarQueryLongOrNull(sqlStatement);
     if (!(v.has_value()))
     {
       throw NullValueException("SQL = " + sqlStatement);
@@ -364,9 +364,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  long SqliteDatabase::execScalarQueryLong(SqlStatement& stmt) const
+  int64_t SqliteDatabase::execScalarQueryLong(SqlStatement& stmt) const
   {
-    optional<long> v = execScalarQueryLongOrNull(stmt);
+    optional<int64_t> v = execScalarQueryLongOrNull(stmt);
     if (!(v.has_value()))
     {
       throw NullValueException();
@@ -377,7 +377,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  optional<long> SqliteDatabase::execScalarQueryLongOrNull(const string& sqlStatement) const
+  optional<int64_t> SqliteDatabase::execScalarQueryLongOrNull(const string& sqlStatement) const
   {
     // throws invalid_argument or SqlStatementCreationError
     SqlStatement stmt = prepStatement(sqlStatement);
@@ -386,18 +386,18 @@ namespace SqliteOverlay
     stmt.step();
 
     // throws NoDataException
-    return stmt.isNull(0) ? optional<long>{} : stmt.getLong(0);
+    return stmt.isNull(0) ? optional<int64_t>{} : stmt.getInt64(0);
   }
 
   //----------------------------------------------------------------------------
 
-  optional<long> SqliteDatabase::execScalarQueryLongOrNull(SqlStatement& stmt) const
+  optional<int64_t> SqliteDatabase::execScalarQueryLongOrNull(SqlStatement& stmt) const
   {
     // throws BusyException or GenericSqliteException
     stmt.step();
 
     // throws NoDataException
-    return stmt.isNull(0) ? optional<long>{} : stmt.getLong(0);
+    return stmt.isNull(0) ? optional<int64_t>{} : stmt.getInt64(0);
   }
 
   //----------------------------------------------------------------------------

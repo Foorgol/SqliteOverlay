@@ -169,11 +169,11 @@ namespace SqliteOverlay
      */
     int getInt(const std::string& key);
 
-    /** \returns the value of a key as a long
+    /** \returns the value of a key as a 64-bit int
      *
      * \throws NoDataException if the key doesn't exist
      */
-    long getLong(const std::string& key);
+    int64_t getLong(const std::string& key);
 
     /** \returns the value of a key as a double
      *
@@ -215,10 +215,10 @@ namespace SqliteOverlay
      */
     std::optional<int> getInt2(const std::string& key);
 
-    /** \returns the value of a key as an optional long that
+    /** \returns the value of a key as an optional 64-bit int that
      * is empty if the key doesn't exist
      */
-    std::optional<long> getLong2(const std::string& key);
+    std::optional<int64_t> getInt64_2(const std::string& key);
 
     /** \returns the value of a key as an optional double that
      * is empty if the key doesn't exist

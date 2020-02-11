@@ -197,9 +197,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  long TabRow::getLong(const string& colName) const
+  int64_t TabRow::getInt64(const string& colName) const
   {
-    return get<long>(colName);
+    return get<int64_t>(colName);
   }
 
   //----------------------------------------------------------------------------
@@ -220,7 +220,7 @@ namespace SqliteOverlay
 
   LocalTimestamp TabRow::getLocalTime(const string& colName, boost::local_time::time_zone_ptr tzp) const
   {
-    time_t rawTime = getLong(colName);
+    time_t rawTime = getInt64(colName);
     return LocalTimestamp(rawTime, tzp);
   }
 
@@ -255,9 +255,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  optional<long> TabRow::getLong2(const string& colName) const
+  optional<int64_t> TabRow::getInt64_2(const string& colName) const
   {
-    return get<optional<long>>(colName);
+    return get<optional<int64_t>>(colName);
   }
 
 //----------------------------------------------------------------------------
@@ -285,7 +285,7 @@ namespace SqliteOverlay
 
   optional<LocalTimestamp> TabRow::getLocalTime2(const string& colName, boost::local_time::time_zone_ptr tzp) const
   {
-    optional<long> rawTime = getLong2(colName);
+    optional<int64_t> rawTime = getInt64_2(colName);
 
     if (rawTime.has_value())
     {
