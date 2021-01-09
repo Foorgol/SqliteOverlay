@@ -10,16 +10,26 @@
  * don't use it at all.
  */
 
-#ifndef SQLITE_OVERLAY_DBTAB_H
-#define	SQLITE_OVERLAY_DBTAB_H
+#pragma once
 
-#include <vector>
-#include <optional>
+#include <functional>                                   // for reference_wra...
+#include <memory>                                       // for unique_ptr
+#include <optional>                                     // for optional
+#include <stdexcept>                                    // for invalid_argument
+#include <string>                                       // for string, opera...
+#include <vector>                                       // for allocator
 
-#include "CommonTabularClass.h"
-#include "ClausesAndQueries.h"
-#include "SqliteExceptions.h"
-#include "TabRow.h"
+#include <Sloppy/ConfigFileParser/ConstraintChecker.h>  // for ValueConstraint
+
+#include "ClausesAndQueries.h"                          // for WhereClause
+#include "CommonTabularClass.h"                         // for CommonTabular...
+#include "Defs.h"                                       // for ConflictClause
+#include "SqlStatement.h"                               // for SqlStatement
+#include "SqliteDatabase.h"                             // for buildColumnCo...
+#include "SqliteExceptions.h"                           // for SqlStatementC...
+#include "TabRow.h"                                     // for TabRow
+
+namespace Sloppy { class CSV_Table; }
 
 namespace SqliteOverlay
 {
@@ -1264,5 +1274,4 @@ namespace SqliteOverlay
     std::string tabName;
   };
 }
-#endif	/* DBTAB_H */
 

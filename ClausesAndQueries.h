@@ -1,16 +1,21 @@
-#ifndef SQLITE_OVERLAY_CLAUSESANDQUERIES_H
-#define	SQLITE_OVERLAY_CLAUSESANDQUERIES_H
+#pragma once
 
-#include <vector>
+#include <algorithm>                      // for max
+#include <cstdint>                        // for int64_t
+#include <string>                         // for string, basic_string
+#include <vector>                         // for vector, allocator
 
-#include <Sloppy/DateTime/DateAndTime.h>
-#include <Sloppy/json_fwd.hpp>
+#include <Sloppy/DateTime/DateAndTime.h>  // for WallClockTimepoint_secs
+#include <Sloppy/DateTime/date.h>         // for year_month_day
+#include <Sloppy/json.hpp>                // for json
 
-#include "SqliteDatabase.h"
+#include "SqlStatement.h"                 // for SqlStatement
 
 using namespace Sloppy::DateTime;
 
 namespace SqliteOverlay {
+
+  class SqliteDatabase;
 
   /** \brief A class that handles everything that an INSERT, DELETE, UPDATE or SELECT clause
    * have in common; is not really designed for usage outside of `WhereClause` or `ColumnValueClause`. */
@@ -467,4 +472,3 @@ namespace SqliteOverlay {
 
 }
 
-#endif  /* CLAUSESANDQUERIES_H */

@@ -1,9 +1,6 @@
-#ifndef SQLITE_OVERLAY_DEFINITIONS_H
-#define SQLITE_OVERLAY_DEFINITIONS_H
+#pragma once
 
-#include <stdexcept>
-
-#include <sqlite3.h>
+#include <string>  // for string
 
 namespace SqliteOverlay
 {
@@ -195,4 +192,3 @@ namespace std
 
 }
 
-#endif

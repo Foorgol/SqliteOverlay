@@ -16,15 +16,15 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SQLITE_OVERLAY_TRANSACTION_H
-#define	SQLITE_OVERLAY_TRANSACTION_H
+#pragma once
 
-#include <memory>
+#include <string>  // for string
 
-#include "SqliteDatabase.h"
+#include "Defs.h"  // for TransactionDtorAction, TransactionType, Transactio...
 
 namespace SqliteOverlay
 {
+  class SqliteDatabase;
 
   /** \brief A class that wraps a database transaction into a C++ object with the benefit
    * that the transaction is automatically either commited or rolled back when the object's
@@ -126,5 +126,4 @@ namespace SqliteOverlay
   };
 
 }
-#endif	/* SQLITE_OVERLAY_TRANSACTION_H */
 

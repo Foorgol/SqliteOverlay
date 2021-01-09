@@ -16,7 +16,12 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <Sloppy/Utils.h>
+#include <algorithm>       // for max
+#include <iosfwd>          // for std
+#include <memory>          // for allocator
+#include <vector>          // for vector
+
+#include <Sloppy/Utils.h>  // for commaSepStringFromValues
 
 #include "TableCreator.h"
 

@@ -5,12 +5,13 @@
  * Created on 18. Februar 2014, 14:25
  */
 
-#ifndef SQLITE_OVERLAY_GENERICDATABASEOBJECT_H
-#define	SQLITE_OVERLAY_GENERICDATABASEOBJECT_H
+#pragma once
 
-#include <string>
-#include "TabRow.h"
-#include "SqliteDatabase.h"
+#include <functional>        // for reference_wrapper
+#include <string>            // for string
+
+#include "SqliteDatabase.h"  // for SqliteDatabase
+#include "TabRow.h"          // for TabRow
 
 namespace SqliteOverlay
 {
@@ -58,6 +59,4 @@ namespace SqliteOverlay
 
   };
 }
-
-#endif	/* GENERICDATABASEOBJECT_H */
 

@@ -16,6 +16,16 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>            // for rand
+#include <time.h>              // for time
+#include <iosfwd>              // for std
+#include <memory>              // for allocator
+#include <stdexcept>           // for invalid_argument
+#include <utility>             // for move
+
+#include "SqliteDatabase.h"    // for SqliteDatabase
+#include "SqliteExceptions.h"  // for GenericSqliteException
+
 #include "Transaction.h"
 
 using namespace std;

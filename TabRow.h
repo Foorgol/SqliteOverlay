@@ -12,15 +12,32 @@
 
 #pragma once
 
-#include <Sloppy/String.h>
-#include <Sloppy/ConfigFileParser/ConstraintChecker.h>
-#include <Sloppy/DateTime/DateAndTime.h>
+#include <stdint.h>                                     // for int64_t
+#include <Sloppy/json.hpp>                              // for json
+#include <chrono>                                       // for duration
+#include <functional>                                   // for reference_wra...
+#include <optional>                                     // for optional
+#include <stdexcept>                                    // for invalid_argument
+#include <string>                                       // for string, alloc...
+#include <tuple>                                        // for tuple
+#include <vector>                                       // for vector
 
-#include "SqliteDatabase.h"
-#include "ClausesAndQueries.h"
+#include <Sloppy/CSV.h>                                 // for CSV_Row
+#include <Sloppy/ConfigFileParser/ConstraintChecker.h>  // for ValueConstraint
+#include <Sloppy/DateTime/DateAndTime.h>                // for WallClockTime...
+#include <Sloppy/DateTime/date.h>                       // for year_month_day
+#include <Sloppy/Memory.h>                              // for MemArray
+#include <Sloppy/String.h>                              // for estring
+
+#include "SqlStatement.h"                               // for SqlStatement
+#include "SqliteDatabase.h"                             // for SqliteDatabase
+#include "SqliteExceptions.h"                           // for SqlStatementC...
 
 namespace SqliteOverlay
 {
+
+  class ColumnValueClause;
+  class WhereClause;
 
   /** \brief A class representing a single data row in a table (not in a view!)
    */

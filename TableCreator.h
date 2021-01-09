@@ -16,15 +16,17 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SQLITE_OVERLAY_TABLECREATOR_H
-#define	SQLITE_OVERLAY_TABLECREATOR_H
+#pragma once
 
-#include <memory>
-#include <initializer_list>
+#include <initializer_list>  // for initializer_list
+#include <stdexcept>         // for invalid_argument
+#include <string>            // for allocator, char_traits, string, operator+
 
-#include "SqliteDatabase.h"
-#include "DbTab.h"
-#include "ClausesAndQueries.h"
+#include <Sloppy/String.h>   // for StringList
+
+#include "DbTab.h"           // for DbTab
+#include "Defs.h"            // for ConflictClause, to_string, ColumnDataType
+#include "SqliteDatabase.h"  // for SqliteDatabase (ptr only), buildColumnCo...
 
 namespace SqliteOverlay
 {
@@ -128,5 +130,4 @@ namespace SqliteOverlay
   };
   
 }
-#endif	/* TABLECREATOR_H */
 

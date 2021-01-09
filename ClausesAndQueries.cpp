@@ -1,7 +1,15 @@
-#include <Sloppy/json.hpp>
+#include <stdint.h>          // for int64_t
+#include <iosfwd>            // for std
+#include <memory>            // for allocator_traits<>::value_type
+#include <stdexcept>         // for invalid_argument, runtime_error
+
+#include <Sloppy/String.h>   // for estring
+#include <Sloppy/json.hpp>   // for json
+
+#include "SqlStatement.h"    // for SqlStatement
+#include "SqliteDatabase.h"  // for SqliteDatabase
 
 #include "ClausesAndQueries.h"
-#include "SqlStatement.h"
 
 using namespace std;
 

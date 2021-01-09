@@ -1,14 +1,21 @@
-#include <stdexcept>
-#include <ctime>
-#include <cstring>
-#include <cstdlib>
+#include <algorithm>                      // for max
+#include <cstdint>                        // for int64_t
+#include <cstring>                        // for strlen
+#include <ctime>                          // for size_t, time_t
+#include <iosfwd>                         // for std
+#include <memory>                         // for allocator
+#include <stdexcept>                      // for invalid_argument
+#include <utility>                        // for move
 
-#include <Sloppy/DateTime/DateAndTime.h>
-#include <Sloppy/String.h>
-#include <Sloppy/json.hpp>
+#include <Sloppy/DateTime/DateAndTime.h>  // for WallClockTimepoint_secs
+#include <Sloppy/String.h>                // for estring
+#include <Sloppy/json.hpp>                // for json, basic_json
 
+
+#include "SqliteExceptions.h"             // for GenericSqliteException, Nul...
 #include "SqlStatement.h"
-#include "SqliteExceptions.h"
+
+namespace date { class time_zone; }
 
 using namespace std;
 using namespace Sloppy::DateTime;
@@ -439,7 +446,7 @@ namespace SqliteOverlay
 
   void SqlStatement::get(int colId, Sloppy::MemArray& result) const
   {
-    result = std::move(getBlob(colId));
+    result = getBlob(colId);
   }
 
   //----------------------------------------------------------------------------

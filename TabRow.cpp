@@ -10,11 +10,14 @@
  * don't use it at all.
  */
 
-#include <stdexcept>
+#include <sys/types.h>          // for time_t
+#include <cstdint>              // for int64_t
+#include <iosfwd>               // for std
+#include <stdexcept>            // for invalid_argument
+#include <utility>              // for move
 
+#include "ClausesAndQueries.h"  // for ColumnValueClause, WhereClause
 #include "TabRow.h"
-#include "CommonTabularClass.h"
-#include "ClausesAndQueries.h"
 
 using namespace std;
 

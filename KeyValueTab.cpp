@@ -16,16 +16,22 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <climits>
-#include <cmath>
-#include <regex>
+#include <sys/types.h>                                  // for time_t
+#include <algorithm>                                    // for max
+#include <cstdint>                                      // for int64_t
+#include <iosfwd>                                       // for std
+#include <stdexcept>                                    // for invalid_argument
+#include <utility>                                      // for move
 
-#include <Sloppy/ConfigFileParser/ConstraintChecker.h>
-#include <Sloppy/DateTime/DateAndTime.h>
-#include <Sloppy/json.hpp>
+#include <Sloppy/ConfigFileParser/ConstraintChecker.h>  // for checkConstraint
+#include <Sloppy/DateTime/DateAndTime.h>                // for WallClockTime...
+#include <Sloppy/String.h>                              // for estring
+#include <Sloppy/json.hpp>                              // for json
+
+#include "SqliteDatabase.h"                             // for SqliteDatabase
+#include "SqliteExceptions.h"                           // for NullValueExce...
 
 #include "KeyValueTab.h"
-#include "TableCreator.h"
 
 using namespace std;
 

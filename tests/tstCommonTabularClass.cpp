@@ -14,6 +14,7 @@
 
 #include "DatabaseTestScenario.h"
 #include "CommonTabularClass.h"
+#include "ClausesAndQueries.h"
 
 using namespace SqliteOverlay;
 

@@ -6,6 +6,11 @@ aux_source_directory(. SRC_LIST)
 # suppress the compilation of unit tests.
 option(BUILD_TESTS "Build unit tests" ON)
 
+# for calling include-what-you-use
+#
+# call syntax from build dir: "iwyu-tool -p ."
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmakeModules/")
 
 find_package(Threads REQUIRED)

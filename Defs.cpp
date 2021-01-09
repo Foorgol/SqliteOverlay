@@ -1,4 +1,7 @@
 
+#include <iosfwd>     // for std
+#include <stdexcept>  // for invalid_argument
+
 #include "Defs.h"
 
 using namespace std;

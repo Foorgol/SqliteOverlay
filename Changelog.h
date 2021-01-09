@@ -1,10 +1,11 @@
-#ifndef SQLITE_OVERLAY_CHANGELOG_H
-#define SQLITE_OVERLAY_CHANGELOG_H
+#pragma once
 
-#include <vector>
-#include <mutex>
+#include <stddef.h>   // for size_t
+#include <mutex>      // for mutex
+#include <string>     // for string
+#include <vector>     // for vector
 
-#include <sqlite3.h>
+#include <sqlite3.h>  // for SQLITE_DELETE, SQLITE_INSERT, SQLITE_UPDATE
 
 namespace SqliteOverlay
 {
@@ -94,4 +95,3 @@ namespace SqliteOverlay
 
 }
 
-#endif

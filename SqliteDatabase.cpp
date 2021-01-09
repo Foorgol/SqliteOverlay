@@ -1,13 +1,19 @@
-#include <sys/stat.h>
+#include <sys/stat.h>              // for stat
+#include <cstddef>                 // for size_t, std
+#include <cstdint>                 // for int64_t
+#include <initializer_list>        // for initializer_list
+#include <memory>                  // for allocator
+#include <utility>                 // for move
 
-#include <Sloppy/String.h>
-#include <Sloppy/Utils.h>
-#include <Sloppy/Crypto/Crypto.h>
+#include <Sloppy/Crypto/Crypto.h>  // for getRandomAlphanumString
+#include <Sloppy/String.h>         // for estring, StringList
+
+#include "KeyValueTab.h"           // for KeyValueTab, KeyValueTab::KEY_COL_...
+#include "SqliteExceptions.h"      // for NullValueException, BusyException
+#include "TableCreator.h"          // for TableCreator
+#include "Transaction.h"           // for Transaction
 
 #include "SqliteDatabase.h"
-#include "Transaction.h"
-#include "KeyValueTab.h"
-#include "TableCreator.h"
 
 using namespace std;
 

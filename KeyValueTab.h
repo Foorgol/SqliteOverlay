@@ -16,19 +16,26 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SQLITE_OVERLAY_KEYVALUETAB_H
-#define	SQLITE_OVERLAY_KEYVALUETAB_H
+#pragma once
 
-#include <Sloppy/ConfigFileParser/ConstraintChecker.h>
-#include <Sloppy/json_fwd.hpp>
+#include <stdint.h>                                     // for int64_t
+#include <functional>                                   // for reference_wra...
+#include <memory>                                       // for unique_ptr
+#include <optional>                                     // for optional
+#include <string>                                       // for string
+#include <vector>                                       // for vector
 
-#include "SqliteDatabase.h"
-#include "DbTab.h"
-#include "ClausesAndQueries.h"
-#include "SqlStatement.h"
+#include <Sloppy/ConfigFileParser/ConstraintChecker.h>  // for ValueConstraint
+#include <Sloppy/DateTime/DateAndTime.h>                // for WallClockTime...
+#include <Sloppy/json.hpp>                              // for json
+
+#include "DbTab.h"                                      // for DbTab
+#include "SqlStatement.h"                               // for SqlStatement
 
 namespace SqliteOverlay
 {
+  class SqliteDatabase;
+
   /** \brief A convience object that treats a given table as a key-value-store
    * and eases creating and retrieval of keys and values.
    *
@@ -340,5 +347,4 @@ namespace SqliteOverlay
   //----------------------------------------------------------------------------
 
 }
-#endif	/* KEYVALUETAB_H */
 

@@ -5,19 +5,20 @@
  * Created on March 2, 2014, 8:27 PM
  */
 
-#ifndef SQLITE_OVERLAY_GENERICOBJECTMANAGER_H
-#define	SQLITE_OVERLAY_GENERICOBJECTMANAGER_H
+#pragma once
 
-#include <vector>
-#include <type_traits>
+#include <optional>          // for optional
+#include <string>            // for operator+, string, char_traits
+#include <vector>            // for allocator, vector
 
-#include "SqliteDatabase.h"
-#include "DbTab.h"
-#include "ClausesAndQueries.h"
-#include "TabRow.h"
+#include "DbTab.h"           // for DbTab
+#include "SqliteDatabase.h"  // for SqliteDatabase
+#include "TabRow.h"          // for TabRow
 
 namespace SqliteOverlay
 {
+  class WhereClause;
+
   template<class T, typename DbClass>
   std::vector<T> rowVector2Objects(const DbClass& db, const std::vector<TabRow>& rows)
   {
@@ -370,6 +371,4 @@ namespace SqliteOverlay
   };
 
 }
-
-#endif	/* GENERICOBJECTMANAGER_H */
 

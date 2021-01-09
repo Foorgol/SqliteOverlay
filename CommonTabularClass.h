@@ -10,20 +10,25 @@
  * don't use it at all.
  */
 
-#ifndef SQLITE_OVERLAY_COMMONTABULARCLASS_H
-#define	SQLITE_OVERLAY_COMMONTABULARCLASS_H
+#pragma once
 
-#include <vector>
+#include <algorithm>           // for max
+#include <functional>          // for reference_wrapper
+#include <stdexcept>           // for invalid_argument
+#include <string>              // for string, char_traits, operator+
+#include <vector>              // for allocator, vector
 
-#include <Sloppy/CSV.h>
+#include <Sloppy/CSV.h>        // for CSV_Table
 
-#include "SqliteDatabase.h"
-#include "ClausesAndQueries.h"
-#include "SqlStatement.h"
-#include "Defs.h"
+#include "Defs.h"              // for ColumnAffinity
+#include "SqlStatement.h"      // for SqlStatement
+#include "SqliteDatabase.h"    // for SqliteDatabase
+#include "SqliteExceptions.h"  // for SqlStatementCreationError
 
 namespace SqliteOverlay
 {
+
+  class WhereClause;
 
   /** \brief A small struct with schema information about a column
    */
@@ -332,5 +337,4 @@ namespace SqliteOverlay
   };
 
 }
-#endif	/* COMMONTABULARCLASS_H */
 

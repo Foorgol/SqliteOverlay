@@ -1,26 +1,25 @@
-#ifndef SQLITE_OVERLAY_SQLITEDATABASE_H
-#define	SQLITE_OVERLAY_SQLITEDATABASE_H
+#pragma once
 
-#include <string>
-#include <memory>
-#include <vector>
-#include <unordered_map>
-#include <optional>
-#include <type_traits>
+#include <stddef.h>         // for size_t
+#include <stdint.h>         // for int64_t
+#include <mutex>            // for mutex
+#include <optional>         // for optional
+#include <stdexcept>        // for invalid_argument
+#include <string>           // for string, allocator
 
-#include <sqlite3.h>
+#include <sqlite3.h>        // for sqlite3, sqlite3_int64
 
-#include <Sloppy/Utils.h>
+#include <Sloppy/String.h>  // for StringList
 
-#include "SqlStatement.h"
-#include "SqliteExceptions.h"
-#include "Defs.h"
-#include "Changelog.h"
+#include "Changelog.h"      // for ChangeLogList, ChangeLogCallbackContext
+#include "Defs.h"           // for ConflictClause, OpenMode, TransactionDtor...
+#include "SqlStatement.h"   // for SqlStatement
 
 namespace SqliteOverlay
 {
-  // a forward definition
+  // a forward definitions
   class KeyValueTab;
+  class Transaction;
 
   // a pseudo-always-false expression for conditional static_asserts
   // in templates
@@ -1188,4 +1187,3 @@ namespace SqliteOverlay
 
 }
 
-#endif  /* SQLITEDATABASE_H */

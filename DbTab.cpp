@@ -10,11 +10,18 @@
  * don't use it at all.
  */
 
-#include <memory>
+#include <stdint.h>         // for int64_t
+#include <algorithm>        // for max
+#include <cstddef>          // for size_t, std
+#include <memory>           // for unique_ptr, make_unique
 
+#include <Sloppy/CSV.h>     // for CSV_Table, CSV_Value, CSV_Value::Type
+#include <Sloppy/String.h>  // for estring
+#include <Sloppy/Utils.h>   // for trimAndCheckString
+
+#include "TabRow.h"         // for TabRow
+#include "Transaction.h"    // for Transaction
 #include "DbTab.h"
-#include "TabRow.h"
-#include "Transaction.h"
 
 using namespace std;
 

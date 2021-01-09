@@ -10,13 +10,14 @@
  * don't use it at all.
  */
 
-#include <stdexcept>
+#include <iosfwd>               // for std
+#include <stdexcept>            // for invalid_argument
 
-#include <Sloppy/String.h>
+#include <Sloppy/String.h>      // for estring
 
+#include "ClausesAndQueries.h"  // for WhereClause
+#include "SqlStatement.h"       // for SqlStatement
 #include "CommonTabularClass.h"
-#include "ClausesAndQueries.h"
-#include "SqlStatement.h"
 
 using namespace std;
 

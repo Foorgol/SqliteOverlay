@@ -1,23 +1,25 @@
 #pragma once
 
-#include <string>
-#include <memory>
-#include <ctime>
-#include <tuple>
+#include <stdint.h>                       // for int64_t
+#include <ctime>                          // for size_t
+#include <optional>                       // for optional
+#include <string>                         // for string, basic_string
+#include <tuple>                          // for tuple, make_tuple
+#include <type_traits>                    // for is_same
+#include <vector>                         // for vector
 
-#include <sqlite3.h>
+#include <sqlite3.h>                      // for sqlite3, sqlite3_stmt
 
-#include <Sloppy/DateTime/DateAndTime.h>
-#include <Sloppy/Memory.h>
-#include <Sloppy/Logger/Logger.h>
-#include <Sloppy/json_fwd.hpp>
-#include <Sloppy/CSV.h>
+#include <Sloppy/CSV.h>                   // for CSV_Row, CSV_Table
+#include <Sloppy/DateTime/DateAndTime.h>  // for WallClockTimepoint_secs
+#include <Sloppy/Logger/Logger.h>         // for Logger
+#include <Sloppy/Memory.h>                // for MemArray, MemView
+#include <Sloppy/json.hpp>                // for json
 
-#include "Defs.h"
-#include "SqliteExceptions.h"
+#include "Defs.h"                         // for ColumnDataType
+#include "SqliteExceptions.h"             // for NullValueException
 
-using namespace Sloppy::DateTime;
-using namespace Sloppy::Logger;
+namespace date { class time_zone; }
 
 namespace SqliteOverlay
 {  
