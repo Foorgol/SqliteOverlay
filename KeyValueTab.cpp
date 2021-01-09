@@ -21,12 +21,12 @@
 #include <regex>
 
 #include <Sloppy/ConfigFileParser/ConstraintChecker.h>
+#include <Sloppy/DateTime/DateAndTime.h>
 #include <Sloppy/json.hpp>
 
 #include "KeyValueTab.h"
 #include "TableCreator.h"
 
-namespace bfs = boost::filesystem;
 using namespace std;
 
 namespace SqliteOverlay
@@ -99,9 +99,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  UTCTimestamp KeyValueTab::getUTCTimestamp(const string& key)
+  Sloppy::DateTime::WallClockTimepoint_secs KeyValueTab::getUTCTimestamp(const string& key)
   {
-    UTCTimestamp result;
+    Sloppy::DateTime::WallClockTimepoint_secs result;
     get(key, result);
     return result;
   }
@@ -162,9 +162,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  optional<UTCTimestamp> KeyValueTab::getUTCTimestamp2(const string& key)
+  optional<Sloppy::DateTime::WallClockTimepoint_secs> KeyValueTab::getUTCTimestamp2(const string& key)
   {
-    optional<UTCTimestamp> result;
+    optional<Sloppy::DateTime::WallClockTimepoint_secs> result;
     get(key, result);
     return result;
   }

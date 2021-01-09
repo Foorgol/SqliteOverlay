@@ -1,5 +1,3 @@
-#include <boost/date_time/local_time/local_time.hpp>
-
 #include <Sloppy/json.hpp>
 
 #include "ClausesAndQueries.h"

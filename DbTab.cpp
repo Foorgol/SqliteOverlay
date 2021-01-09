@@ -12,9 +12,6 @@
 
 #include <memory>
 
-#include <boost/algorithm/string.hpp>
-#include <boost/date_time/local_time/local_time.hpp>
-
 #include "DbTab.h"
 #include "TabRow.h"
 #include "Transaction.h"
@@ -405,8 +402,7 @@ namespace SqliteOverlay
   void DbTab::addColumn_exec(const string& colName, ColumnDataType colType, const string& constraints) const
   {
     string cn{colName};
-    boost::trim(cn);
-    if (cn.empty())
+    if (!Sloppy::trimAndCheckString(cn))
     {
       throw std::invalid_argument("Called with empty column name");
     }

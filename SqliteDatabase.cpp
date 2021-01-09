@@ -1,13 +1,10 @@
 #include <sys/stat.h>
 
-#include <boost/date_time/local_time/local_time.hpp>
-
 #include <Sloppy/String.h>
 #include <Sloppy/Utils.h>
 #include <Sloppy/Crypto/Crypto.h>
 
 #include "SqliteDatabase.h"
-//#include "DbTab.h"
 #include "Transaction.h"
 #include "KeyValueTab.h"
 #include "TableCreator.h"

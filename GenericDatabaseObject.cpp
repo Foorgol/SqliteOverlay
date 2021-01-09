@@ -5,8 +5,6 @@
  * Created on 18. Februar 2014, 14:25
  */
 
-#include <boost/date_time/local_time/local_time.hpp>
-
 #include "GenericDatabaseObject.h"
 
 namespace SqliteOverlay
