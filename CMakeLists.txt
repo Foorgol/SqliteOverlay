@@ -57,8 +57,6 @@ set(LIB_SOURCES
     TableCreator.h
     Transaction.cpp
     Transaction.h
-    #UserMngr.cpp
-    #ActionMngr.cpp
     SqliteExceptions.h
     Defs.h
     Defs.cpp
@@ -113,8 +111,6 @@ set(INSTALLATION_HEADERS
     TableCreator.h
     Transaction.h
     SqliteExceptions.h
-    #UserMngr.h
-    #ActionMngr.h
     Changelog.h
     )
 install(FILES ${INSTALLATION_HEADERS} DESTINATION include/SqliteOverlay)
@@ -142,8 +138,6 @@ set(LIB_SOURCES_TST
     tests/tstKeyValueTab.cpp
     tests/tstTransaction.cpp
     tests/tstCopyAndBackup.cpp
-    #tests/tstUserManager.cpp
-    #tests/tstActionManager.cpp
     tests/tstTableCreator.cpp
     tests/tstIterators.cpp
     tests/tstThreadsAndBusy.cpp

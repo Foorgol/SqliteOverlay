@@ -1,8 +1,0 @@
-
-namespace SqliteOverlay {
-
-  namespace ActionMngr
-  {
-
-  }
-}
