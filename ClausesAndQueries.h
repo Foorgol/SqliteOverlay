@@ -129,10 +129,10 @@ namespace SqliteOverlay {
      */
     inline void addCol(
         const std::string& colName,   ///< the name of the column that should contain the value
-        const CommonTimestamp* pTimestamp   ///< the value itself
+        const Sloppy::DateTime::WallClockTimepoint_secs& val  ///< the value itself
         )
     {
-      addCol(colName, pTimestamp->getRawTime());
+      addCol(colName, val.to_time_t());
     }
 
     /** \brief Adds a date to the list of column values;
@@ -143,10 +143,14 @@ namespace SqliteOverlay {
      */
     inline void addCol(
         const std::string& colName,   ///< the name of the column that should contain the value
-        const boost::gregorian::date& d   ///< the value itself
+        const date::year_month_day& d   ///< the value itself
         )
     {
-      addCol(colName, boost::gregorian::to_int(d));
+      const auto day = static_cast<unsigned>(d.day());
+      const auto mon = static_cast<unsigned>(d.month());
+      const auto y = static_cast<int>(d.year());
+
+      addCol(colName, static_cast<int>(day + mon * 100 + y * 10000));
     }
 
     /** \brief Deletes all column names and values from the internal lists and
@@ -337,7 +341,7 @@ namespace SqliteOverlay {
     void addCol(
         const std::string& colName,   ///< the name of the column that should contain the value
         const std::string& op,   ///< the operator between column name and value
-        const CommonTimestamp* pTimestamp   ///< the value itself
+        const Sloppy::DateTime::WallClockTimepoint_secs& val   ///< the value itself
         );
 
     /** \brief Adds a 'IS NOT NULL' to the list of column values
@@ -361,11 +365,8 @@ namespace SqliteOverlay {
     inline void addCol(
         const std::string& colName,   ///< the name of the column that should contain the value
         const std::string& op,   ///< the operator between column name and value
-        const boost::gregorian::date& d   ///< the value itself
-        )
-    {
-      addCol(colName, op, boost::gregorian::to_int(d));
-    }
+        const date::year_month_day& d   ///< the value itself
+        );
 
     /** \brief Constructs a "`SELECT rowid`" or "`SELECT COUNT(*)`" statement for a given
      * database and table name, the statement using a WHERE clause

@@ -191,28 +191,15 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  LocalTimestamp SqlStatement::getLocalTime(int colId, boost::local_time::time_zone_ptr tzp) const
+  Sloppy::DateTime::WallClockTimepoint_secs SqlStatement::getTimestamp_secs(int colId, date::time_zone* tzp) const
   {
     if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
     {
       throw NullValueException();
     }
 
-    time_t rawTime = sqlite3_column_int64(stmt, colId);
-    return LocalTimestamp(rawTime, tzp);
-  }
-
-  //----------------------------------------------------------------------------
-
-  UTCTimestamp SqlStatement::getUTCTime(int colId) const
-  {
-    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
-    {
-      throw NullValueException();
-    }
-
-    time_t rawTime = sqlite3_column_int64(stmt, colId);
-    return UTCTimestamp(rawTime);
+    const time_t rawTime = sqlite3_column_int64(stmt, colId);
+    return Sloppy::DateTime::WallClockTimepoint_secs(rawTime, tzp);
   }
 
   //----------------------------------------------------------------------------
@@ -330,32 +317,17 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  std::optional<LocalTimestamp> SqlStatement::getLocalTime2(int colId, boost::local_time::time_zone_ptr tzp) const
+  std::optional<Sloppy::DateTime::WallClockTimepoint_secs> SqlStatement::getTimestamp_secs2(int colId, date::time_zone* tzp) const
   {
     assertColumnDataAccess(colId);
 
     if (isNull_NoGuards(colId))
     {
-      return std::optional<LocalTimestamp>{};
+      return std::nullopt;
     }
 
-    time_t rawTime = sqlite3_column_int64(stmt, colId);
-    return LocalTimestamp(rawTime, tzp);
-  }
-
-  //----------------------------------------------------------------------------
-
-  std::optional<UTCTimestamp> SqlStatement::getUTCTime2(int colId) const
-  {
-    assertColumnDataAccess(colId);
-
-    if (isNull_NoGuards(colId))
-    {
-      return std::optional<UTCTimestamp>{};
-    }
-
-    time_t rawTime = sqlite3_column_int64(stmt, colId);
-    return UTCTimestamp(rawTime);
+    const time_t rawTime = sqlite3_column_int64(stmt, colId);
+    return Sloppy::DateTime::WallClockTimepoint_secs(rawTime, tzp);
   }
 
   //----------------------------------------------------------------------------

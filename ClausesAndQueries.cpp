@@ -89,7 +89,7 @@ namespace SqliteOverlay {
   void WhereClause::addCol(const string& colName, const string& op, int val)
   {
     addCol(colName, val);
-    colVals[colVals.size() - 1].op = op;
+    colVals.back().op = op;
   }
 
   //----------------------------------------------------------------------------
@@ -97,7 +97,7 @@ namespace SqliteOverlay {
   void WhereClause::addCol(const string& colName, const string& op, int64_t val)
   {
     addCol(colName, val);
-    colVals[colVals.size() - 1].op = op;
+    colVals.back().op = op;
   }
 
   //----------------------------------------------------------------------------
@@ -105,7 +105,7 @@ namespace SqliteOverlay {
   void WhereClause::addCol(const string& colName, const string& op, double val)
   {
     addCol(colName, val);
-    colVals[colVals.size() - 1].op = op;
+    colVals.back().op = op;
   }
 
   //----------------------------------------------------------------------------
@@ -113,15 +113,23 @@ namespace SqliteOverlay {
   void WhereClause::addCol(const string& colName, const string& op, const string& val)
   {
     addCol(colName, val);
-    colVals[colVals.size() - 1].op = op;
+    colVals.back().op = op;
   }
 
   //----------------------------------------------------------------------------
 
-  void WhereClause::addCol(const string& colName, const string& op, const CommonTimestamp* pTimestamp)
+  void WhereClause::addCol(const string& colName, const string& op, const WallClockTimepoint_secs& val)
   {
-    addCol(colName, pTimestamp);
-    colVals[colVals.size() - 1].op = op;
+    addCol(colName, val);
+    colVals.back().op = op;
+  }
+
+  //----------------------------------------------------------------------------
+
+  void WhereClause::addCol(const string& colName, const string& op, const date::year_month_day& d)
+  {
+    addCol(colName, d);
+    colVals.back().op = op;
   }
 
   //----------------------------------------------------------------------------

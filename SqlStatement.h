@@ -1,5 +1,4 @@
-#ifndef SQLITE_OVERLAY_SQLSTATEMENT_H
-#define SQLITE_OVERLAY_SQLSTATEMENT_H
+#pragma once
 
 #include <string>
 #include <memory>
@@ -195,28 +194,10 @@ namespace SqliteOverlay
      */
     void bind(
         int argPos,   ///< the placeholder to bind to (1-based if you use "?")
-        const LocalTimestamp& val   ///< the value to bind to the placeholder
+        const Sloppy::DateTime::WallClockTimepoint_secs& val   ///< the value to bind to the placeholder
         ) const
     {
-      bind(argPos, val.getRawTime());  // forwards the call to a int64-bind
-    }
-
-    /** \brief Binds a timestamp to a placeholder in the statement; time is always stored in UTC seconds
-     *
-     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
-     * a specification how placeholders are defined in the SQLite language.
-     *
-     * \throws GenericSqliteException incl. error code if anything goes wrong
-     *
-     * Test case: yes
-     *
-     */
-    void bind(
-        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
-        const UTCTimestamp& val   ///< the value to bind to the placeholder
-        ) const
-    {
-      bind(argPos, val.getRawTime());  // forwards the call to a int64-bind
+      bind(argPos, val.to_time_t());  // forwards the call to a int64-bind
     }
 
     /** \brief Binds a blob of data to a placeholder in the statement
@@ -470,27 +451,9 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    LocalTimestamp getLocalTime(
+    Sloppy::DateTime::WallClockTimepoint_secs getTimestamp_secs(
         int colId,   ///< the zero-based column ID in the result row
-        boost::local_time::time_zone_ptr tzp   ///< a pointer to the time zone for the local time
-        ) const;
-
-    /** \brief Retrieves the value of a column in the statement result as UTCTimestamp instance;
-     * requires the cell content to be an integer with "seconds since epoch".
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \returns the value in the requested result column as UTCTimestamp
-     *
-     * Test case: yes
-     *
-     */
-    UTCTimestamp getUTCTime(
-        int colId   ///< the zero-based column ID in the result row
+        date::time_zone* tzp = nullptr   ///< a pointer to the time zone passed to the ctor of the WallClockTimepoint
         ) const;
 
     /** \brief Retrieves the value of a column in the statement result as a data blob.
@@ -643,27 +606,9 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    std::optional<LocalTimestamp> getLocalTime2(
+    std::optional<Sloppy::DateTime::WallClockTimepoint_secs> getTimestamp_secs2(
         int colId,   ///< the zero-based column ID in the result row
-        boost::local_time::time_zone_ptr tzp   ///< a pointer to the time zone for the local time
-        ) const;
-
-    /** \brief Retrieves the value of a column in the statement result as UTCTimestamp instance;
-     * requires the cell content to be an integer with "seconds since epoch".
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \returns the value in the requested result column as UTCTimestamp or an empty optional in case of NULL
-     *
-     * Test case: yes
-     *
-     */
-    std::optional<UTCTimestamp> getUTCTime2(
-        int colId   ///< the zero-based column ID in the result row
+        date::time_zone* tzp   ///< a pointer to the time zone for the WallClockTimepoint ctor
         ) const;
 
     /** \brief Retrieves the value of a column in the statement result as a data blob.
@@ -870,28 +815,6 @@ namespace SqliteOverlay
     void get(int colId, bool& result) const
     {
       result = getBool(colId);
-    }
-
-    /** \brief Retrieves the value of a column in the statement result as a UTC timestamp
-     *
-     * Uses an out-parameter instead of a direct return. The advantage is that multiple
-     * `get()` variants for int, double, string, ... can have the same signature style
-     * of `get(int, T&)` which allows for templating and overloading.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * Test case: yes
-     *
-     */
-    void get(int colId, UTCTimestamp& result) const
-    {
-      result = getUTCTime(colId);
-    }
-    void get(int colId, std::optional<UTCTimestamp>& result) const
-    {
-      result = getUTCTime2(colId);
     }
 
     /** \brief Retrieves the value of a column in the statement result as a JSON object
@@ -1188,5 +1111,3 @@ namespace SqliteOverlay
     int stepCount{0};
   };
 }
-
-#endif /* SQLSTATEMENT_H */

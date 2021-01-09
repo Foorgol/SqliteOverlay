@@ -12,10 +12,7 @@
 
 #include <stdexcept>
 
-#include <boost/date_time/local_time/local_time.hpp>
-
 #include "TabRow.h"
-//#include "DbTab.h"
 #include "CommonTabularClass.h"
 #include "ClausesAndQueries.h"
 
