@@ -11,8 +11,6 @@
 
 #include "SqlStatement.h"                 // for SqlStatement
 
-using namespace Sloppy::DateTime;
-
 namespace SqliteOverlay {
 
   class SqliteDatabase;
@@ -339,8 +337,7 @@ namespace SqliteOverlay {
      * Test case: not yet
      *
      */
-    void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
+    void addCol(const std::string& colName,   ///< the name of the column that should contain the value
         const std::string& op,   ///< the operator between column name and value
         const Sloppy::DateTime::WallClockTimepoint_secs& val   ///< the value itself
         );

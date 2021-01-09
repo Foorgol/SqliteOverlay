@@ -124,7 +124,7 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
 
-  void WhereClause::addCol(const string& colName, const string& op, const WallClockTimepoint_secs& val)
+  void WhereClause::addCol(const string& colName, const string& op, const Sloppy::DateTime::WallClockTimepoint_secs& val)
   {
     addCol(colName, val);
     colVals.back().op = op;

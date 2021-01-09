@@ -201,7 +201,7 @@ namespace SqliteOverlay
      *
      * \throws NoDataException if the key doesn't exist
      */
-    WallClockTimepoint_secs getUTCTimestamp(const std::string& key);
+    Sloppy::DateTime::WallClockTimepoint_secs getUTCTimestamp(const std::string& key);
 
     /** \returns the value of a key as a JSON object
      *

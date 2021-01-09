@@ -218,7 +218,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  WallClockTimepoint_secs TabRow::getTimestamp_secs(const string& colName, date::time_zone* tzp) const
+  Sloppy::DateTime::WallClockTimepoint_secs TabRow::getTimestamp_secs(const string& colName, date::time_zone* tzp) const
   {
     const time_t rawTime = getInt64(colName);
     return Sloppy::DateTime::WallClockTimepoint_secs{rawTime, tzp};
