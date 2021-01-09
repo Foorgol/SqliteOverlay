@@ -10,16 +10,14 @@
  * don't use it at all.
  */
 
-#ifndef SQLITE_OVERLAY_TABROW_H
-#define	SQLITE_OVERLAY_TABROW_H
+#pragma once
 
 #include <Sloppy/String.h>
 #include <Sloppy/ConfigFileParser/ConstraintChecker.h>
+#include <Sloppy/DateTime/DateAndTime.h>
 
 #include "SqliteDatabase.h"
 #include "ClausesAndQueries.h"
-
-namespace greg = boost::gregorian;
 
 namespace SqliteOverlay
 {
@@ -356,7 +354,8 @@ namespace SqliteOverlay
         const std::string& colName   ///< the name of the column to query
         ) const;
 
-    /** \returns the contents of a given column as a timestamp in local time
+
+    /** \returns the contents of a given column as a duration of custom granularity
      *
      * \throws std::invalid argument if the column name was empty
      *
@@ -371,12 +370,28 @@ namespace SqliteOverlay
      * Test case: not yet
      *
      */
-    LocalTimestamp getLocalTime(
-        const std::string& colName,   ///< the name of the column to query
-        boost::local_time::time_zone_ptr tzp   ///< pointer to the timezone info for constructing the LocalTimestamp object
-        ) const;
+    template<class RepType, class PeriodRatio>
+    Sloppy::DateTime::WallClockTimepoint_secs getDuration(
+        const std::string& colName   ///< the name of the column to query
+        ) const
+    {
+      if constexpr (std::is_same_v<RepType, int>) {
+        return std::chrono::duration<RepType, PeriodRatio>(getInt(colName));
+      }
+      if constexpr (std::is_same_v<RepType, int64_t>) {
+        return std::chrono::duration<RepType, PeriodRatio>(getInt64(colName));
+      }
+      if constexpr (std::is_same_v<RepType, double>) {
+        return std::chrono::duration<RepType, PeriodRatio>(getDouble(colName));
+      }
 
-    /** \returns the contents of a given column as a timestamp in UTC
+      static_assert (alwaysFalse<RepType>, "Unsupported RepType for TabRow::getDuration()");
+    }
+
+    /** \returns the contents of a given column as a timestamp
+     *
+     *  The column has to contain the timestamp in seconds since the
+     *  UNIX epoch (which is more or less UTC).
      *
      * \throws std::invalid argument if the column name was empty
      *
@@ -388,11 +403,12 @@ namespace SqliteOverlay
      *
      * \throws NullValueException if the column contained NULL
      *
-     * Test case: yes
+     * Test case: not yet
      *
      */
-    UTCTimestamp getUTCTime(
-        const std::string& colName   ///< the name of the column to query
+    Sloppy::DateTime::WallClockTimepoint_secs getTimestamp_secs(
+        const std::string& colName,   ///< the name of the column to query
+        date::time_zone* tzp = nullptr   ///< pointer to the timezone info that is passed to the ctor of the WallClockTimepoint
         ) const;
 
     /** \returns the contents of a given column as a JSON object
@@ -434,7 +450,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    greg::date getDate(
+    date::year_month_day getDate(
         const std::string& colName   ///< the name of the column to query
         ) const;
 
@@ -523,8 +539,11 @@ namespace SqliteOverlay
         const std::string& colName   ///< the name of the column to query
         ) const;
 
-    /** \returns the contents of a given column as a LocalTimestamp
-     * or NULL if the column was empty
+    /** \returns the contents of a given column as a timestamp
+     * or empty if the column was empty
+     *
+     *  The column has to contain the timestamp in seconds since the
+     *  UNIX epoch (which is more or less UTC).
      *
      * \throws std::invalid argument if the column name was empty
      *
@@ -537,24 +556,9 @@ namespace SqliteOverlay
      * Test case: not yet
      *
      */
-    std::optional<LocalTimestamp> getLocalTime2(
+    std::optional<Sloppy::DateTime::WallClockTimepoint_secs> getTimestamp_secs2(
         const std::string& colName,   ///< the name of the column to query
-        boost::local_time::time_zone_ptr tzp   ///< pointer to the local time zone description
-        ) const;
-
-    /** \returns the contents of a given column as a UTCTimestamp
-     * or NULL if the column was empty
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     */
-    std::optional<UTCTimestamp> getUTCTime2(
-        const std::string& colName   ///< the name of the column to query
+        date::time_zone* tzp = nullptr   ///< pointer to the local time zone description
         ) const;
 
     /** \returns the contents of a given column as a JSON object
@@ -586,7 +590,7 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    std::optional<greg::date> getDate2(
+    std::optional<date::year_month_day> getDate2(
         const std::string& colName   ///< the name of the column to query
         ) const;
 
@@ -899,6 +903,4 @@ namespace SqliteOverlay
   };
 
 }
-
-#endif	/* TABROW_H */
 

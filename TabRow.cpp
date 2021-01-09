@@ -218,17 +218,10 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  LocalTimestamp TabRow::getLocalTime(const string& colName, boost::local_time::time_zone_ptr tzp) const
+  WallClockTimepoint_secs TabRow::getTimestamp_secs(const string& colName, date::time_zone* tzp) const
   {
-    time_t rawTime = getInt64(colName);
-    return LocalTimestamp(rawTime, tzp);
-  }
-
-  //----------------------------------------------------------------------------
-
-  UTCTimestamp TabRow::getUTCTime(const string& colName) const
-  {
-    return get<UTCTimestamp>(colName);
+    const time_t rawTime = getInt64(colName);
+    return Sloppy::DateTime::WallClockTimepoint_secs{rawTime, tzp};
   }
 
   //----------------------------------------------------------------------------
@@ -240,10 +233,10 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  boost::gregorian::date TabRow::getDate(const string& colName) const
+  date::year_month_day TabRow::getDate(const string& colName) const
   {
-    int ymd = getInt(colName);
-    return greg::from_int(ymd);
+    const int ymd = getInt(colName);
+    return Sloppy::DateTime::ymdFromInt(ymd);
   }
 
 //----------------------------------------------------------------------------
@@ -283,26 +276,19 @@ namespace SqliteOverlay
 
 //----------------------------------------------------------------------------
 
-  optional<LocalTimestamp> TabRow::getLocalTime2(const string& colName, boost::local_time::time_zone_ptr tzp) const
+  optional<Sloppy::DateTime::WallClockTimepoint_secs> TabRow::getTimestamp_secs2(const string& colName, date::time_zone* tzp) const
   {
-    optional<int64_t> rawTime = getInt64_2(colName);
+    const auto rawTime = getInt64_2(colName);
 
-    if (rawTime.has_value())
+    if (rawTime)
     {
-      return LocalTimestamp{rawTime.value(), tzp};
+      return Sloppy::DateTime::WallClockTimepoint_secs{rawTime.value(), tzp};
     }
 
-    return optional<LocalTimestamp>{};
+    return std::nullopt;
   }
 
 //----------------------------------------------------------------------------
-
-  optional<UTCTimestamp> TabRow::getUTCTime2(const string& colName) const
-  {
-    return get<optional<UTCTimestamp>>(colName);
-  }
-
-  //----------------------------------------------------------------------------
 
   optional<nlohmann::json> TabRow::getJson2(const string& colName) const
   {
@@ -311,15 +297,15 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  optional<boost::gregorian::date> TabRow::getDate2(const string& colName) const
+  optional<date::year_month_day> TabRow::getDate2(const string& colName) const
   {
-    auto ymd = getInt2(colName);
-    if (ymd.has_value())
+    const auto ymd = getInt2(colName);
+    if (ymd)
     {
-      return greg::from_int(ymd.value());
+      return Sloppy::DateTime::ymdFromInt(ymd.value());
     }
 
-    return optional<greg::date>{};
+    return std::nullopt;
   }
 
 //----------------------------------------------------------------------------

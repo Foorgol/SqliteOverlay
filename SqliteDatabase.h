@@ -22,6 +22,11 @@ namespace SqliteOverlay
   // a forward definition
   class KeyValueTab;
 
+  // a pseudo-always-false expression for conditional static_asserts
+  // in templates
+  template<typename T>
+  constexpr bool alwaysFalse = false;
+
   // some free functions, mostly for creating SQL strings
 
   /** \brief Creates a column constraint string for CREATE TABLE statements
