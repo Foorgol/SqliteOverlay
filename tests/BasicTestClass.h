@@ -4,13 +4,10 @@
 #include <string>
 #include <memory>
 #include <gtest/gtest.h>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "Sloppy/Logger/Logger.h"
 
-using namespace std;
-namespace boostfs = boost::filesystem;
-using namespace Sloppy::Logger;
 
 class EmptyFixture
 {
@@ -24,9 +21,9 @@ protected:
   virtual void SetUp ();
   virtual void TearDown ();
 
-  string getTestDir () const;
-  string genTestFilePath(string fName) const;
-  boostfs::path tstDirPath;
+  std::string getTestDir () const;
+  std::string genTestFilePath(const std::string& fName) const;
+  std::filesystem::path tstDirPath;
 };
 
 #endif /* BASICTESTCLASS_H */

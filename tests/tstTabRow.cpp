@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <boost/filesystem.hpp>
 
 #include <Sloppy/Crypto/Sodium.h>
 #include <Sloppy/Crypto/Crypto.h>
@@ -87,7 +86,8 @@ TEST_F(DatabaseTestScenario, TabRow_getters)
   //
   // before the test, modify the int value in row 1 to get a suitable date value
   r.update("i", 20160807);
-  boost::gregorian::date dExpected{2016, 8, 7};
+  date::year_month_day dExpected{date::year{2016} / 8 / 7};
+  std::cout << "----!-----" << std::endl;
   ASSERT_EQ(dExpected, r.getDate("i"));
   auto dt = r.getDate2("i");
   ASSERT_TRUE(dt.has_value());

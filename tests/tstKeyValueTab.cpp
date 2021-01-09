@@ -3,7 +3,6 @@
 #include <cmath>
 
 #include <gtest/gtest.h>
-#include <boost/filesystem.hpp>
 
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"

@@ -1,13 +1,9 @@
 #include <gtest/gtest.h>
-#include <boost/filesystem.hpp>
-#include <boost/date_time/local_time/local_time.hpp>
 
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"
-//#include "ClausesAndQueries.h"
 
 using namespace SqliteOverlay;
-namespace bfs = boost::filesystem;
 
 TEST_F(DatabaseTestScenario, QueryInt)
 {

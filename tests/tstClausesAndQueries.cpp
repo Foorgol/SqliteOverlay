@@ -1,8 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <boost/filesystem.hpp>
-#include <boost/date_time/local_time/local_time.hpp>
-
 #include "DatabaseTestScenario.h"
 #include "ClausesAndQueries.h"
 
@@ -156,7 +153,7 @@ TEST_F(DatabaseTestScenario, ColumnValueClause_DateCol)
 {
   SampleDB db = getScenario01();
   ColumnValueClause cvc;
-  boost::gregorian::date d{2016, 8, 7};
+  const date::year_month_day d{date::year{2016} /8 / 7};
 
   cvc.addCol("i", d);
 
@@ -179,11 +176,13 @@ TEST_F(DatabaseTestScenario, ColumnValueClause_DateCol)
 
 TEST_F(DatabaseTestScenario, ColumnValueClause_TimestampCol)
 {
+  using namespace std::chrono_literals;
+
   SampleDB db = getScenario01();
   ColumnValueClause cvc;
-  UTCTimestamp ts{2019,01,30,19,52,0};
+  Sloppy::DateTime::WallClockTimepoint_secs ts{date::year{2019} / 01 / 30, 19h, 52min, 0s};
 
-  cvc.addCol("i", &ts);
+  cvc.addCol("i", ts);
 
   ASSERT_TRUE(cvc.hasColumns());
 
@@ -416,7 +415,7 @@ TEST_F(DatabaseTestScenario, WhereClause_DateCol)
 {
   SampleDB db = getScenario01();
   WhereClause w;
-  boost::gregorian::date d{2016, 8, 7};
+  date::year_month_day d{date::year{2016} / 8 / 7};
 
   ASSERT_TRUE(w.isEmpty());
 

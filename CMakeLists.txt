@@ -1,5 +1,5 @@
 project(SqliteOverlay)
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.2)
 aux_source_directory(. SRC_LIST)
 
 # call cmake with "cmake -DBUILD_TESTS=OFF .." to
@@ -7,6 +7,10 @@ aux_source_directory(. SRC_LIST)
 option(BUILD_TESTS "Build unit tests" ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmakeModules/")
+
+find_package(Threads REQUIRED)
+set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
+
 find_package(SQLite3 REQUIRED)
 include_directories(${SQLITE3_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${SQLITE3_LIBRARIES})
@@ -18,7 +22,7 @@ set(WIN_LOCAL_PREFIX "D:/msys64/usr/local")
 # My lib of sloppyly implemented helper functions
 #
 find_library(Sloppy_LIB NAME Sloppy PATHS /usr/local/lib /usr/lib /usr/local/lib64 /usr/lib64)
-set(LIBS ${LIBS} ${Sloppy_LIB})
+set(LIBS ${LIBS} ${Sloppy_LIB} curl)
 message("Using Sloppy lib at " ${Sloppy_LIB})
 
 if (WIN32)
@@ -145,7 +149,7 @@ set(LIB_SOURCES_TST
 
 find_package(GTest)
 
-if (GTEST_FOUND AND Boost_FOUND AND BUILD_TESTS)
+if (GTEST_FOUND AND BUILD_TESTS)
     message("   !!! Tests will be build as well !!!")
     include_directories("." ${GTEST_INCLUDE_DIRS})
 
@@ -162,4 +166,4 @@ if (GTEST_FOUND AND Boost_FOUND AND BUILD_TESTS)
     message("Writing unit test binary to: ${CMAKE_BINARY_DIR}")
 
     target_link_libraries(${PROJECT_NAME}_Tests ${LIBS} ${GTEST_BOTH_LIBRARIES})
-endif (GTEST_FOUND AND Boost_FOUND AND BUILD_TESTS)
+endif (GTEST_FOUND AND BUILD_TESTS)

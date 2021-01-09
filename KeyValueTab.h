@@ -236,7 +236,7 @@ namespace SqliteOverlay
     /** \returns the value of a key as an optional UTCTimestamp that
      * is empty if the key doesn't exist
      */
-    std::optional<UTCTimestamp> getUTCTimestamp2(const std::string& key);
+    std::optional<Sloppy::DateTime::WallClockTimepoint_secs> getUTCTimestamp2(const std::string& key);
 
     /** \returns the value of a key as an optional JSON object that
      * is empty if the key doesn't exist

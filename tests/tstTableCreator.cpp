@@ -3,7 +3,6 @@
 #include "TableCreator.h"
 
 using namespace SqliteOverlay;
-namespace bfs = boost::filesystem;
 
 TEST(TableCreatorTests, AddColAndGetStatement)
 {

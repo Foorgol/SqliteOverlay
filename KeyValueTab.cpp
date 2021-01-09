@@ -101,9 +101,10 @@ namespace SqliteOverlay
 
   Sloppy::DateTime::WallClockTimepoint_secs KeyValueTab::getUTCTimestamp(const string& key)
   {
-    Sloppy::DateTime::WallClockTimepoint_secs result;
-    get(key, result);
-    return result;
+    time_t raw;
+    get(key, raw);
+
+    return Sloppy::DateTime::WallClockTimepoint_secs{raw};
   }
 
   //----------------------------------------------------------------------------
@@ -164,9 +165,9 @@ namespace SqliteOverlay
 
   optional<Sloppy::DateTime::WallClockTimepoint_secs> KeyValueTab::getUTCTimestamp2(const string& key)
   {
-    optional<Sloppy::DateTime::WallClockTimepoint_secs> result;
-    get(key, result);
-    return result;
+    auto raw = getInt64_2(key);
+    if (!raw) return std::nullopt;
+    return Sloppy::DateTime::WallClockTimepoint_secs{static_cast<time_t>(raw.value())};
   }
 
   //----------------------------------------------------------------------------

@@ -10,8 +10,6 @@
  * don't use it at all.
  */
 
-#include <boost/date_time/local_time/local_time.hpp>
-
 #include "SampleDB.h"
 //#include "TableCreator.h"
 

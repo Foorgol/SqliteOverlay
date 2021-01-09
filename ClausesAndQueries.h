@@ -146,11 +146,7 @@ namespace SqliteOverlay {
         const date::year_month_day& d   ///< the value itself
         )
     {
-      const auto day = static_cast<unsigned>(d.day());
-      const auto mon = static_cast<unsigned>(d.month());
-      const auto y = static_cast<int>(d.year());
-
-      addCol(colName, static_cast<int>(day + mon * 100 + y * 10000));
+      addCol(colName, Sloppy::DateTime::intFromYmd(d));
     }
 
     /** \brief Deletes all column names and values from the internal lists and
@@ -362,7 +358,7 @@ namespace SqliteOverlay {
      * Test case: yes
      *
      */
-    inline void addCol(
+    void addCol(
         const std::string& colName,   ///< the name of the column that should contain the value
         const std::string& op,   ///< the operator between column name and value
         const date::year_month_day& d   ///< the value itself

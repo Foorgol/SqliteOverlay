@@ -191,7 +191,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  Sloppy::DateTime::WallClockTimepoint_secs SqlStatement::getTimestamp_secs(int colId, date::time_zone* tzp) const
+  Sloppy::DateTime::WallClockTimepoint_secs SqlStatement::getTimestamp_secs(int colId, const date::time_zone* tzp) const
   {
     if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
     {
@@ -317,7 +317,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  std::optional<Sloppy::DateTime::WallClockTimepoint_secs> SqlStatement::getTimestamp_secs2(int colId, date::time_zone* tzp) const
+  std::optional<Sloppy::DateTime::WallClockTimepoint_secs> SqlStatement::getTimestamp_secs2(int colId, const date::time_zone* tzp) const
   {
     assertColumnDataAccess(colId);
 

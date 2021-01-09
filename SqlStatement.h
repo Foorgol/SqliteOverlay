@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <ctime>
+#include <tuple>
 
 #include <sqlite3.h>
 
@@ -453,7 +454,7 @@ namespace SqliteOverlay
      */
     Sloppy::DateTime::WallClockTimepoint_secs getTimestamp_secs(
         int colId,   ///< the zero-based column ID in the result row
-        date::time_zone* tzp = nullptr   ///< a pointer to the time zone passed to the ctor of the WallClockTimepoint
+        const date::time_zone* tzp = nullptr   ///< a pointer to the time zone passed to the ctor of the WallClockTimepoint
         ) const;
 
     /** \brief Retrieves the value of a column in the statement result as a data blob.
@@ -608,7 +609,7 @@ namespace SqliteOverlay
      */
     std::optional<Sloppy::DateTime::WallClockTimepoint_secs> getTimestamp_secs2(
         int colId,   ///< the zero-based column ID in the result row
-        date::time_zone* tzp   ///< a pointer to the time zone for the WallClockTimepoint ctor
+        const date::time_zone* tzp = nullptr   ///< a pointer to the time zone for the WallClockTimepoint ctor
         ) const;
 
     /** \brief Retrieves the value of a column in the statement result as a data blob.
@@ -961,7 +962,7 @@ namespace SqliteOverlay
       T2 r2;
       get(col2, r2);
 
-      return make_tuple(r1, r2);
+      return std::make_tuple(r1, r2);
     }
 
     /** \brief Simple wrapper for retrieving three column values in a tuple.

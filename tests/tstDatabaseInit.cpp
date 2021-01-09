@@ -1,24 +1,26 @@
+
+#include <filesystem>
+
 #include <gtest/gtest.h>
-#include <boost/filesystem.hpp>
 
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"
 #include "Changelog.h"
 
+namespace fs = std::filesystem;
 using namespace SqliteOverlay;
-namespace bfs = boost::filesystem;
 
 TEST_F(DatabaseTestScenario, DatabaseCtor)
 {
   // create a new, empty database
   string dbFileName = getSqliteFileName();
-  bfs::path dbPathObj(dbFileName);
+  fs::path dbPathObj(dbFileName);
 
-  ASSERT_FALSE(bfs::exists(dbPathObj));
+  ASSERT_FALSE(fs::exists(dbPathObj));
   ASSERT_THROW(SqliteDatabase(dbFileName, OpenMode::OpenExisting_RW), std::invalid_argument);
   ASSERT_THROW(SqliteDatabase(dbFileName, OpenMode::OpenExisting_RO), std::invalid_argument);
   SqliteDatabase db{dbFileName, OpenMode::OpenOrCreate_RW};
-  ASSERT_TRUE(bfs::exists(dbPathObj));
+  ASSERT_TRUE(fs::exists(dbPathObj));
   ASSERT_TRUE(db.isAlive());
 
   // close the database connection
@@ -36,12 +38,12 @@ TEST_F(DatabaseTestScenario, DatabaseCtor)
   db.close();
 
   // clean-up and test "force new"
-  ASSERT_TRUE(bfs::remove(dbPathObj));
-  ASSERT_FALSE(bfs::exists(dbPathObj));
+  ASSERT_TRUE(fs::remove(dbPathObj));
+  ASSERT_FALSE(fs::exists(dbPathObj));
   db = SqliteDatabase{dbFileName, OpenMode::ForceNew};
-  ASSERT_TRUE(bfs::exists(dbPathObj));
-  ASSERT_TRUE(bfs::remove(dbPathObj));
-  ASSERT_FALSE(bfs::exists(dbPathObj));
+  ASSERT_TRUE(fs::exists(dbPathObj));
+  ASSERT_TRUE(fs::remove(dbPathObj));
+  ASSERT_FALSE(fs::exists(dbPathObj));
 
   // try to open a non-existing / invalid / empty file
   ASSERT_THROW(SqliteDatabase("", OpenMode::OpenOrCreate_RW), std::invalid_argument);

@@ -10,12 +10,13 @@
  * don't use it at all.
  */
 
+#include <filesystem>
+
 #include <gtest/gtest.h>
 
 #include "DatabaseTestScenario.h"
-//#include "DbTab.h"
 
-namespace bfs = boost::filesystem;
+namespace fs = std::filesystem;
 
 const string DatabaseTestScenario::DB_TEST_FILE_NAME{"SqliteTestDB.db"};
 
@@ -66,12 +67,12 @@ void DatabaseTestScenario::TearDown()
 
   // delete the test database, if still existing
   string dbFileName = getSqliteFileName();
-  bfs::path dbPathObj(dbFileName);
-  if (bfs::exists(dbPathObj))
+  fs::path dbPathObj(dbFileName);
+  if (fs::exists(dbPathObj))
   {
-    ASSERT_TRUE(bfs::remove(dbPathObj));
+    ASSERT_TRUE(fs::remove(dbPathObj));
   }
-  ASSERT_FALSE(bfs::exists(dbPathObj));
+  ASSERT_FALSE(fs::exists(dbPathObj));
 
 }
 
@@ -86,9 +87,9 @@ string DatabaseTestScenario::getSqliteFileName() const
     
 bool DatabaseTestScenario::sqliteFileExists() const
 {
-  bfs::path dbPathObj(getSqliteFileName());
+  fs::path dbPathObj(getSqliteFileName());
 
-  return bfs::exists(dbPathObj);
+  return fs::exists(dbPathObj);
 }
 
 //----------------------------------------------------------------------------
@@ -153,12 +154,12 @@ void DatabaseTestScenario::SetUp()
   // delete the test database, if still existing,
   // so that we have a clean start
   string dbFileName = getSqliteFileName();
-  bfs::path dbPathObj(dbFileName);
-  if (bfs::exists(dbPathObj))
+  fs::path dbPathObj(dbFileName);
+  if (fs::exists(dbPathObj))
   {
-    ASSERT_TRUE(bfs::remove(dbPathObj));
+    ASSERT_TRUE(fs::remove(dbPathObj));
   }
-  ASSERT_FALSE(bfs::exists(dbPathObj));
+  ASSERT_FALSE(fs::exists(dbPathObj));
 
 }
 

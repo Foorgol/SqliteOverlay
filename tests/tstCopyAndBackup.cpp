@@ -1,11 +1,11 @@
 #include <memory>
 #include <climits>
+#include <filesystem>
 
 #include <Sloppy/Utils.h>
 
 
 #include <gtest/gtest.h>
-#include <boost/filesystem.hpp>
 
 #include "DatabaseTestScenario.h"
 #include "SampleDB.h"
@@ -83,7 +83,7 @@ TEST_F(DatabaseTestScenario, BackupCopy)
   ASSERT_FALSE(dstIter.hasData());
 
   // delete the backup
-  ASSERT_TRUE(boostfs::remove(bckFileName));
+  ASSERT_TRUE(std::filesystem::remove(bckFileName));
 }
 
 //----------------------------------------------------------------
@@ -113,5 +113,5 @@ TEST_F(DatabaseTestScenario, RestoreFromCopy)
   ASSERT_EQ(5, t1.length());
 
   // delete the backup
-  ASSERT_TRUE(boostfs::remove(bckFileName));
+  ASSERT_TRUE(std::filesystem::remove(bckFileName));
 }

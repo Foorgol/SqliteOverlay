@@ -316,18 +316,20 @@ TEST_F(DatabaseTestScenario, StmtLimits)
 
 TEST_F(DatabaseTestScenario, StmtTime)
 {
+  using namespace std::chrono_literals;
+
   prepScenario01();
   auto db = getRawDbHandle();
 
   // the following timestamps are all identical
-  auto tzp = Sloppy::DateTime::getPopulatedTzDatabase().time_zone_from_region("Europe/Berlin");
-  UTCTimestamp utcRef{2019, 1, 27, 9, 42, 42};
-  LocalTimestamp localRef{2019, 1, 27, 10, 42, 42, tzp};
+  auto tzp = date::locate_zone("Europe/Berlin");
+  Sloppy::DateTime::WallClockTimepoint_secs utcRef{date::year{2019} / 1 / 27, 9h, 42min, 42s};
+  Sloppy::DateTime::WallClockTimepoint_secs localRef{date::year{2019} / 1 / 27, 10h, 42min, 42s, tzp};
   time_t rawRef{1548582162};
 
   // check consistency
-  ASSERT_EQ(rawRef, utcRef.getRawTime());
-  ASSERT_EQ(rawRef, localRef.getRawTime());
+  ASSERT_EQ(rawRef, utcRef.to_time_t());
+  ASSERT_EQ(rawRef, localRef.to_time_t());
 
   // storage of local time
   SqlStatement stmt{db.get(), "UPDATE t1 SET i = ? WHERE rowid=1"};
@@ -355,16 +357,16 @@ TEST_F(DatabaseTestScenario, StmtTime)
   // retrieval of local time
   stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
-  LocalTimestamp lt = stmt.getLocalTime(0, tzp);
+  auto lt = stmt.getTimestamp_secs(0, tzp);
   ASSERT_EQ(lt, localRef);
-  ASSERT_EQ(rawRef, lt.getRawTime());
+  ASSERT_EQ(rawRef, lt.to_time_t());
 
   // retrieval of UTC time
   stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
-  UTCTimestamp u = stmt.getUTCTime(0);
+  auto u = stmt.getTimestamp_secs(0);
   ASSERT_EQ(u, utcRef);
-  ASSERT_EQ(rawRef, u.getRawTime());
+  ASSERT_EQ(rawRef, u.to_time_t());
 }
 
 //----------------------------------------------------------------
