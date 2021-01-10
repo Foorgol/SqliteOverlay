@@ -383,52 +383,6 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  void SqlStatement::bind(int argPos, int val) const
-  {
-    static_assert (sizeof(int) == 4, "'int' has to be 32-bit!");
-
-    int e = sqlite3_bind_int(stmt, argPos, val);
-    if (e != SQLITE_OK)
-    {
-      throw GenericSqliteException{e, "call to bindInt() of a SqlStatement"};
-    }
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqlStatement::bind(int argPos, int64_t val) const
-  {
-    int e = sqlite3_bind_int64(stmt, argPos, val);
-    if (e != SQLITE_OK)
-    {
-      throw GenericSqliteException{e, "call to bindInt64() of a SqlStatement"};
-    }
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqlStatement::bind(int argPos, double val) const
-  {
-    int e = sqlite3_bind_double(stmt, argPos, val);
-    if (e != SQLITE_OK)
-    {
-      throw GenericSqliteException{e, "call to bindDouble() of a SqlStatement"};
-    }
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqlStatement::bind(int argPos, const string& val) const
-  {
-    int e = sqlite3_bind_text(stmt, argPos, val.c_str(), val.length(), SQLITE_TRANSIENT);
-    if (e != SQLITE_OK)
-    {
-      throw GenericSqliteException{e, "call to bindString() of a SqlStatement"};
-    }
-  }
-
-  //----------------------------------------------------------------------------
-
   void SqlStatement::bind(int argPos, const char* val) const
   {
     int e = sqlite3_bind_text(stmt, argPos, val, strlen(val), SQLITE_TRANSIENT);
@@ -448,14 +402,6 @@ namespace SqliteOverlay
       throw GenericSqliteException{e, "call to bindBlob64() of a SqlStatement"};
     }
 
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqlStatement::bind(int argPos, const nlohmann::json& v) const
-  {
-    const string jsonData = v.dump();
-    bind(argPos, jsonData);  // the actual data binding is handled as a string value
   }
 
   //----------------------------------------------------------------------------

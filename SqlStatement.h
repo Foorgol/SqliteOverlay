@@ -78,76 +78,58 @@ namespace SqliteOverlay
      * value types at compile time.
      */
     template<typename T>
-    void bind(int argPos, T val) const
+    void bind(int argPos, const T& val) const
     {
-      // a literal 'false' is not possible here because it would
-      // trigger the static_assert even if the template has never
-      // been instantiated.
-      //
-      // Thus, we construct a "fake false" that depends on `T` and
-      // that is therefore only triggered if we actually instantiate
-      // this template.s
-      static_assert (!std::is_same<T,T>::value, "SqlStatement: call to bind() with a unsupported value type!");
+      static_assert (sizeof(int) == 4, "'int' has to be 32-bit!");
+
+      int e{SQLITE_OK};
+      if constexpr (std::is_same_v<T, int>) {
+        e = sqlite3_bind_int(stmt, argPos, val);
+      }
+      else if constexpr (std::is_same_v<T, int64_t>) {
+        e = sqlite3_bind_int64(stmt, argPos, val);
+      }
+      else if constexpr (std::is_same_v<T, double>) {
+        e = sqlite3_bind_double(stmt, argPos, val);
+      }
+      else if constexpr (std::is_same_v<T, std::string>) {
+        e = sqlite3_bind_text(stmt, argPos, val.c_str(), val.length(), SQLITE_TRANSIENT);
+      }
+      else if constexpr (std::is_same_v<T, bool>) {
+        e = sqlite3_bind_int(stmt, argPos, val ? 1 : 0);
+      }
+      else if constexpr (std::is_same_v<T, Sloppy::DateTime::WallClockTimepoint_secs>) {
+        // time is always stored in UTC seconds
+        e = sqlite3_bind_int64(stmt, argPos, val.to_time_t());
+      }
+      else if constexpr (std::is_same_v<T, nlohmann::json>) {
+        const std::string jsonData = val.dump();
+        bind(argPos, jsonData);  // the actual data binding is handled as a string value
+      }
+      else if constexpr (std::is_same_v<T, Sloppy::MemView>) {
+        /** \note SQLite makes an internal copy of the provided buffer; this is safer but
+        * also more memory consuming. Bear this in mind when dealing with very large blobs.
+        */
+        bind(argPos, val.to_voidPtr(), val.byteSize());  // forward the call to the generic bindBlob
+      }
+
+      else {
+        // a literal 'false' is not possible here because it would
+        // trigger the static_assert even if the template has never
+        // been instantiated.
+        //
+        // Thus, we construct a "fake false" that depends on `T` and
+        // that is therefore only triggered if we actually instantiate
+        // this template.s
+        static_assert (!std::is_same<T,T>::value, "SqlStatement: call to bind() with a unsupported value type!");
+      }
+
+      if (e != SQLITE_OK)
+      {
+        throw GenericSqliteException{e, "call to bindInt() of a SqlStatement"};
+      }
     }
 
-    /** \brief Binds an int value to a placeholder in the statement
-     *
-     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
-     * a specification how placeholders are defined in the SQLite language.
-     *
-     * \throws GenericSqliteException incl. error code if anything goes wrong
-     *
-     * Test case: yes
-     *
-     */
-    void bind(
-        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
-        int val   ///< the value to bind to the placeholder
-        ) const;
-
-    /** \brief Binds a 64-bit int value to a placeholder in the statement
-     *
-     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
-     * a specification how placeholders are defined in the SQLite language.
-     *
-     * \throws GenericSqliteException incl. error code if anything goes wrong
-     *
-     * Test case: yes
-     *
-     */
-    void bind(int argPos,   ///< the placeholder to bind to (1-based if you use "?")
-        int64_t val   ///< the value to bind to the placeholder
-        ) const;
-
-    /** \brief Binds a double value to a placeholder in the statement
-     *
-     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
-     * a specification how placeholders are defined in the SQLite language.
-     *
-     * \throws GenericSqliteException incl. error code if anything goes wrong
-     *
-     * Test case: yes
-     *
-     */
-    void bind(
-        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
-        double val   ///< the value to bind to the placeholder
-        ) const;
-
-    /** \brief Binds a string value to a placeholder in the statement
-     *
-     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
-     * a specification how placeholders are defined in the SQLite language.
-     *
-     * \throws GenericSqliteException incl. error code if anything goes wrong
-     *
-     * Test case: yes
-     *
-     */
-    void bind(
-        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
-        const std::string& val   ///< the value to bind to the placeholder
-        ) const;
 
     /** \brief Binds a *zero-terminated* C-string to a placeholder in the statement
      *
@@ -167,41 +149,6 @@ namespace SqliteOverlay
         const char* val   ///< the value to bind to the placeholder
         ) const;
 
-    /** \brief Binds a boolean value to a placeholder in the statement
-     *
-     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
-     * a specification how placeholders are defined in the SQLite language.
-     *
-     * \throws GenericSqliteException incl. error code if anything goes wrong
-     *
-     * Test case: yes
-     *
-     */
-    void bind(
-        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
-        bool val   ///< the value to bind to the placeholder
-        ) const
-    {
-      bind(argPos, val ? 1 : 0);
-    }
-
-    /** \brief Binds a timestamp to a placeholder in the statement; time is always stored in UTC seconds
-     *
-     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
-     * a specification how placeholders are defined in the SQLite language.
-     *
-     * \throws GenericSqliteException incl. error code if anything goes wrong
-     *
-     * Test case: yes
-     *
-     */
-    void bind(
-        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
-        const Sloppy::DateTime::WallClockTimepoint_secs& val   ///< the value to bind to the placeholder
-        ) const
-    {
-      bind(argPos, val.to_time_t());  // forwards the call to a int64-bind
-    }
 
     /** \brief Binds a blob of data to a placeholder in the statement
      *
@@ -220,46 +167,6 @@ namespace SqliteOverlay
         int argPos,   ///< the placeholder to bind to (1-based if you use "?")
         const void* ptr,   ///< a pointer to blob data
         size_t nBytes   ///< number of bytes in the blob data
-        ) const;
-
-    /** \brief Binds a blob of data to a placeholder in the statement
-     *
-     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
-     * a specification how placeholders are defined in the SQLite language.
-     *
-     * \note SQLite makes an internal copy of the provided buffer; this is safer but
-     * also more memory consuming. Bear this in mind when dealing with very large blobs.
-     *
-     * \throws GenericSqliteException incl. error code if anything goes wrong
-     *
-     * Test case: yes
-     *
-     */
-    void bind(
-        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
-        const Sloppy::MemView& v   ///< the buffer that shall be stored
-        ) const
-    {
-      bind(argPos, v.to_voidPtr(), v.byteSize());  // forward the call to the generic bindBlob
-    }
-
-    /** \brief Binds a JSON object to a placeholder in the statement; the JSON data is
-     * stored as plain text using JSON's dump() method.
-     *
-     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
-     * a specification how placeholders are defined in the SQLite language.
-     *
-     * \note SQLite makes an internal copy of the provided buffer; this is safer but
-     * also more memory consuming. Bear this in mind when dealing with very large blobs.
-     *
-     * \throws GenericSqliteException incl. error code if anything goes wrong
-     *
-     * Test case: yes
-     *
-     */
-    void bind(
-        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
-        const nlohmann::json& v   ///< the JSON object that shall be stored
         ) const;
 
     /** \brief Binds a NULL value to a placeholder in the statement
