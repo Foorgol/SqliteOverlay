@@ -37,25 +37,27 @@ using namespace std;
 
 namespace SqliteOverlay
 {
-  constexpr char KeyValueTab::KEY_COL_NAME[];
-  constexpr char KeyValueTab::VAL_COL_NAME[];
-    
+  const std::string KeyValueTab::KeyColName{"K"};
+  const std::string KeyValueTab::ValColName{"V"};
+
     
   //----------------------------------------------------------------------------
 
   KeyValueTab::KeyValueTab(SqliteDatabase* _db, const string& _tabName)
     :db(_db), tabName(_tabName), tab(DbTab{*db, tabName, true})
+    , sqlSelect{"SELECT " + ValColName + " FROM " + tabName + " WHERE " + KeyColName + " = ?"}
+    , sqlUpdate{"UPDATE " + tabName + " SET " + ValColName + "=? " + "WHERE " + KeyColName + "=?"}
+    , sqlInsert{"INSERT INTO " + tabName + " (" + ValColName + "," + KeyColName + ") VALUES (?,?)"}
   {
     // make sure that the table has the columns for keys and values
-    if (!(tab.hasColumn(KEY_COL_NAME)))
+    if (!(tab.hasColumn(KeyColName)))
     {
       throw std::invalid_argument("KeyValueTab ctor: table " + tabName + " has no valid key column");
     }
-    if (!(tab.hasColumn(VAL_COL_NAME)))
+    if (!(tab.hasColumn(ValColName)))
     {
       throw std::invalid_argument("KeyValueTab ctor: table " + tabName + " has no valid value column");
     }
-
   }
 
   //----------------------------------------------------------------------------
@@ -64,7 +66,7 @@ namespace SqliteOverlay
   {
     if (key.empty()) return false;
 
-    return (tab.getMatchCountForColumnValue(KEY_COL_NAME, key) > 0);
+    return (tab.getMatchCountForColumnValue(KeyColName, key) > 0);
   }
 
   //----------------------------------------------------------------------------
@@ -141,7 +143,7 @@ namespace SqliteOverlay
 
   void KeyValueTab::remove(const string& key)
   {
-    std::string sql{"DELETE FROM " + tabName + " WHERE " + KEY_COL_NAME + "=?"};
+    const std::string sql{"DELETE FROM " + tabName + " WHERE " + KeyColName + "=?"};
     auto stmt = db->prepStatement(sql);
     stmt.bind(1, key);
     stmt.step();
@@ -153,7 +155,7 @@ namespace SqliteOverlay
   {
     vector<string> result;
 
-    std::string sql{"SELECT " + std::string{KEY_COL_NAME} + " FROM " + tabName};
+    const std::string sql{"SELECT " + std::string{KeyColName} + " FROM " + tabName};
     auto stmt = db->prepStatement(sql);
 
     for (stmt.step() ; stmt.hasData() ; stmt.step())
@@ -164,113 +166,6 @@ namespace SqliteOverlay
     return result;
   }
 
-  //----------------------------------------------------------------------------
-
-  void KeyValueTab::releaseDatabase()
-  {
-    valSelectStatement.reset();
-    valUpdateStatement.reset();
-    valInsertStatement.reset();
-  }
-
-  //----------------------------------------------------------------------------
-
-  void KeyValueTab::enableStatementCache(bool useCaching)
-  {
-    cacheStatements = useCaching;
-    if (!useCaching) releaseDatabase();
-  }
-
-  //----------------------------------------------------------------------------
-
-  void KeyValueTab::prepValueSelectStmt()
-  {
-    // prepare the sql-text for looking up values once and for all
-    static const string sql{"SELECT " + string(VAL_COL_NAME) + " FROM " + tabName +
-                            " WHERE " + string(KEY_COL_NAME) + " = ?"};
-
-    // do we need to create a new statement at all?
-    if (valSelectStatement)
-    {
-      valSelectStatement->reset(true);
-      return;
-    }
-
-    // prepare an empty dummy statement on the heap
-    valSelectStatement = std::make_unique<SqlStatement>();
-
-    // create the "true" select statement in a tmp variable
-    // on the stack
-    auto tmpStatement = db->prepStatement(sql);
-
-    // move "from stack to heap" ;)
-    //
-    // remember: statements are resource owners that
-    // do not support copying
-    *valSelectStatement = std::move(tmpStatement);
-  }
-
-  //----------------------------------------------------------------------------
-
-  void KeyValueTab::prepValueUpdateStmt()
-  {
-    // prepare the sql-text for updating values once and for all
-    static const string sql{
-      "UPDATE " + tabName + " SET " + std::string{VAL_COL_NAME} + "=? " +
-      "WHERE " + std::string{KEY_COL_NAME} + "=?"
-    };
-
-    // do we need to create a new statement at all?
-    if (valUpdateStatement)
-    {
-      valUpdateStatement->reset(true);
-      return;
-    }
-
-    // prepare an empty dummy statement on the heap
-    valUpdateStatement = std::make_unique<SqlStatement>();
-
-    // create the "true" select statement in a tmp variable
-    // on the stack
-    auto tmpStatement = db->prepStatement(sql);
-
-    // move "from stack to heap" ;)
-    //
-    // remember: statements are resource owners that
-    // do not support copying
-    *valUpdateStatement = std::move(tmpStatement);
-  }
-
-  //----------------------------------------------------------------------------
-
-  void KeyValueTab::prepValueInsertStmt()
-  {
-    // prepare the sql-text for inserting values once and for all
-    static const string sql{
-      "INSERT INTO " + tabName + " (" + string{KEY_COL_NAME} + "," +
-      string{VAL_COL_NAME} + ") VALUES (?,?)"
-    };
-
-    // do we need to create a new statement at all?
-    if (valInsertStatement)
-    {
-      valInsertStatement->reset(true);
-      return;
-    }
-
-    // prepare an empty dummy statement on the heap
-    valInsertStatement = std::make_unique<SqlStatement>();
-
-    // create the "true" select statement in a tmp variable
-    // on the stack
-    auto tmpStatement = db->prepStatement(sql);
-
-    // move "from stack to heap" ;)
-    //
-    // remember: statements are resource owners that
-    // do not support copying
-    *valInsertStatement = std::move(tmpStatement);
-  }
 
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------

@@ -976,8 +976,8 @@ namespace SqliteOverlay
     }
 
     TableCreator tc;
-    tc.addCol(KeyValueTab::KEY_COL_NAME, ColumnDataType::Text, ConflictClause::Rollback, ConflictClause::Rollback);
-    tc.addCol(KeyValueTab::VAL_COL_NAME, ColumnDataType::Null, ConflictClause::NotUsed, ConflictClause::Rollback);
+    tc.addCol(KeyValueTab::KeyColName, ColumnDataType::Text, ConflictClause::Rollback, ConflictClause::Rollback);
+    tc.addCol(KeyValueTab::ValColName, ColumnDataType::Null, ConflictClause::NotUsed, ConflictClause::Rollback);
     tc.createTableAndResetCreator(*this, tabName);
 
     // create an index with a unique name on the "key"-column
@@ -987,7 +987,7 @@ namespace SqliteOverlay
     Sloppy::estring sql = "CREATE INDEX %1 ON %2(%3)";
     sql.arg(idxName);
     sql.arg(tabName);
-    sql.arg(KeyValueTab::KEY_COL_NAME);
+    sql.arg(KeyValueTab::KeyColName);
     execNonQuery(sql);
 
     return KeyValueTab(this, tabName);

@@ -50,9 +50,9 @@ namespace SqliteOverlay
    */
   class KeyValueTab
   {
-  public:    
-    static constexpr char KEY_COL_NAME[] = "K";
-    static constexpr char VAL_COL_NAME[] = "V";
+  public:
+    static const std::string KeyColName;
+    static const std::string ValColName;
 
     /** \brief Creates a new Key-Value-Table instance from an existing
      * database table.
@@ -65,17 +65,17 @@ namespace SqliteOverlay
         const std::string& _tabName   ///< the table name
         );
 
-    /** Empty dtor */
-    ~KeyValueTab() {}
+    /** Default dtor */
+    ~KeyValueTab() = default;
 
-    /** No copy construction because we own resources (prepared SQL statements) */
-    KeyValueTab(const KeyValueTab& other) = delete;
+    /** Standard copy ctor */
+    KeyValueTab(const KeyValueTab& other) = default;
 
     /** Standard move ctor */
     KeyValueTab(KeyValueTab&& other) = default;
 
-    /** No copy assignment because we own resources (prepared SQL statements) */
-    KeyValueTab& operator=(const KeyValueTab& other) = delete;
+    /** Standard copy assignment */
+    KeyValueTab& operator=(const KeyValueTab& other) = default;
 
     /** Standard move assignment */
     KeyValueTab& operator=(KeyValueTab&& other) = default;
@@ -88,26 +88,10 @@ namespace SqliteOverlay
         const T& val   ///< the value to be assigned to the key
         )
     {
-      if (hasKey(key))
-      {
-        prepValueUpdateStmt();
-        valUpdateStatement->bind(1, val);
-        valUpdateStatement->bind(2, key);
-        valUpdateStatement->step();
-
-        // delete the statement object if the user
-        // has disabled the statement caching
-        if (!cacheStatements) valUpdateStatement.reset();
-      } else {
-        prepValueInsertStmt();
-        valInsertStatement->bind(1, key);
-        valInsertStatement->bind(2, val);
-        valInsertStatement->step();
-
-        // delete the statement object if the user
-        // has disabled the statement caching
-        if (!cacheStatements) valInsertStatement.reset();
-      }
+      auto stmt = db->prepStatement(hasKey(key) ? sqlUpdate : sqlInsert);
+      stmt.bind(1, val);
+      stmt.bind(2, key);
+      stmt.step();
     }
 
     /** \brief Retrieves a value from the table
@@ -120,21 +104,15 @@ namespace SqliteOverlay
         const std::string& key   ///< the key's name
         )
     {
-      prepValueSelectStmt();
-      valSelectStatement->bind(1, key);
-      valSelectStatement->step();
-      const auto result = valSelectStatement->get<T>(0);
-
-      // delete the statement object if the user
-      // has disabled the statement caching
-      if (!cacheStatements) valSelectStatement.reset();
-
-      return result;
+      auto stmt = db->prepStatement(sqlSelect);
+      stmt.bind(1, key);
+      stmt.step();
+      return stmt.get<T>(0);
     }
 
     /** \brief Retrieves a value from the table
      *
-     * If the key doesn't exist, the output reference is empty. Otherwise
+     * If the key doesn't exist, the output is empty. Otherwise
      * it contains the value for the provided key.
      *
      */
@@ -143,17 +121,14 @@ namespace SqliteOverlay
         const std::string& key   ///< the key's name
         )
     {
-      prepValueSelectStmt();
-      valSelectStatement->bind(1, key);
-      valSelectStatement->step();
-
-      const std::optional<T> result = (valSelectStatement->hasData()) ? valSelectStatement->get<T>(0) : std::optional<T>{};
-
-      // delete the statement object if the user
-      // has disabled the statement caching
-      if (!cacheStatements) valSelectStatement.reset();
-
-      return result;
+      try {
+        auto stmt = db->prepStatement(sqlSelect);
+        stmt.bind(1, key);
+        stmt.step();
+        return stmt.get2<T>(0);
+      }  catch (NoDataException) {  // special treatment for KeyValueTabs: non-existing columns don't throw, they return "empty"
+        return std::nullopt;
+      }
     }
 
     /** \returns the value of a key as a string
@@ -199,63 +174,13 @@ namespace SqliteOverlay
      */
     std::vector<std::string> allKeys() const;
 
-    /** \brief Drops all stored statements and other links to the database so that
-     * the database is no longer "BUSY" due to unfinished prepared statements.
-     *
-     * You can be safely continue to use the object after calling this function
-     * at the (marginal?) cost that some query statements have to be re-created.
-     *
-     * \note Releasing the database does not automatically disable statement
-     * caching. It only drops the currently pending, cached statements, that's all.
-     * If caching is enabled and you continue to use the object, new statements
-     * will be created and cached.
-     */
-    void releaseDatabase();
-
-    /** \brief Enables or disables caching of common query statements; if caching
-     * is enabled, the object keeps some prepared, unfinished SQL statements open
-     * for faster look-ups.
-     *
-     * Disabling the caching implies the release of any pending statements just
-     * like a call to `releaseDatabase` would do.
-     *
-     * \warning Enabling the statement caching prevents the closing of the
-     * associated database connection. The reason is that dabase connections
-     * fail with BUSY if there pending unfinished connections.
-     *
-     * \warning Since we internally store a reference to the database connection
-     * you shouldn't use this object anymore after closing the associated database
-     * connection. Keep that in mind if you use a rather long-living instance
-     * of a KeyValueTab, e.g. in a GUI-widget.
-     */
-    void enableStatementCache(
-        bool useCaching   ///< `true`: caching enabled, `false`: caching disabled
-        );
-
-  protected:
-    /** \brief Either resets or creates/prepares a statement for a value select operation
-     * and stores it in `valSelectStatement`.
-     */
-    void prepValueSelectStmt();
-
-    /** \brief Either resets or creates/prepares a statement for a value update operation
-     * and stores it in `valUpdateStatement`.
-     */
-    void prepValueUpdateStmt();
-
-    /** \brief Either resets or creates/prepares a statement for a value insert operation
-     * and stores it in `valInsertStatement`.
-     */
-    void prepValueInsertStmt();
-
   private:
-    SqliteDatabase* const db;
-    const std::string tabName;
+    SqliteDatabase* db;
+    std::string tabName;
     DbTab tab;
-    bool cacheStatements{false};
-    std::unique_ptr<SqlStatement> valSelectStatement;
-    std::unique_ptr<SqlStatement> valUpdateStatement;
-    std::unique_ptr<SqlStatement> valInsertStatement;
+    std::string sqlSelect;
+    std::string sqlUpdate;
+    std::string sqlInsert;
   };  
 
   //----------------------------------------------------------------------------
