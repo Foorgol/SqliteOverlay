@@ -596,14 +596,14 @@ TEST_F(DatabaseTestScenario, DbTab_ImportCSV1)
 
   ASSERT_EQ(2, t1.importCSV(csv));
   ASSERT_EQ(2, t1.length());
-  ASSERT_EQ(20, t1[1].getInt("i"));
-  ASSERT_EQ(3.14, t1[1].getDouble("f"));
+  ASSERT_EQ(20, t1[1].get<int>("i"));
+  ASSERT_EQ(3.14, t1[1].get<double>("f"));
   ASSERT_EQ("abc", t1[1]["s"]);
-  ASSERT_FALSE(t1[1].getString2("d").has_value());
-  ASSERT_EQ(40, t1[2].getInt("i"));
-  ASSERT_EQ(6.28, t1[2].getDouble("f"));
+  ASSERT_FALSE(t1[1].get2<std::string>("d").has_value());
+  ASSERT_EQ(40, t1[2].get<int>("i"));
+  ASSERT_EQ(6.28, t1[2].get<double>("f"));
   ASSERT_EQ("xyz", t1[2]["s"]);
-  ASSERT_FALSE(t1[2].getString2("d").has_value());
+  ASSERT_FALSE(t1[2].get2<std::string>("d").has_value());
 }
 
 //----------------------------------------------------------------
@@ -628,16 +628,16 @@ TEST_F(DatabaseTestScenario, DbTab_ImportCSV2)
 
   ASSERT_EQ(2, t1.importCSV(csv));
   ASSERT_EQ(7, t1.length());
-  ASSERT_EQ(20, t1[6].getInt("i"));
-  ASSERT_EQ(3.14, t1[6].getDouble("f"));
-  ASSERT_EQ(40, t1[7].getInt("i"));
-  ASSERT_FALSE(t1[7].getDouble2("f").has_value());
+  ASSERT_EQ(20, t1[6].get<int>("i"));
+  ASSERT_EQ(3.14, t1[6].get<double>("f"));
+  ASSERT_EQ(40, t1[7].get<int>("i"));
+  ASSERT_FALSE(t1[7].get2<double>("f").has_value());
 
   for (int i : {6, 7})
   {
     for (const string& s : {"d", "s"})
     {
-      ASSERT_FALSE(t1[i].getString2(s).has_value());
+      ASSERT_FALSE(t1[i].get2<std::string>(s).has_value());
     }
   }
 }

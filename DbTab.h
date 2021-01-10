@@ -220,7 +220,7 @@ namespace SqliteOverlay
       {
         throw NoDataException{"call to TabRow::getSingleRowByColumnValue() but the query didn't return any data"};
       }
-      int id = stmt.getInt(0);
+      int id = stmt.get<int>(0);
 
       return TabRow(db, tabName, id, true);
     }
@@ -258,7 +258,7 @@ namespace SqliteOverlay
       {
         return std::optional<TabRow>{};
       }
-      int id = stmt.getInt(0);
+      int id = stmt.get<int>(0);
 
       return TabRow(db, tabName, id, true);
     }
@@ -1044,24 +1044,7 @@ namespace SqliteOverlay
      */
     T operator*() const
     {
-      T result;
-      stmt.get(1, result);
-      return result;
-    }
-
-    /** Access to the column value; saves one copy operation compared to
-     * `operator*()`.
-     *
-     * \throws NullValueException if the column contains NULL at the current position
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \returns the column value at the current iterator position
-     *
-     */
-    void get(T& result) const
-    {
-      stmt.get(1, result);
+      return stmt.get<T>(1);
     }
 
     /** \returns the column value at the current iterator position as an `optional` in
@@ -1071,9 +1054,7 @@ namespace SqliteOverlay
      */
     std::optional<T> get2() const
     {
-      std::optional<T> result;
-      stmt.get(1, result);
-      return result;
+      return stmt.get2<T>(1);
     }
 
     /** \returns the rowid at the current iterator position
@@ -1082,7 +1063,7 @@ namespace SqliteOverlay
      */
     int rowid() const
     {
-      return stmt.getInt(0);
+      return stmt.get<int>(0);
     }
 
   protected:
@@ -1259,7 +1240,7 @@ namespace SqliteOverlay
      */
     int rowid() const
     {
-      return stmt.getInt(0);
+      return stmt.get<int>(0);
     }
 
   protected:

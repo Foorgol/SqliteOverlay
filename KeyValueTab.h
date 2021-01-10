@@ -110,145 +110,59 @@ namespace SqliteOverlay
       }
     }
 
-    /** \brief Retrieves a value from the table and assigns it to
-     * a provided output reference.
-     *
-     * Works with "normal" types (e.g., `int`).
+    /** \brief Retrieves a value from the table
      *
      * \throws NoDataException if the key doesn't exist
      *
      */
     template<typename T>
-    void get(
-        const std::string& key,   ///< the key's name
-        T& outVal   ///< reference to which the key's value will be assigned
+    T get(
+        const std::string& key   ///< the key's name
         )
     {
       prepValueSelectStmt();
       valSelectStatement->bind(1, key);
       valSelectStatement->step();
-      valSelectStatement->get(0, outVal);
+      const auto result = valSelectStatement->get<T>(0);
 
       // delete the statement object if the user
       // has disabled the statement caching
       if (!cacheStatements) valSelectStatement.reset();
+
+      return result;
     }
 
-    /** \brief Retrieves a value from the table and assigns it to
-     * a provided output reference.
+    /** \brief Retrieves a value from the table
      *
-     * Works with "optional" types (e.g., `optional<int>`). if the
-     * key doesn't exist, the output reference is empty. Otherwise
+     * If the key doesn't exist, the output reference is empty. Otherwise
      * it contains the value for the provided key.
      *
      */
     template<typename T>
-    void get(
-        const std::string& key,   ///< the key's name
-        std::optional<T>& outVal   ///< reference to which the key's value will be assigned
+    std::optional<T> get2(
+        const std::string& key   ///< the key's name
         )
     {
       prepValueSelectStmt();
       valSelectStatement->bind(1, key);
       valSelectStatement->step();
 
-      if (!(valSelectStatement->hasData()))
-      {
-        outVal.reset();
-      } else {
-        valSelectStatement->get(0, outVal);
-      }
+      const std::optional<T> result = (valSelectStatement->hasData()) ? valSelectStatement->get<T>(0) : std::optional<T>{};
 
       // delete the statement object if the user
       // has disabled the statement caching
       if (!cacheStatements) valSelectStatement.reset();
+
+      return result;
     }
 
     /** \returns the value of a key as a string
      *
      * \throws NoDataException if the key doesn't exist
      */
-    std::string operator[](const std::string& key);
-
-    /** \returns the value of a key as an integer
-     *
-     * \throws NoDataException if the key doesn't exist
-     */
-    int getInt(const std::string& key);
-
-    /** \returns the value of a key as a 64-bit int
-     *
-     * \throws NoDataException if the key doesn't exist
-     */
-    int64_t getLong(const std::string& key);
-
-    /** \returns the value of a key as a double
-     *
-     * \throws NoDataException if the key doesn't exist
-     */
-    double getDouble(const std::string& key);
-
-    /** \returns the value of a key as a bool
-     *
-     * \note We simply convert to int and compare with 0. If the value is
-     * 0, we return `false` and in all other cases `true`.
-     *
-     * \throws NoDataException if the key doesn't exist
-     */
-    bool getBool(const std::string& key);
-
-    /** \returns the value of a key as a UTCTimestamp
-     *
-     * \throws NoDataException if the key doesn't exist
-     */
-    Sloppy::DateTime::WallClockTimepoint_secs getUTCTimestamp(const std::string& key);
-
-    /** \returns the value of a key as a JSON object
-     *
-     * \throws NoDataException if the key doesn't exist
-     *
-     * \throws nlohmann::json::parse_error if the key didn't contain valid JSON data
-     *
-     */
-    nlohmann::json getJson(const std::string& key);
-
-    /** \returns the value of a key as an optional string that
-     * is empty ("empty optional", not "empty string"!) if the key doesn't exist
-     */
-    std::optional<std::string> getString2(const std::string& key);
-
-    /** \returns the value of a key as an optional integer that
-     * is empty if the key doesn't exist
-     */
-    std::optional<int> getInt2(const std::string& key);
-
-    /** \returns the value of a key as an optional 64-bit int that
-     * is empty if the key doesn't exist
-     */
-    std::optional<int64_t> getInt64_2(const std::string& key);
-
-    /** \returns the value of a key as an optional double that
-     * is empty if the key doesn't exist
-     */
-    std::optional<double> getDouble2(const std::string& key);
-
-    /** \returns the value of a key as an optional bool that
-     * is empty if the key doesn't exist
-     *
-     * \note We simply convert to int and compare with 0. If the value is
-     * 0, we return `false` and in all other cases `true`.
-     */
-    std::optional<bool> getBool2(const std::string& key);
-
-    /** \returns the value of a key as an optional UTCTimestamp that
-     * is empty if the key doesn't exist
-     */
-    std::optional<Sloppy::DateTime::WallClockTimepoint_secs> getUTCTimestamp2(const std::string& key);
-
-    /** \returns the value of a key as an optional JSON object that
-     * is empty if the key doesn't exist
-     */
-    std::optional<nlohmann::json> getJson2(const std::string& key);
+    std::string operator[](const std::string& key) {
+      return get<std::string>(key);
+    }
 
     // boolean queries
     bool hasKey(const std::string& key) const;

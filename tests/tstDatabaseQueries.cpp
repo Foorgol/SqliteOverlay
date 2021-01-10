@@ -50,7 +50,7 @@ TEST_F(DatabaseTestScenario, ContentQuery)
   {
     ++rowCount;
     int val;
-    val = stmt.getInt(0);  // get the row ID
+    val = stmt.get<int>(0);  // get the row ID
     ASSERT_EQ(rowCount, val);
     stmt.step();
   }
@@ -63,7 +63,7 @@ TEST_F(DatabaseTestScenario, ContentQuery)
   {
     ++rowCount;
     int val;
-    val = stmt.getInt(0);  // get the row ID
+    val = stmt.get<int>(0);  // get the row ID
     ASSERT_EQ(rowCount, val);
   }
   ASSERT_EQ(5, rowCount);

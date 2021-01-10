@@ -65,7 +65,7 @@ TEST_F(DatabaseTestScenario, BusyThreads)
 
       SqlStatement stmt = db.prepStatement("SELECT rowid,i FROM t2 ORDER BY rowid DESC LIMIT 1");
       stmt.step();
-      stmt.get(1, i);
+      i = stmt.get<int>(1);
       if (i >= LoopLimit) break;
 
       ColumnValueClause cvc;
@@ -116,7 +116,7 @@ TEST_F(DatabaseTestScenario, BusyThreads)
 
     for (auto it = tab2.tabRowIterator(); it.hasData(); ++it)
     {
-      ASSERT_EQ((it.rowid()-1)*2, it->getInt("i") );
+      ASSERT_EQ((it.rowid()-1)*2, it->get<int>("i") );
     }
     ASSERT_EQ(1 + LoopLimit/2, tab2.length());
 

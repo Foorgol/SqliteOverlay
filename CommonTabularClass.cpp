@@ -130,9 +130,9 @@ namespace SqliteOverlay
       
     while (stmt.hasData())
     {
-      int colId = stmt.getInt(0);
-      string colName = stmt.getString(1);
-      string colType = stmt.getString(2);
+      int colId = stmt.get<int>(0);
+      string colName = stmt.get<std::string>(1);
+      string colType = stmt.get<std::string>(2);
 
       result.emplace_back(colId, colName, colType);
       stmt.step();
@@ -167,7 +167,7 @@ namespace SqliteOverlay
       throw std::invalid_argument("Invalid column name");
     }
 
-    return stmt.getString(0);
+    return stmt.get<std::string>(0);
   }
 
 //----------------------------------------------------------------------------
@@ -189,7 +189,7 @@ namespace SqliteOverlay
       throw std::invalid_argument("Invalid column ID");
     }
 
-    return stmt.getString(0);
+    return stmt.get<std::string>(0);
   }
 
 //----------------------------------------------------------------------------
@@ -211,7 +211,7 @@ namespace SqliteOverlay
       throw std::invalid_argument("Invalid column name");
     }
 
-    return stmt.getInt(0);
+    return stmt.get<int>(0);
   }
 
 //----------------------------------------------------------------------------
@@ -268,7 +268,7 @@ namespace SqliteOverlay
     {
       SqlStatement stmt = db.get().prepStatement(sql);
       stmt.step();
-      return stmt.getInt(0);
+      return stmt.get<int>(0);
     }
     catch (SqlStatementCreationError e)
     {

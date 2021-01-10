@@ -34,16 +34,6 @@ TEST_F(DatabaseTestScenario, SingleColumnIterator_Plain)
       ASSERT_THROW(*it, NullValueException);
     }
 
-    // test get()
-    int real{-42};
-    if (ex > 0)
-    {
-      it.get(real);
-      ASSERT_EQ(ex, real);
-    } else {
-      ASSERT_THROW(it.get(real), NullValueException);
-    }
-
     // test get2
     optional<int> oi = it.get2();
     if (ex > 0)

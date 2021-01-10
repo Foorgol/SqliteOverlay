@@ -338,7 +338,7 @@ namespace SqliteOverlay
     stmt.step();
 
     // throws NoDataException
-    return stmt.isNull(0) ? optional<int>{} : stmt.getInt(0);
+    return stmt.isNull(0) ? optional<int>{} : stmt.get<int>(0);
   }
 
   //----------------------------------------------------------------------------
@@ -349,7 +349,7 @@ namespace SqliteOverlay
     stmt.step();
 
     // throws NoDataException
-    return stmt.isNull(0) ? optional<int>{} : stmt.getInt(0);
+    return stmt.isNull(0) ? optional<int>{} : stmt.get<int>(0);
   }
 
   //----------------------------------------------------------------------------
@@ -389,7 +389,7 @@ namespace SqliteOverlay
     stmt.step();
 
     // throws NoDataException
-    return stmt.isNull(0) ? optional<int64_t>{} : stmt.getInt64(0);
+    return stmt.isNull(0) ? optional<int64_t>{} : stmt.get<int64_t>(0);
   }
 
   //----------------------------------------------------------------------------
@@ -400,7 +400,7 @@ namespace SqliteOverlay
     stmt.step();
 
     // throws NoDataException
-    return stmt.isNull(0) ? optional<int64_t>{} : stmt.getInt64(0);
+    return stmt.isNull(0) ? optional<int64_t>{} : stmt.get<int64_t>(0);
   }
 
   //----------------------------------------------------------------------------
@@ -440,7 +440,7 @@ namespace SqliteOverlay
     stmt.step();
 
     // throws NoDataException
-    return stmt.isNull(0) ? optional<double>{} : stmt.getDouble(0);
+    return stmt.isNull(0) ? optional<double>{} : stmt.get<double>(0);
   }
 
   //----------------------------------------------------------------------------
@@ -451,7 +451,7 @@ namespace SqliteOverlay
     stmt.step();
 
     // throws NoDataException
-    return stmt.isNull(0) ? optional<double>{} : stmt.getDouble(0);
+    return stmt.isNull(0) ? optional<double>{} : stmt.get<double>(0);
   }
 
   //----------------------------------------------------------------------------
@@ -491,7 +491,7 @@ namespace SqliteOverlay
     stmt.step();
 
     // throws NoDataException
-    return stmt.isNull(0) ? optional<string>{} : stmt.getString(0);
+    return stmt.isNull(0) ? optional<string>{} : stmt.get<std::string>(0);
   }
 
   //----------------------------------------------------------------------------
@@ -502,7 +502,7 @@ namespace SqliteOverlay
     stmt.step();
 
     // throws NoDataException
-    return stmt.isNull(0) ? optional<string>{} : stmt.getString(0);
+    return stmt.isNull(0) ? optional<string>{} : stmt.get<std::string>(0);
   }
 
   //----------------------------------------------------------------------------
@@ -597,7 +597,7 @@ namespace SqliteOverlay
     auto stmt = execContentQuery(sql);
     while (stmt.hasData())
     {
-      string tabName = stmt.getString(0);
+      string tabName = stmt.get<std::string>(0);
 
       // skip a special, internal table
       if (tabName != "sqlite_sequence")

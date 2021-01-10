@@ -14,6 +14,7 @@
 #include "DbTab.h"           // for DbTab
 #include "SqliteDatabase.h"  // for SqliteDatabase
 #include "TabRow.h"          // for TabRow
+#include "SqlStatement.h"
 
 namespace SqliteOverlay
 {
@@ -165,7 +166,8 @@ namespace SqliteOverlay
     std::vector<T> result;
     for (stmt.step(); stmt.hasData(); ++stmt)
     {
-      result.push_back(T{db, stmt.getInt(0)});
+      const auto id = stmt.get<int>(0);
+      result.push_back(T{db, id});
     }
 
     return result;
@@ -183,7 +185,7 @@ namespace SqliteOverlay
       const std::string& refColumnName   ///< the name of the column containing the reference ID
       )
   {
-    auto objId = r.getInt2(refColumnName);
+    auto objId = r.get2<int>(refColumnName);
     return (objId.has_value()) ? T(db, *objId) : std::optional<T>{};
   }
 

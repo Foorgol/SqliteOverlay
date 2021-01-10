@@ -347,7 +347,7 @@ namespace SqliteOverlay
      */
     bool isDone() const;
 
-    /** \brief Retrieves the value of a column in the statement result as int value (32 bit)
+    /** \brief Retrieves the value of a column in the statement result in various types
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
      *
@@ -355,53 +355,101 @@ namespace SqliteOverlay
      *
      * \throws InvalidColumnException if the requested column does not exist
      *
-     * \returns the value in the requested result column as int
+     * \returns the value in the requested result column in the requested format
+     *
+     * Test case: FIX
+     *
+     */
+    template<typename T>
+    T get(int colId) const {
+      if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
+      {
+        throw NullValueException();
+      }
+
+      if constexpr (std::is_same_v<T, int>) {
+        return sqlite3_column_int(stmt, colId);
+      }
+      else if constexpr (std::is_same_v<T, int64_t>) {
+        return sqlite3_column_int64(stmt, colId);
+      }
+      else if constexpr  (std::is_same_v<T, double>) {
+        return sqlite3_column_double(stmt, colId);
+      }
+      else if constexpr (std::is_same_v<T, std::string>) {
+        return std::string{reinterpret_cast<const char*>(sqlite3_column_text(stmt, colId))};
+      }
+      else if constexpr (std::is_same_v<T, nlohmann::json>) {
+        return nlohmann::json::parse(sqlite3_column_text(stmt, colId));
+      }
+      else if constexpr (std::is_same_v<T, Sloppy::MemArray>) {
+        // get the number of bytes in the blob
+        const size_t nBytes = sqlite3_column_bytes(stmt, colId);
+        if (nBytes == 0)
+        {
+          return Sloppy::MemArray{}; // empty blob
+        }
+
+        // wrap the data from SQLite into a MemView
+        const void* srcPtr = sqlite3_column_blob(stmt, colId);
+        if (srcPtr == nullptr)  // shouldn't happen after the previous check, but we want to be sure
+        {
+          return Sloppy::MemArray{}; // empty blob
+        }
+        const Sloppy::MemView fakeView{static_cast<const char*>(srcPtr), nBytes};
+
+        return Sloppy::MemArray{fakeView};  // creates a deep copy
+      }
+      else if constexpr (std::is_same_v<T, Sloppy::DateTime::WallClockTimepoint_secs>) {
+        /** \note Creates a timestamp with out time zone (--> UTC is used for
+         *  output operations. There is a special overload that takes a time zone
+         *  pointer as second argument for local timestamps.
+         */
+        const time_t rawTime = sqlite3_column_int64(stmt, colId);
+        return Sloppy::DateTime::WallClockTimepoint_secs(rawTime);
+      }
+      else if constexpr (std::is_same_v<T, date::year_month_day>) {
+        /** \note The date has to be stored as an integer value, e.g.,
+        * 2018-10-28 should be stored as the integer value "20181028".
+        */
+        return Sloppy::DateTime::ymdFromInt(get<int>(colId));
+      }
+
+      else {
+        // a literal 'false' is not possible here because it would
+        // trigger the static_assert even if the template has never
+        // been instantiated.
+        //
+        // Thus, we construct a "fake false" that depends on `T` and
+        // that is therefore only triggered if we actually instantiate
+        // this template
+        static_assert (!std::is_same_v<T, T>, "Unsupported template parameter for SqlStatement::get<T>");
+      }
+    }
+
+    /** \brief Retrieves the value of a column in the statement result as custom data type
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * \returns the value in the requested result column or an empty optional in case of NULL
      *
      * Test case: yes, but without implicit conversion and only with partial exception testing
-     *
      */
-    int getInt(
-        int colId   ///< the zero-based column ID in the result row
-        ) const;
+    template<typename T>
+    std::optional<T> get2(int colId) const {
+      assertColumnDataAccess(colId);
 
-    /** \brief Retrieves the value of a column in the statement result as a 64 bit integer value
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \returns the value in the requested result column as int
-     *
-     * Test case: yes
-     *
-     */
-    int64_t getInt64(
-        int colId   ///< the zero-based column ID in the result row
-        ) const;
+      if (isNull_NoGuards(colId)) return std::nullopt;
 
-    /** \brief Retrieves the value of a column in the statement result as double value
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \returns the value in the requested result column as double
-     *
-     * Test case: yes, but without implicit conversion and only with partial exception testing
-     *
-     */
-    double getDouble(
-        int colId   ///< the zero-based column ID in the result row
-        ) const;
+      return get<T>(colId);
+    }
 
     /** \brief Retrieves the value of a column in the statement result as bool value
      *
      * \warning This function assumes that the column content can be converted to an
-     * integer value! This is only a wrapper around `getInt()` that compares the
+     * integer value! This is only a wrapper around `get<int>()` that compares the
      * result with `0`.
      *
      * \throws NullValueException if the column contains NULL
@@ -419,26 +467,9 @@ namespace SqliteOverlay
         int colId   ///< the zero-based column ID in the result row
         ) const
     {
-      return (getInt(colId) != 0);
+      return (get<int>(colId) != 0);
     }
 
-
-    /** \brief Retrieves the value of a column in the statement result as string value
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \returns the value in the requested result column as string
-     *
-     * Test case: yes, but without implicit conversion and only with partial exception testing
-     *
-     */
-    std::string getString(
-        int colId   ///< the zero-based column ID in the result row
-        ) const;
 
     /** \brief Retrieves the value of a column in the statement result as LocalTimestamp instance;
      * requires the cell content to be an integer with "seconds since epoch".
@@ -454,48 +485,9 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    Sloppy::DateTime::WallClockTimepoint_secs getTimestamp_secs(
+    Sloppy::DateTime::WallClockTimepoint_secs get(
         int colId,   ///< the zero-based column ID in the result row
-        const date::time_zone* tzp = nullptr   ///< a pointer to the time zone passed to the ctor of the WallClockTimepoint
-        ) const;
-
-    /** \brief Retrieves the value of a column in the statement result as a data blob.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \throws All exceptions that the ctor of `Sloppy::MemArray` can produce (i. e., if we run out of memory)
-     *
-     * \returns the whole blob contents in one heap-allocated buffer
-     *
-     * Test case: yes
-     *
-     */
-    Sloppy::MemArray getBlob(
-        int colId   ///< the zero-based column ID in the result row
-        ) const;
-
-    /** \brief Retrieves the value of a column in the statement result as a JSON object, assuming
-     * that the JSON data has been serialized as a normal string.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \throws nlohmann::json::parse_error if the column didn't contain valid JSON data
-     *
-     * \returns the value in the requested result column as a JSON object
-     *
-     * Test case: yes
-     *
-     */
-    nlohmann::json getJson(
-        int colId   ///< the zero-based column ID in the result row
+        const date::time_zone* tzp   ///< a pointer to the time zone passed to the ctor of the WallClockTimepoint
         ) const;
 
     /** \brief Retrieves the fundamental SQLite data type for a column in the result row
@@ -528,74 +520,7 @@ namespace SqliteOverlay
         int colId   ///< the zero-based column ID in the result row
         ) const;
 
-    //-----------------
-    /** \brief Retrieves the value of a column in the statement result as int value (32 bit)
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \returns the value in the requested result column as int or an empty optional in case of NULL
-     *
-     * Test case: yes, but without implicit conversion and only with partial exception testing
-     *
-     */
-    std::optional<int> getInt2(
-        int colId   ///< the zero-based column ID in the result row
-        ) const;
-
-    /** \brief Retrieves the value of a column in the statement result as 64-bit integer value
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \returns the value in the requested result column as long  or an empty optional in case of NULL
-     *
-     * Test case: yes
-     *
-     */
-    std::optional<int64_t> getInt64_2(
-        int colId   ///< the zero-based column ID in the result row
-        ) const;
-
-    /** \brief Retrieves the value of a column in the statement result as double value
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \returns the value in the requested result column as double or an empty optional in case of NULL
-     *
-     * Test case: yes, but without implicit conversion and only with partial exception testing
-     *
-     */
-    std::optional<double> getDouble2(
-        int colId   ///< the zero-based column ID in the result row
-        ) const;
-
-    /** \brief Retrieves the value of a column in the statement result as string value
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \returns the value in the requested result column as string or an empty optional in case of NULL
-     *
-     * Test case: yes, but without implicit conversion and only with partial exception testing
-     *
-     */
-    std::optional<std::string> getString2(
-        int colId   ///< the zero-based column ID in the result row
-        ) const;
-
-    /** \brief Retrieves the value of a column in the statement result as LocalTimestamp instance;
+    /** \brief Retrieves the value of a column in the statement result as timestamp instance;
      * requires the cell content to be an integer with "seconds since epoch".
      *
      * \throws NoDataException if the statement didn't return any data or is already finished
@@ -609,51 +534,10 @@ namespace SqliteOverlay
      * Test case: yes
      *
      */
-    std::optional<Sloppy::DateTime::WallClockTimepoint_secs> getTimestamp_secs2(
+    std::optional<Sloppy::DateTime::WallClockTimepoint_secs> get2(
         int colId,   ///< the zero-based column ID in the result row
         const date::time_zone* tzp = nullptr   ///< a pointer to the time zone for the WallClockTimepoint ctor
         ) const;
-
-    /** \brief Retrieves the value of a column in the statement result as a data blob.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \throws All exceptions that the ctor of `Sloppy::MemArray` can produce (i. e., if we run out of memory)
-     *
-     * \returns the whole blob contents in one heap-allocated buffer or an empty optional in case of NULL
-     *
-     * Test case: yes
-     *
-     */
-    std::optional<Sloppy::MemArray> getBlob2(
-        int colId   ///< the zero-based column ID in the result row
-        ) const;
-
-    /** \brief Retrieves the value of a column in the statement result as a JSON object, assuming
-     * that the JSON data has been serialized as a normal string.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \throws nlohmann::json::parse_error if the column didn't contain valid JSON data
-     *
-     * \returns the value in the requested result column as a JSON object or an empty optional in case of NULL
-     *
-     * Test case: yes
-     *
-     */
-    std::optional<nlohmann::json> getJson2(
-        int colId   ///< the zero-based column ID in the result row
-        ) const;
-
-    //---------------
 
     /** \returns `true` if the requested column in the result row is empty (NULL)
      *
@@ -697,254 +581,7 @@ namespace SqliteOverlay
      */
     std::string getExpandedSQL() const;
 
-    /** \brief Catches all calls to `get()` with unsupported
-     * value types at compile time.
-     */
-    template<typename T>
-    void get(int colId, T& result) const
-    {
-      // a literal 'false' is not possible here because it would
-      // trigger the static_assert even if the template has never
-      // been instantiated.
-      //
-      // Thus, we construct a "fake false" that depends on `T` and
-      // that is therefore only triggered if we actually instantiate
-      // this template.s
-      static_assert (!std::is_same<T,T>::value, "SqlStatement: call to get() with a unsupported value type!");
-    }
 
-    /** \brief Retrieves the value of a column in the statement result as an int value (32 bit)
-     *
-     * Uses an out-parameter instead of a direct return. The advantage is that multiple
-     * `get()` variants for int, double, string, ... can have the same signature style
-     * of `get(int, T&)` which allows for templating and overloading.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * Test case: yes
-     *
-     */
-    void get(int colId, int& result) const
-    {
-      result = getInt(colId);
-    }
-
-    void get(int colId, std::optional<int>& result) const
-    {
-      result = getInt2(colId);
-    }
-
-    /** \brief Retrieves the value of a column in the statement result as a 64-bit integer value
-     *
-     * Uses an out-parameter instead of a direct return. The advantage is that multiple
-     * `get()` variants for int, double, string, ... can have the same signature style
-     * of `get(int, T&)` which allows for templating and overloading.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * Test case: yes
-     *
-     */
-    void get(int colId, int64_t& result) const
-    {
-      result = getInt64(colId);
-    }
-    void get(int colId, std::optional<int64_t>& result) const
-    {
-      result = getInt64_2(colId);
-    }
-
-    /** \brief Retrieves the value of a column in the statement result as a double value (32 bit)
-     *
-     * Uses an out-parameter instead of a direct return. The advantage is that multiple
-     * `get()` variants for int, double, string, ... can have the same signature style
-     * of `get(int, T&)` which allows for templating and overloading.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * Test case: yes
-     *
-     */
-    void get(int colId, double& result) const
-    {
-      result = getDouble(colId);
-    }
-    void get(int colId, std::optional<double>& result) const
-    {
-      result = getDouble2(colId);
-    }
-
-    /** \brief Retrieves the value of a column in the statement result as a string
-     *
-     * Uses an out-parameter instead of a direct return. The advantage is that multiple
-     * `get()` variants for int, double, string, ... can have the same signature style
-     * of `get(int, T&)` which allows for templating and overloading.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * Test case: yes
-     *
-     */
-    void get(int colId, std::string& result) const
-    {
-      result = getString(colId);
-    }
-    void get(int colId, std::optional<std::string>& result) const
-    {
-      result = getString2(colId);
-    }
-
-    /** \brief Retrieves the value of a column in the statement result as a bool value
-     *
-     * Uses an out-parameter instead of a direct return. The advantage is that multiple
-     * `get()` variants for int, double, string, ... can have the same signature style
-     * of `get(int, T&)` which allows for templating and overloading.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * Test case: yes
-     *
-     */
-    void get(int colId, bool& result) const
-    {
-      result = getBool(colId);
-    }
-
-    /** \brief Retrieves the value of a column in the statement result as a JSON object
-     *
-     * Uses an out-parameter instead of a direct return. The advantage is that multiple
-     * `get()` variants for int, double, string, ... can have the same signature style
-     * of `get(int, T&)` which allows for templating and overloading.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \throws nlohmann::json::parse_error if the column didn't contain valid JSON data
-     *
-     * Test case: yes
-     *
-     */
-    void get(int colId, nlohmann::json& result) const;
-    void get(int colId, std::optional<nlohmann::json>& result)
-    {
-      result = getJson2(colId);
-    }
-
-    /** \brief Retrieves the value of a column in the statement result as a BLOB object
-     *
-     * Uses an out-parameter instead of a direct return. The advantage is that multiple
-     * `get()` variants for int, double, string, ... can have the same signature style
-     * of `get(int, T&)` which allows for templating and overloading.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \throws nlohmann::json::parse_error if the column didn't contain valid JSON data
-     *
-     * Test case: yes
-     *
-     */
-    void get(int colId, Sloppy::MemArray& result) const;
-    void get(int colId, std::optional<Sloppy::MemArray>& result)
-    {
-      result = getBlob2(colId);
-    }
-
-    /** \brief Retrieves the value of a column in the statement result
-     * with the possibility to catch and return NULL values.
-     *
-     * This is a specialized version of the other `get(int, T&)` func that is
-     * picked by the compiler in case of `optional<T>&` parameters. In this
-     * specialized version we first check for NULL. If that's not the case,
-     * we call the normal getter.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * Test case: yes
-     *
-     */
-    template<typename T>
-    void get(int colId, std::optional<T>& result) const
-    {
-      T tmp;
-
-      try
-      {
-        get(colId, tmp);
-      }
-      catch (NullValueException)
-      {
-        result.reset();
-        return;
-      }
-
-      result = tmp;
-    }
-
-    /** \brief Simple wrapper for retrieving two column values with one call.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * Test case: yes
-     *
-     */
-    template<typename T1, typename T2>
-    void multiGet(int col1, T1& result1, int col2, T2& result2) const
-    {
-      get(col1, result1);
-      get(col2, result2);
-    }
-
-    /** \brief Simple wrapper for retrieving three column values with one call.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * Test case: no
-     *
-     */
-    template<typename T1, typename T2, typename T3>
-    void multiGet(int col1, T1& result1, int col2, T2& result2, int col3, T3& result3) const
-    {
-      get(col1, result1);
-      get(col2, result2);
-      get(col3, result3);
-    }
-
-    /** \brief Simple wrapper for retrieving four column values with one call.
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * Test case: yes
-     *
-     */
-    template<typename T1, typename T2, typename T3, typename T4>
-    void multiGet(int col1, T1& result1, int col2, T2& result2, int col3, T3& result3, int col4, T4& result4) const
-    {
-      get(col1, result1);
-      get(col2, result2);
-      get(col3, result3);
-      get(col4, result4);
-    }
 
     /** \brief Simple wrapper for retrieving two column values in a tuple.
      *
@@ -958,13 +595,10 @@ namespace SqliteOverlay
     template<typename T1, typename T2>
     std::tuple<T1, T2> tupleGet(int col1, int col2) const
     {
-      T1 r1;
-      get(col1, r1);
-
-      T2 r2;
-      get(col2, r2);
-
-      return std::make_tuple(r1, r2);
+      return std::tuple{
+            get<T1>(col1),
+            get<T2>(col2),
+      };
     }
 
     /** \brief Simple wrapper for retrieving three column values in a tuple.
@@ -979,16 +613,11 @@ namespace SqliteOverlay
     template<typename T1, typename T2, typename T3>
     std::tuple<T1, T2, T3> tupleGet(int col1, int col2, int col3) const
     {
-      T1 r1;
-      get(col1, r1);
-
-      T2 r2;
-      get(col2, r2);
-
-      T3 r3;
-      get(col3, r3);
-
-      return make_tuple(r1, r2, r3);
+      return std::tuple{
+            get<T1>(col1),
+            get<T2>(col2),
+            get<T3>(col3),
+      };
     }
 
     /** \brief Simple wrapper for retrieving four column values in a tuple.
@@ -1003,19 +632,12 @@ namespace SqliteOverlay
     template<typename T1, typename T2, typename T3, typename T4>
     std::tuple<T1, T2, T3, T4> tupleGet(int col1, int col2, int col3, int col4) const
     {
-      T1 r1;
-      get(col1, r1);
-
-      T2 r2;
-      get(col2, r2);
-
-      T3 r3;
-      get(col3, r3);
-
-      T4 r4;
-      get(col4, r4);
-
-      return make_tuple(r1, r2, r3, r4);
+      return std::tuple{
+            get<T1>(col1),
+            get<T2>(col2),
+            get<T3>(col3),
+            get<T4>(col4),
+      };
     }
 
     /** \returns the number of data columns in the result data set or -1 if the statement

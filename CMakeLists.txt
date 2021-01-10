@@ -56,8 +56,8 @@ set(LIB_SOURCES
     TabRow.h
     ClausesAndQueries.cpp
     ClausesAndQueries.h
-    GenericDatabaseObject.cpp
-    GenericObjectManager.cpp
+    #GenericDatabaseObject.cpp
+    #GenericObjectManager.cpp
     GenericDatabaseObject.h
     GenericObjectManager.h
     KeyValueTab.cpp

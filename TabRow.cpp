@@ -40,7 +40,7 @@ namespace SqliteOverlay
     {
       SqlStatement stmt = db.get().prepStatement("SELECT rowid " + cachedWhereStatementForRow);
       stmt.step();
-      stmt.getInt(0);
+      stmt.get<int>(0);
     }
     catch (SqlStatementCreationError)
     {
@@ -162,147 +162,13 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  Sloppy::MemArray TabRow::get(const string& colName) const
+  optional<Sloppy::DateTime::WallClockTimepoint_secs> TabRow::get2(const string& colName, date::time_zone* tzp) const
   {
-    if (colName.empty())
-    {
-      throw std::invalid_argument("Column access: received empty column name");
-    }
-    SqlStatement stmt;
-    std::string sql = "SELECT " + colName + cachedWhereStatementForRow;
-    try
-    {
-      stmt = db.get().prepStatement(sql);
-    }
-    catch (SqlStatementCreationError)
-    {
-      throw std::invalid_argument("Column access: received invalid column name");
-    }
-    catch (...)
-    {
-      throw;
-    }
-
-    stmt.step();
-
-    return stmt.getBlob(0);
-  }
-
-  //----------------------------------------------------------------------------
-
-  int TabRow::getInt(const string& colName) const
-  {
-    return get<int>(colName);
-  }
-
-  //----------------------------------------------------------------------------
-
-  int64_t TabRow::getInt64(const string& colName) const
-  {
-    return get<int64_t>(colName);
-  }
-
-  //----------------------------------------------------------------------------
-
-  double TabRow::getDouble(const string& colName) const
-  {
-    return get<double>(colName);
-  }
-
-  //----------------------------------------------------------------------------
-
-  Sloppy::MemArray TabRow::getBlob(const string& colName) const
-  {
-    return get<Sloppy::MemArray>(colName);
-  }
-
-  //----------------------------------------------------------------------------
-
-  Sloppy::DateTime::WallClockTimepoint_secs TabRow::getTimestamp_secs(const string& colName, date::time_zone* tzp) const
-  {
-    const time_t rawTime = getInt64(colName);
-    return Sloppy::DateTime::WallClockTimepoint_secs{rawTime, tzp};
-  }
-
-  //----------------------------------------------------------------------------
-
-  nlohmann::json TabRow::getJson(const string& colName) const
-  {
-    return get<nlohmann::json>(colName);
-  }
-
-  //----------------------------------------------------------------------------
-
-  date::year_month_day TabRow::getDate(const string& colName) const
-  {
-    const int ymd = getInt(colName);
-    return Sloppy::DateTime::ymdFromInt(ymd);
-  }
-
-//----------------------------------------------------------------------------
-
-  optional<int> TabRow::getInt2(const string& colName) const
-  {
-    return get<optional<int>>(colName);
-  }
-
-  //----------------------------------------------------------------------------
-
-  optional<int64_t> TabRow::getInt64_2(const string& colName) const
-  {
-    return get<optional<int64_t>>(colName);
-  }
-
-//----------------------------------------------------------------------------
-
-  optional<double> TabRow::getDouble2(const string& colName) const
-  {
-    return get<optional<double>>(colName);
-  }
-
-  //----------------------------------------------------------------------------
-
-  std::optional<Sloppy::MemArray> TabRow::getBlob2(const string& colName) const
-  {
-    return get<optional<Sloppy::MemArray>>(colName);
-  }
-
-//----------------------------------------------------------------------------
-
-  optional<string> TabRow::getString2(const string& colName) const
-  {
-    return get<optional<string>>(colName);
-  }
-
-//----------------------------------------------------------------------------
-
-  optional<Sloppy::DateTime::WallClockTimepoint_secs> TabRow::getTimestamp_secs2(const string& colName, date::time_zone* tzp) const
-  {
-    const auto rawTime = getInt64_2(colName);
+    const auto rawTime = get2<int64_t>(colName);
 
     if (rawTime)
     {
       return Sloppy::DateTime::WallClockTimepoint_secs{rawTime.value(), tzp};
-    }
-
-    return std::nullopt;
-  }
-
-//----------------------------------------------------------------------------
-
-  optional<nlohmann::json> TabRow::getJson2(const string& colName) const
-  {
-    return get<optional<nlohmann::json>>(colName);
-  }
-
-  //----------------------------------------------------------------------------
-
-  optional<date::year_month_day> TabRow::getDate2(const string& colName) const
-  {
-    const auto ymd = getInt2(colName);
-    if (ymd)
-    {
-      return Sloppy::DateTime::ymdFromInt(ymd.value());
     }
 
     return std::nullopt;
@@ -336,7 +202,7 @@ namespace SqliteOverlay
 
   bool TabRow::checkConstraint(const string& colName, Sloppy::ValueConstraint c, string* errMsg) const
   {
-    return Sloppy::checkConstraint(getString2(colName), c, errMsg);
+    return Sloppy::checkConstraint(get2<std::string>(colName), c, errMsg);
   }
 
   //----------------------------------------------------------------------------

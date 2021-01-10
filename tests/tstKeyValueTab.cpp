@@ -59,25 +59,22 @@ TEST_F(DatabaseTestScenario, KeyValueTab_SettersAndGetters)
   ASSERT_EQ(0, rawTab.getMatchCountForColumnValue("K", "i"));
   kvt.set("i", 42);
   ASSERT_EQ(1, rawTab.getMatchCountForColumnValue("K", "i"));
-  ASSERT_EQ(42, kvt.getInt("i"));
+  ASSERT_EQ(42, kvt.get<int>("i"));
 
   // update value for existing key
   kvt.set("i", 666);
   ASSERT_EQ(1, rawTab.getMatchCountForColumnValue("K", "i"));
-  ASSERT_EQ(666, kvt.getInt("i"));
+  ASSERT_EQ(666, kvt.get<int>("i"));
 
   // get the value of a non-existing key
-  ASSERT_THROW(kvt.getInt("sdkljf"), NoDataException);
-  int v{0};
-  //kvt.get("sdkljf", v);
-  ASSERT_THROW(kvt.get("sdkljf", v), NoDataException);
+  ASSERT_THROW(kvt.get<int>("sdkljf"), NoDataException);
   optional<int> oi{123};
   ASSERT_TRUE(oi.has_value());
-  ASSERT_NO_THROW(kvt.get("sdkljf", oi));
+  ASSERT_NO_THROW(oi = kvt.get2<int>("sdkljf"));
   ASSERT_FALSE(oi.has_value());
 
   // get an existing key with an `optional<T>` reference
-  ASSERT_NO_THROW(kvt.get("i", oi));
+  ASSERT_NO_THROW(oi = kvt.get2<int>("i"));
   ASSERT_TRUE(oi.has_value());
   ASSERT_EQ(666, oi.value());
 
@@ -97,27 +94,27 @@ TEST_F(DatabaseTestScenario, KeyValueTab_SettersAndGetters)
   wc.addCol("K", "json");
   TabRow r{db, "kvt", wc};
   ASSERT_EQ("{\"a\":\"abc\",\"b\":42}", r["V"]);
-  ASSERT_EQ("{\"a\":\"abc\",\"b\":42}", kvt.getJson("json").dump());
-  auto oj = kvt.getJson2("json");
+  ASSERT_EQ("{\"a\":\"abc\",\"b\":42}", kvt.get<nlohmann::json>("json").dump());
+  auto oj = kvt.get2<nlohmann::json>("json");
   ASSERT_TRUE(oj.has_value());
   ASSERT_EQ("{\"a\":\"abc\",\"b\":42}", oj.value().dump());
 
   //
   // getters type 2, not throwing
   //
-  auto oi2 = kvt.getInt2("sfsdf");
+  auto oi2 = kvt.get2<int>("sfsdf");
   ASSERT_FALSE(oi2.has_value());
-  oi2 = kvt.getInt2("i");
+  oi2 = kvt.get2<int>("i");
   ASSERT_TRUE(oi2.has_value());
 
   kvt.set("l", LONG_MAX);
-  auto ol = kvt.getInt64_2("l");
+  auto ol = kvt.get2<int64_t>("l");
   ASSERT_EQ(LONG_MAX, ol.value());
 
   // invalid key content returns default values
   kvt.set("l", "abc");
   ASSERT_EQ("abc", kvt["l"]);
-  ASSERT_EQ(0, kvt.getLong("l"));
+  ASSERT_EQ(0, kvt.get<int64_t>("l"));
 
   /*
   //
@@ -197,13 +194,13 @@ TEST_F(DatabaseTestScenario, KeyValueTab_Remove)
 
   kvt.set("i", 42);
   ASSERT_EQ(1, kvt.size());
-  auto v = kvt.getInt2("i");
+  auto v = kvt.get2<int>("i");
   ASSERT_TRUE(v.has_value());
   ASSERT_EQ(42, *v);
 
   kvt.remove("i");
   ASSERT_EQ(0, kvt.size());
-  v = kvt.getInt2("i");
+  v = kvt.get2<int>("i");
   ASSERT_FALSE(v.has_value());
 
   ASSERT_NO_THROW(kvt.remove("sdkjfhsdjkf"));
@@ -244,7 +241,7 @@ TEST_F(DatabaseTestScenario, KeyValueTab_Caching)
   // trigger a few queries so that we
   // get pending, un-finalized statements
   kvt.set("k1", 42);
-  ASSERT_EQ(42, kvt.getInt("k1"));
+  ASSERT_EQ(42, kvt.get<int>("k1"));
 
   // a close() operation on the database should now fail
   ASSERT_THROW(db.close(), BusyException);

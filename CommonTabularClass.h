@@ -232,7 +232,7 @@ namespace SqliteOverlay
         SqlStatement stmt = db.get().prepStatement(sql);
         stmt.bind(1, val);
         stmt.step();
-        return stmt.getInt(0);
+        return stmt.get<int>(0);
       }
       catch (SqlStatementCreationError e)
       {

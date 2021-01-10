@@ -60,133 +60,6 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  string KeyValueTab::operator [](const string& key)
-  {
-    string result;
-    get(key, result);
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  int KeyValueTab::getInt(const string& key)
-  {
-    int result;
-    get(key, result);
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  int64_t KeyValueTab::getLong(const string& key)
-  {
-    int64_t result;
-    get(key, result);
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  double KeyValueTab::getDouble(const string& key)
-  {
-    double result;
-    get(key, result);
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  bool KeyValueTab::getBool(const string& key)
-  {
-    bool result;
-    get(key, result);
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  Sloppy::DateTime::WallClockTimepoint_secs KeyValueTab::getUTCTimestamp(const string& key)
-  {
-    time_t raw;
-    get(key, raw);
-
-    return Sloppy::DateTime::WallClockTimepoint_secs{raw};
-  }
-
-  //----------------------------------------------------------------------------
-
-  nlohmann::json KeyValueTab::getJson(const string& key)
-  {
-    nlohmann::json result;
-    get(key, result);
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  optional<string> KeyValueTab::getString2(const string& key)
-  {
-    optional<string> result;
-    get(key, result);
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  optional<int> KeyValueTab::getInt2(const string& key)
-  {
-    optional<int> result;
-    get(key, result);
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  optional<int64_t> KeyValueTab::getInt64_2(const string& key)
-  {
-    optional<int64_t> result;
-    get(key, result);
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  optional<double> KeyValueTab::getDouble2(const string& key)
-  {
-    optional<double> result;
-    get(key, result);
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  optional<bool> KeyValueTab::getBool2(const string& key)
-  {
-    optional<bool> result;
-    get(key, result);
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  optional<Sloppy::DateTime::WallClockTimepoint_secs> KeyValueTab::getUTCTimestamp2(const string& key)
-  {
-    auto raw = getInt64_2(key);
-    if (!raw) return std::nullopt;
-    return Sloppy::DateTime::WallClockTimepoint_secs{static_cast<time_t>(raw.value())};
-  }
-
-  //----------------------------------------------------------------------------
-
-  optional<nlohmann::json> KeyValueTab::getJson2(const string& key)
-  {
-    optional<nlohmann::json> result;
-    get(key, result);
-    return result;
-  }
-
-  //----------------------------------------------------------------------------
-
   bool KeyValueTab::hasKey(const string& key) const
   {
     if (key.empty()) return false;
@@ -229,7 +102,7 @@ namespace SqliteOverlay
     //
     // such an entry must have been created by something else
     // than a KeyValueTab instance because we don't work with "NULL" here
-    optional<Sloppy::estring> v = getString2(keyName);
+    optional<Sloppy::estring> v = get2<std::string>(keyName);
     if (!(v.has_value()))
     {
       if (errMsg != nullptr)
@@ -285,7 +158,7 @@ namespace SqliteOverlay
 
     for (stmt.step() ; stmt.hasData() ; stmt.step())
     {
-      result.push_back(stmt.getString(0));
+      result.push_back(stmt.get<std::string>(0));
     }
 
     return result;

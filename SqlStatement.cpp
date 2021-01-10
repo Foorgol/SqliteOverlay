@@ -150,55 +150,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  int SqlStatement::getInt(int colId) const
-  {
-    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
-    {
-      throw NullValueException();
-    }
-
-    return sqlite3_column_int(stmt, colId);
-  }
-
-  //----------------------------------------------------------------------------
-
-  int64_t SqlStatement::getInt64(int colId) const
-  {
-    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
-    {
-      throw NullValueException();
-    }
-
-    return sqlite3_column_int64(stmt, colId);
-  }
-
-  //----------------------------------------------------------------------------
-
-  double SqlStatement::getDouble(int colId) const
-  {
-    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
-    {
-      throw NullValueException();
-    }
-
-    return sqlite3_column_double(stmt, colId);
-  }
-
-  //----------------------------------------------------------------------------
-
-  string SqlStatement::getString(int colId) const
-  {
-    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
-    {
-      throw NullValueException();
-    }
-
-    return string{reinterpret_cast<const char*>(sqlite3_column_text(stmt, colId))};
-  }
-
-  //----------------------------------------------------------------------------
-
-  Sloppy::DateTime::WallClockTimepoint_secs SqlStatement::getTimestamp_secs(int colId, const date::time_zone* tzp) const
+  Sloppy::DateTime::WallClockTimepoint_secs SqlStatement::get(int colId, const date::time_zone* tzp) const
   {
     if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
     {
@@ -207,47 +159,6 @@ namespace SqliteOverlay
 
     const time_t rawTime = sqlite3_column_int64(stmt, colId);
     return Sloppy::DateTime::WallClockTimepoint_secs(rawTime, tzp);
-  }
-
-  //----------------------------------------------------------------------------
-
-  Sloppy::MemArray SqlStatement::getBlob(int colId) const
-  {
-    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
-    {
-      throw NullValueException();
-    }
-
-    // get the number of bytes in the blob
-    size_t nBytes = sqlite3_column_bytes(stmt, colId);
-    if (nBytes == 0)
-    {
-      return Sloppy::MemArray{}; // empty blob
-    }
-
-    // wrap the data from SQLite into a MemView
-    const void* srcPtr = sqlite3_column_blob(stmt, colId);
-    if (srcPtr == nullptr)  // shouldn't happen after the previous check, but we want to be sure
-    {
-      return Sloppy::MemArray{}; // empty blob
-    }
-    Sloppy::MemView fakeView{static_cast<const char*>(srcPtr), nBytes};
-
-    return Sloppy::MemArray{fakeView};  // creates a deep copy
-  }
-
-  //----------------------------------------------------------------------------
-
-  nlohmann::json SqlStatement::getJson(int colId) const
-  {
-    if (isNull(colId))  // implies check and exceptions for assertColumnDataAccess()
-    {
-      throw NullValueException();
-    }
-
-    const string jsonData = getString(colId);
-
-    return nlohmann::json::parse(jsonData);
   }
 
   //----------------------------------------------------------------------------
@@ -268,63 +179,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  std::optional<int> SqlStatement::getInt2(int colId) const
-  {
-    assertColumnDataAccess(colId);
-
-    if (isNull_NoGuards(colId))
-    {
-      return std::optional<int>{};
-    }
-
-    return sqlite3_column_int(stmt, colId);
-  }
-
-  //----------------------------------------------------------------------------
-
-  std::optional<int64_t> SqlStatement::getInt64_2(int colId) const
-  {
-    assertColumnDataAccess(colId);
-
-    if (isNull_NoGuards(colId))
-    {
-      return std::optional<int64_t>{};
-    }
-
-    return sqlite3_column_int64(stmt, colId);
-  }
-
-  //----------------------------------------------------------------------------
-
-  std::optional<double> SqlStatement::getDouble2(int colId) const
-  {
-    assertColumnDataAccess(colId);
-
-    if (isNull_NoGuards(colId))
-    {
-      return std::optional<double>{};
-    }
-
-    return sqlite3_column_double(stmt, colId);
-  }
-
-  //----------------------------------------------------------------------------
-
-  std::optional<string> SqlStatement::getString2(int colId) const
-  {
-    assertColumnDataAccess(colId);
-
-    if (isNull_NoGuards(colId))
-    {
-      return std::optional<string>{};
-    }
-
-    return string{reinterpret_cast<const char*>(sqlite3_column_text(stmt, colId))};
-  }
-
-  //----------------------------------------------------------------------------
-
-  std::optional<Sloppy::DateTime::WallClockTimepoint_secs> SqlStatement::getTimestamp_secs2(int colId, const date::time_zone* tzp) const
+  std::optional<Sloppy::DateTime::WallClockTimepoint_secs> SqlStatement::get2(int colId, const date::time_zone* tzp) const
   {
     assertColumnDataAccess(colId);
 
@@ -335,51 +190,6 @@ namespace SqliteOverlay
 
     const time_t rawTime = sqlite3_column_int64(stmt, colId);
     return Sloppy::DateTime::WallClockTimepoint_secs(rawTime, tzp);
-  }
-
-  //----------------------------------------------------------------------------
-
-  std::optional<Sloppy::MemArray> SqlStatement::getBlob2(int colId) const
-  {
-    assertColumnDataAccess(colId);
-
-    if (isNull_NoGuards(colId))
-    {
-      return std::optional<Sloppy::MemArray>{};
-    }
-
-    // get the number of bytes in the blob
-    size_t nBytes = sqlite3_column_bytes(stmt, colId);
-    if (nBytes == 0)
-    {
-      return Sloppy::MemArray{}; // empty blob
-    }
-
-    // wrap the data from SQLite into a MemView
-    const void* srcPtr = sqlite3_column_blob(stmt, colId);
-    if (srcPtr == nullptr)  // shouldn't happen after the previous check, but we want to be sure
-    {
-      return Sloppy::MemArray{}; // empty blob
-    }
-    Sloppy::MemView fakeView{static_cast<const char*>(srcPtr), nBytes};
-
-    return Sloppy::MemArray{fakeView};  // creates a deep copy
-  }
-
-  //----------------------------------------------------------------------------
-
-  std::optional<nlohmann::json> SqlStatement::getJson2(int colId) const
-  {
-    assertColumnDataAccess(colId);
-
-    if (isNull_NoGuards(colId))
-    {
-      return std::optional<nlohmann::json>{};
-    }
-
-    const string jsonData = getString(colId);
-
-    return nlohmann::json::parse(jsonData);
   }
 
   //----------------------------------------------------------------------------
@@ -433,20 +243,6 @@ namespace SqliteOverlay
     sqlite3_free(sql);
 
     return result;
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqlStatement::get(int colId, nlohmann::json& result) const
-  {
-    result = getJson(colId);
-  }
-
-  //----------------------------------------------------------------------------
-
-  void SqlStatement::get(int colId, Sloppy::MemArray& result) const
-  {
-    result = getBlob(colId);
   }
 
   //----------------------------------------------------------------------------

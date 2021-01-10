@@ -111,7 +111,7 @@ namespace SqliteOverlay
     auto stmt = db.get().prepStatement(cachedSelectSql + col + " IS NULL");
     stmt.step();
     if (!stmt.hasData()) return optional<TabRow>{};
-    return TabRow(db, tabName, stmt.getInt(0), true);
+    return TabRow(db, tabName, stmt.get<int>(0), true);
   }
 
   //----------------------------------------------------------------------------
@@ -211,7 +211,7 @@ namespace SqliteOverlay
       throw NoDataException();
     }
 
-    return TabRow(db, tabName, stmt.getInt(0), true);
+    return TabRow(db, tabName, stmt.get<int>(0), true);
   }
 
   //----------------------------------------------------------------------------
@@ -225,7 +225,7 @@ namespace SqliteOverlay
       return optional<TabRow>{};
     }
 
-    return TabRow(db, tabName, stmt.getInt(0), true);
+    return TabRow(db, tabName, stmt.get<int>(0), true);
   }
 
   //----------------------------------------------------------------------------
@@ -241,7 +241,7 @@ namespace SqliteOverlay
       return optional<TabRow>{};
     }
 
-    return TabRow(db, tabName, stmt.getInt(0), true);
+    return TabRow(db, tabName, stmt.get<int>(0), true);
   }
 
   //----------------------------------------------------------------------------
@@ -299,7 +299,7 @@ namespace SqliteOverlay
       optional<string> val;
       try
       {
-        val = stmt.getString(1);
+        val = stmt.get<std::string>(1);
       }
       catch (NullValueException)
       {
@@ -309,7 +309,7 @@ namespace SqliteOverlay
       bool isOkay = Sloppy::checkConstraint(val, c);
       if (!isOkay)
       {
-        result.push_back(stmt.getInt(0));
+        result.push_back(stmt.get<int>(0));
       }
     }
 
@@ -461,7 +461,7 @@ namespace SqliteOverlay
     stmt.step();
     while (stmt.hasData())
     {
-      result.emplace_back(db, tabName, stmt.getInt(0), true);
+      result.emplace_back(db, tabName, stmt.get<int>(0), true);
 
       stmt.step();
     }

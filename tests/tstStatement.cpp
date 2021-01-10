@@ -60,13 +60,9 @@ TEST_F(DatabaseTestScenario, StmtBind)
   stmt.step();
   stmt = SqlStatement{db.get(), "SELECT s FROM t1 WHERE rowid=6"};
   stmt.step();
-  nlohmann::json jsonOut1 = stmt.getJson(0);
+  nlohmann::json jsonOut1 = stmt.get<nlohmann::json>(0);
   ASSERT_EQ("abc", jsonOut1["a"]);
   ASSERT_EQ(42, jsonOut1["b"]);
-  nlohmann::json jsonOut2;
-  stmt.get(0, jsonOut2);
-  ASSERT_EQ("abc", jsonOut2["a"]);
-  ASSERT_EQ(42, jsonOut2["b"]);
 
   nlohmann::json jsonNull;
   ASSERT_EQ("null", jsonNull.dump());
@@ -75,7 +71,7 @@ TEST_F(DatabaseTestScenario, StmtBind)
   stmt.step();
   stmt = SqlStatement{db.get(), "SELECT s FROM t1 WHERE rowid=7"};
   stmt.step();
-  jsonOut1 = stmt.getJson(0);
+  jsonOut1 = stmt.get<nlohmann::json>(0);
   ASSERT_EQ("null", jsonOut1.dump());
   ASSERT_TRUE(jsonOut1.empty());
 
@@ -86,7 +82,7 @@ TEST_F(DatabaseTestScenario, StmtBind)
   stmt.step();
   stmt = SqlStatement{db.get(), "SELECT s FROM t1 WHERE rowid=8"};
   stmt.step();
-  jsonOut1 = stmt.getJson(0);
+  jsonOut1 = stmt.get<nlohmann::json>(0);
   ASSERT_EQ("{}", jsonOut1.dump());
   ASSERT_TRUE(jsonOut1.empty());
 }
@@ -103,7 +99,7 @@ TEST_F(DatabaseTestScenario, StmtStep)
   ASSERT_TRUE(stmt.step());
   ASSERT_TRUE(stmt.isDone());
   ASSERT_FALSE(stmt.hasData());
-  ASSERT_THROW(stmt.getInt(0), NoDataException);
+  ASSERT_THROW(stmt.get<int>(0), NoDataException);
   ASSERT_FALSE(stmt.step());
   ASSERT_FALSE(stmt.step());   // still `false` because we're done
 
@@ -112,10 +108,10 @@ TEST_F(DatabaseTestScenario, StmtStep)
   ASSERT_TRUE(stmt.step());   // yields the scalar result
   ASSERT_FALSE(stmt.isDone());
   ASSERT_TRUE(stmt.hasData());
-  ASSERT_TRUE(stmt.getInt(0) > 1);
+  ASSERT_TRUE(stmt.get<int>(0) > 1);
   ASSERT_FALSE(stmt.step());   // "no more data"
   ASSERT_TRUE(stmt.isDone());
-  ASSERT_THROW(stmt.getInt(0), NoDataException);
+  ASSERT_THROW(stmt.get<int>(0), NoDataException);
   ASSERT_FALSE(stmt.step());   // still `false` because we're done
 
   // prep and execute a SQL query that could return
@@ -125,7 +121,7 @@ TEST_F(DatabaseTestScenario, StmtStep)
   ASSERT_TRUE(++stmt);   // try the prefix increment operator instead of `step()`
   ASSERT_TRUE(stmt.isDone());
   ASSERT_FALSE(stmt.hasData());
-  ASSERT_THROW(stmt.getInt(0), NoDataException);
+  ASSERT_THROW(stmt.get<int>(0), NoDataException);
   //ASSERT_FALSE(stmt.step());
   ASSERT_FALSE(++stmt);   // "no more data"
 
@@ -134,13 +130,13 @@ TEST_F(DatabaseTestScenario, StmtStep)
   ASSERT_TRUE(stmt.step());
   ASSERT_FALSE(stmt.isDone());
   ASSERT_TRUE(stmt.hasData());
-  ASSERT_NO_THROW(stmt.getInt(0));
-  ASSERT_NO_THROW(stmt.getInt(1));
+  ASSERT_NO_THROW(stmt.get<int>(0));
+  ASSERT_NO_THROW(stmt.get<int>(1));
   ASSERT_TRUE(stmt.step());
   ASSERT_FALSE(stmt.isDone());
   ASSERT_TRUE(stmt.hasData());
-  ASSERT_THROW(stmt.getInt(0), NullValueException);  // i is NULL in the second row
-  ASSERT_NO_THROW(stmt.getInt(1));
+  ASSERT_THROW(stmt.get<int>(0), NullValueException);  // i is NULL in the second row
+  ASSERT_NO_THROW(stmt.get<int>(1));
 }
 
 //----------------------------------------------------------------
@@ -184,10 +180,10 @@ TEST_F(DatabaseTestScenario, StmtGetters)
   ASSERT_TRUE(stmt.dataStep());
 
   // test all getters
-  ASSERT_EQ(1, stmt.getInt(0)); // ID column
-  ASSERT_EQ(42, stmt.getInt(1)); // i column
-  ASSERT_EQ(23.23, stmt.getDouble(2));
-  ASSERT_EQ("Hallo", stmt.getString(3));
+  ASSERT_EQ(1, stmt.get<int>(0)); // ID column
+  ASSERT_EQ(42, stmt.get<int>(1)); // i column
+  ASSERT_EQ(23.23, stmt.get<double>(2));
+  ASSERT_EQ("Hallo", stmt.get<std::string>(3));
   ASSERT_TRUE(stmt.getBool(1));
   for (int i=0; i < 4; ++i) ASSERT_FALSE(stmt.isNull(i));
 
@@ -224,7 +220,7 @@ TEST_F(DatabaseTestScenario, HugeJsonObjs)
   stmt.step();
   stmt = SqlStatement{db.get(), "SELECT s FROM t1 WHERE rowid=6"};
   stmt.step();
-  nlohmann::json jsonOut = stmt.getJson(0);
+  nlohmann::json jsonOut = stmt.get<nlohmann::json>(0);
 
   // compare the stored and the retrieved object
   ASSERT_EQ(jsonIn.size(), jsonOut.size());
@@ -287,8 +283,8 @@ TEST_F(DatabaseTestScenario, StmtLimits)
 
     stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
     ASSERT_TRUE(stmt.step());
-    ASSERT_EQ(i, stmt.getInt(0));
-    ASSERT_EQ(i, stmt.getInt64(0));  // should work for int as well
+    ASSERT_EQ(i, stmt.get<int>(0));
+    ASSERT_EQ(i, stmt.get<int64_t>(0));  // should work for int as well
   }
 
   // bind, update and retrieve LONG_MIN and LONG_MAX
@@ -307,8 +303,8 @@ TEST_F(DatabaseTestScenario, StmtLimits)
 
     stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
     ASSERT_TRUE(stmt.step());
-    ASSERT_EQ(i, stmt.getInt64(0));
-    ASSERT_NE(i, stmt.getInt(0));  // should NOT work for int
+    ASSERT_EQ(i, stmt.get<int64_t>(0));
+    ASSERT_NE(i, stmt.get<int>(0));  // should NOT work for int
   }
 }
 
@@ -337,14 +333,14 @@ TEST_F(DatabaseTestScenario, StmtTime)
   ASSERT_TRUE(stmt.step());
   stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(rawRef, stmt.getInt64(0));
+  ASSERT_EQ(rawRef, stmt.get<int64_t>(0));
 
   // reset
   stmt = SqlStatement{db.get(), "UPDATE t1 SET i = 0 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
   stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(0, stmt.getInt64(0));
+  ASSERT_EQ(0, stmt.get<int64_t>(0));
 
   // storage of UTC time
   stmt = SqlStatement{db.get(), "UPDATE t1 SET i = ? WHERE rowid=1"};
@@ -352,19 +348,19 @@ TEST_F(DatabaseTestScenario, StmtTime)
   ASSERT_TRUE(stmt.step());
   stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(rawRef, stmt.getInt64(0));
+  ASSERT_EQ(rawRef, stmt.get<int64_t>(0));
 
   // retrieval of local time
   stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
-  auto lt = stmt.getTimestamp_secs(0, tzp);
+  auto lt = stmt.get(0, tzp);
   ASSERT_EQ(lt, localRef);
   ASSERT_EQ(rawRef, lt.to_time_t());
 
   // retrieval of UTC time
   stmt = SqlStatement{db.get(), "SELECT i FROM t1 WHERE rowid=1"};
   ASSERT_TRUE(stmt.step());
-  auto u = stmt.getTimestamp_secs(0);
+  auto u = stmt.get<Sloppy::DateTime::WallClockTimepoint_secs>(0);
   ASSERT_EQ(u, utcRef);
   ASSERT_EQ(rawRef, u.to_time_t());
 }
@@ -395,7 +391,7 @@ TEST_F(DatabaseTestScenario, StmtBlob)
   stmt = db.prepStatement("SELECT b FROM t1 WHERE rowid=1");
   ASSERT_TRUE(stmt.step());
   ASSERT_TRUE(stmt.hasData());
-  Sloppy::MemArray reBuf = stmt.getBlob(0);
+  Sloppy::MemArray reBuf = stmt.get<Sloppy::MemArray>(0);
 
   // compare both buffers; only succeeds if the buffers have equal size and content
   ASSERT_TRUE(sodium->memcmp(buf.view(), reBuf.view()));
@@ -411,45 +407,16 @@ TEST_F(DatabaseTestScenario, TemplateGetter)
   ASSERT_TRUE(stmt.step());
   ASSERT_TRUE(stmt.hasData());
 
-  int i{0};
-  stmt.get(0, i);
+  int i = stmt.get<int>(0);
   ASSERT_EQ(1, i);
 
-  int64_t l{0};
-  stmt.get(1, l);
-  ASSERT_EQ(42, l); // i column
-
-  double d{0};
-  stmt.get(2, d);
-  ASSERT_EQ(23.23, d);
-
-  string s;
-  stmt.get(3, s);
-  ASSERT_EQ("Hallo", s);
-
-  //
-  // test the more advanced multi-getters
-  //
-  i = 0;
-  l = 0;
-  stmt.multiGet(0, i, 1, l);
-  ASSERT_EQ(1, i);
+  int64_t l = stmt.get<int64_t>(1);
   ASSERT_EQ(42, l);
 
-  d = 0;
-  s.clear();
-  tie (d,s) = stmt.tupleGet<double, string>(2, 3);
+  double d = stmt.get<double>(2);
   ASSERT_EQ(23.23, d);
-  ASSERT_EQ("Hallo", s);
 
-  i = 0;
-  l = 0;
-  d = 0;
-  s.clear();
-  stmt.multiGet(0, i, 1, l, 2, d, 3, s);
-  ASSERT_EQ(1, i);
-  ASSERT_EQ(42, l);
-  ASSERT_EQ(23.23, d);
+  string s = stmt.get<std::string>(3);
   ASSERT_EQ("Hallo", s);
 }
 
@@ -462,50 +429,38 @@ TEST_F(DatabaseTestScenario, TemplateGetterOptional)
   db.execNonQuery("INSERT INTO t1(a, b, c) VALUES(NULL, NULL, NULL)");
   db.execNonQuery("INSERT INTO t1(a, b, c) VALUES(42, \"xxx\", 3.3)");
 
-  optional<int> i;
-  optional<double> d;
-  optional<int64_t> l;
-  optional<string> s;
-
   auto stmt = db.prepStatement("SELECT rowid, a, b, c FROM t1 WHERE rowid=2");
   ASSERT_TRUE(stmt.step());
   ASSERT_TRUE(stmt.hasData());
 
-  stmt.get(0, i);
+  optional<int> i = stmt.get2<int>(0);
   ASSERT_EQ(2, i.value());
 
-  stmt.get(1, l);
+  optional<double> d = stmt.get2<double>(3);
+  ASSERT_EQ(3.3, d.value());
+
+  optional<int64_t> l = stmt.get2<int64_t>(1);
   ASSERT_EQ(42, l.value()); // i column
 
-  stmt.get(2, s);
+  optional<string> s = stmt.get2<std::string>(2);
   ASSERT_EQ("xxx", s.value());
 
-  stmt.get(3, d);
-  ASSERT_EQ(3.3, d.value());
 
   stmt = db.prepStatement("SELECT rowid, a, b, c FROM t1 WHERE rowid=1");
   ASSERT_TRUE(stmt.step());
   ASSERT_TRUE(stmt.hasData());
 
-  stmt.get(0, i);
+  i = stmt.get2<int>(0);
   ASSERT_EQ(1, i.value());
 
-  stmt.get(1, l);
+  l = stmt.get2<int64_t>(1);
   ASSERT_FALSE(l.has_value());
 
-  stmt.get(2, s);
+  s = stmt.get2<std::string>(2);
   ASSERT_FALSE(s.has_value());
 
-  stmt.get(3, d);
+  d = stmt.get2<double>(3);
   ASSERT_FALSE(d.has_value());
-
-  //
-  // test the more advanced multi-getters
-  //
-  int plainInt{0};
-  stmt.multiGet(0, plainInt, 1, i);
-  ASSERT_EQ(1, plainInt);
-  ASSERT_FALSE(i.has_value());
 }
 
 //----------------------------------------------------------------

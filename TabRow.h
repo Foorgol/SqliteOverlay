@@ -270,106 +270,38 @@ namespace SqliteOverlay
 
       stmt.step();
 
-      T outVal;
-      stmt.get(0, outVal);
-
-      return outVal;
+      return stmt.get<T>(0);
     }
 
-    /** \returns the contents of a given column as a binary blob of data
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * \throws NullValueException if the column contained NULL
-     *
-     * Test case: yes, as part of the getXXX functions
-     *
-     */
-    Sloppy::MemArray get(
+    template<typename T>
+    std::optional<T> get2(
         const std::string& colName   ///< the name of the column to query
-        ) const;
+        ) const
+    {
+      if (colName.empty())
+      {
+        throw std::invalid_argument("Column access: received empty column name");
+      }
 
-    /** \returns the contents of a given column as an integer
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * \throws NullValueException if the column contained NULL
-     *
-     * Test case: yes
-     *
-     */
-    int getInt(
-        const std::string& colName   ///< the name of the column to query
-        ) const;
+      SqlStatement stmt;
+      std::string sql = "SELECT " + colName + cachedWhereStatementForRow;
+      try
+      {
+        stmt = db.get().prepStatement(sql);
+      }
+      catch (SqlStatementCreationError)
+      {
+        throw std::invalid_argument("Column access: received invalid column name");
+      }
+      catch (...)
+      {
+        throw;
+      }
 
-    /** \returns the contents of a given column as a 64-bit integer
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * \throws NullValueException if the column contained NULL
-     *
-     * Test case: yes
-     *
-     */
-    int64_t getInt64(
-        const std::string& colName   ///< the name of the column to query
-        ) const;
+      stmt.step();
 
-    /** \returns the contents of a given column as a double
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * \throws NullValueException if the column contained NULL
-     *
-     * Test case: yes
-     *
-     */
-    double getDouble(
-        const std::string& colName   ///< the name of the column to query
-        ) const;
-
-    /** \returns the contents of a given column as a BLOB
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * \throws NullValueException if the column contained NULL
-     *
-     * Test case: yes
-     *
-     */
-    Sloppy::MemArray getBlob(
-        const std::string& colName   ///< the name of the column to query
-        ) const;
+      return stmt.get2<T>(0);
+    }
 
 
     /** \returns the contents of a given column as a duration of custom granularity
@@ -393,13 +325,13 @@ namespace SqliteOverlay
         ) const
     {
       if constexpr (std::is_same_v<RepType, int>) {
-        return std::chrono::duration<RepType, PeriodRatio>(getInt(colName));
+        return std::chrono::duration<RepType, PeriodRatio>(get<int>(colName));
       }
       if constexpr (std::is_same_v<RepType, int64_t>) {
-        return std::chrono::duration<RepType, PeriodRatio>(getInt64(colName));
+        return std::chrono::duration<RepType, PeriodRatio>(get<int64_t>(colName));
       }
       if constexpr (std::is_same_v<RepType, double>) {
-        return std::chrono::duration<RepType, PeriodRatio>(getDouble(colName));
+        return std::chrono::duration<RepType, PeriodRatio>(get<double>(colName));
       }
 
       static_assert (alwaysFalse<RepType>, "Unsupported RepType for TabRow::getDuration()");
@@ -423,138 +355,14 @@ namespace SqliteOverlay
      * Test case: not yet
      *
      */
-    Sloppy::DateTime::WallClockTimepoint_secs getTimestamp_secs(
+    Sloppy::DateTime::WallClockTimepoint_secs get(
         const std::string& colName,   ///< the name of the column to query
-        date::time_zone* tzp = nullptr   ///< pointer to the timezone info that is passed to the ctor of the WallClockTimepoint
-        ) const;
-
-    /** \returns the contents of a given column as a JSON object
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * \throws NullValueException if the column contained NULL
-     *
-     * \throws nlohmann::json::parse_error if the column didn't contain valid JSON data
-     *
-     * Test case: yes
-     *
-     */
-    nlohmann::json getJson(
-        const std::string& colName   ///< the name of the column to query
-        ) const;
-
-    /** \returns the contents of a given column as a date
-     *
-     * \note The date has to be stored as an integer value, e.g.,
-     * 2018-10-28 should be stored as the integer value "20181028".
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * \throws NullValueException if the column contained NULL
-     *
-     * Test case: yes
-     *
-     */
-    date::year_month_day getDate(
-        const std::string& colName   ///< the name of the column to query
-        ) const;
-
-    /** \returns the contents of a given column as an integer or NULL if the column was empty
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * Test case: yes
-     *
-     */
-    std::optional<int> getInt2(
-        const std::string& colName   ///< the name of the column to query
-        ) const;
-
-    /** \returns the contents of a given column as a 64-bit integer or NULL if the column was empty
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * Test case: yes
-     *
-     */
-    std::optional<int64_t> getInt64_2(
-        const std::string& colName   ///< the name of the column to query
-        ) const;
-
-    /** \returns the contents of a given column as a double or NULL if the column was empty
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * Test case: yes
-     *
-     */
-    std::optional<double> getDouble2(
-        const std::string& colName   ///< the name of the column to query
-        ) const;
-
-    /** \returns the contents of a given column as a BLOB or NULL if the column was empty
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * Test case: yes
-     *
-     */
-    std::optional<Sloppy::MemArray> getBlob2(
-        const std::string& colName   ///< the name of the column to query
-        ) const;
-
-    /** \returns the contents of a given column as a string or NULL if the column was empty
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * Test case: yes
-     *
-     */
-    std::optional<std::string> getString2(
-        const std::string& colName   ///< the name of the column to query
-        ) const;
+        date::time_zone* tzp   ///< pointer to the timezone info that is passed to the ctor of the WallClockTimepoint
+        ) const
+    {
+      const time_t rawTime = get<int64_t>(colName);
+      return Sloppy::DateTime::WallClockTimepoint_secs{rawTime, tzp};
+    }
 
     /** \returns the contents of a given column as a timestamp
      * or empty if the column was empty
@@ -573,42 +381,9 @@ namespace SqliteOverlay
      * Test case: not yet
      *
      */
-    std::optional<Sloppy::DateTime::WallClockTimepoint_secs> getTimestamp_secs2(
+    std::optional<Sloppy::DateTime::WallClockTimepoint_secs> get2(
         const std::string& colName,   ///< the name of the column to query
-        date::time_zone* tzp = nullptr   ///< pointer to the local time zone description
-        ) const;
-
-    /** \returns the contents of a given column as a JSON object
-     * or NULL if the column was empty
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     */
-    std::optional<nlohmann::json> getJson2(
-        const std::string& colName   ///< the name of the column to query
-        ) const;
-
-    /** \returns the contents of a given column as a date
-     * or NULL if the column was empty
-     *
-     * \throws std::invalid argument if the column name was empty
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NoDataException if the query didn't return any data (e.g., invalid column name
-     * or row has been deleted in the meantime)
-     *
-     * Test case: yes
-     *
-     */
-    std::optional<date::year_month_day> getDate2(
-        const std::string& colName   ///< the name of the column to query
+        date::time_zone* tzp   ///< pointer to the local time zone description
         ) const;
 
     /** \brief Overload operator for "is equal", compares table name,
@@ -656,87 +431,6 @@ namespace SqliteOverlay
      *
      */
     void erase() const;
-
-    /** \returns two column values with a single SELECT statement / a single database query
-     *
-     * \throws std::invalid argument if the column name was empty or invalid
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NullValueException if the column contained NULL and the requested type is not `optional<...>`
-     *
-     * Test case: yes
-     *
-     */
-    template<typename T1, typename T2>
-    void multiGetByRef(
-        const std::string& colName1,   ///< name of the first column to get
-        T1& out1,   ///< reference for storing the value of the first column
-        const std::string& colName2,   ///< name of the second column to get
-        T2& out2   ///< reference for storing the value of the second column
-        ) const
-    {
-      SqlStatement stmt = getSelectStatementWithColumnChecking(colName1, colName2);
-      stmt.step();
-      stmt.multiGet(0, out1, 1, out2);
-    }
-    
-    /** \returns three column values with a single SELECT statement / a single database query
-     *
-     * \throws std::invalid argument if the column name was empty or invalid
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NullValueException if the column contained NULL and the requested type is not `optional<...>`
-     *
-     * Test case: yes
-     *
-     */
-    template<typename T1, typename T2, typename T3>
-    void multiGetByRef(
-        const std::string& colName1,
-        T1& out1,
-        const std::string& colName2,
-        T2& out2,
-        const std::string& colName3,
-        T3& out3
-        ) const
-    {
-      SqlStatement stmt = getSelectStatementWithColumnChecking(colName1, colName2, colName3);
-      stmt.step();
-      stmt.multiGet(0, out1, 1, out2, 2, out3);
-    }
-
-    /** \returns four column values with a single SELECT statement / a single database query
-     *
-     * \throws std::invalid argument if the column name was empty or invalid
-     *
-     * \throws BusyException if the database wasn't available for
-     * reading the column
-     *
-     * \throws NullValueException if the column contained NULL and the requested type is not `optional<...>`
-     *
-     * Test case: yes
-     *
-     */
-    template<typename T1, typename T2, typename T3, typename T4>
-    void multiGetByRef(
-        const std::string& colName1,
-        T1& out1,
-        const std::string& colName2,
-        T2& out2,
-        const std::string& colName3,
-        T3& out3,
-        const std::string& colName4,
-        T4& out4
-        ) const
-    {
-      SqlStatement stmt = getSelectStatementWithColumnChecking(colName1, colName2, colName3, colName4);
-      stmt.step();
-      stmt.multiGet(0, out1, 1, out2, 2, out3, 3, out4);
-    }
 
     /** \returns two column values with a single SELECT statement / a single database query
      *

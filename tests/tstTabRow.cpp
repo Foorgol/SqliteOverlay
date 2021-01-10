@@ -58,29 +58,29 @@ TEST_F(DatabaseTestScenario, TabRow_getters)
 
   // get string
   ASSERT_EQ("Hallo", r["s"]);
-  auto optString = r.getString2("s");
+  auto optString = r.get2<std::string>("s");
   ASSERT_TRUE(optString.has_value());
   ASSERT_EQ("Hallo", optString.value());
 
   // get int
-  ASSERT_EQ(42, r.getInt("i"));
-  auto i = r.getInt2("i");
+  ASSERT_EQ(42, r.get<int>("i"));
+  auto i = r.get2<int>("i");
   ASSERT_TRUE(i.has_value());
   ASSERT_EQ(42, i.value());
 
   // get double
-  ASSERT_EQ(23.23, r.getDouble("f"));
-  auto d = r.getDouble2("f");
+  ASSERT_EQ(23.23, r.get<double>("f"));
+  auto d = r.get2<double>("f");
   ASSERT_TRUE(d.has_value());
   ASSERT_EQ(23.23, d.value());
 
   // test invalid column name
-  ASSERT_THROW(r.getInt("skjfh"), std::invalid_argument);
-  ASSERT_THROW(r.getDouble("skjfh"), std::invalid_argument);
+  ASSERT_THROW(r.get<int>("skjfh"), std::invalid_argument);
+  ASSERT_THROW(r.get<double>("skjfh"), std::invalid_argument);
   ASSERT_THROW(r["skjfh"], std::invalid_argument);
-  ASSERT_THROW(r.getInt2("skjfh"), std::invalid_argument);
-  ASSERT_THROW(r.getDouble2("skjfh"), std::invalid_argument);
-  ASSERT_THROW(r.getString2("skjfh"), std::invalid_argument);
+  ASSERT_THROW(r.get2<int>("skjfh"), std::invalid_argument);
+  ASSERT_THROW(r.get2<double>("skjfh"), std::invalid_argument);
+  ASSERT_THROW(r.get2<std::string>("skjfh"), std::invalid_argument);
 
   // test date functions
   //
@@ -88,33 +88,33 @@ TEST_F(DatabaseTestScenario, TabRow_getters)
   r.update("i", 20160807);
   date::year_month_day dExpected{date::year{2016} / 8 / 7};
   std::cout << "----!-----" << std::endl;
-  ASSERT_EQ(dExpected, r.getDate("i"));
-  auto dt = r.getDate2("i");
+  ASSERT_EQ(dExpected, r.get<date::year_month_day>("i"));
+  auto dt = r.get2<date::year_month_day>("i");
   ASSERT_TRUE(dt.has_value());
   ASSERT_EQ(dExpected, dt.value());
 
   // test JSON functions
   nlohmann::json jsonIn = nlohmann::json::parse(R"({"a": "abc", "b": 42})");
   r.update("s", jsonIn);
-  nlohmann::json jsonOut1 = r.getJson("s");
+  nlohmann::json jsonOut1 = r.get<nlohmann::json>("s");
   ASSERT_EQ("abc", jsonOut1["a"]);
   ASSERT_EQ(42, jsonOut1["b"]);
-  auto jsonOut2 = r.getJson2("s");
+  auto jsonOut2 = r.get2<nlohmann::json>("s");
   ASSERT_TRUE(jsonOut2.has_value());
   ASSERT_EQ("abc", jsonOut2->at("a"));
   ASSERT_EQ(42, jsonOut2->at("b"));
   r.update("s", "invalid JSON data");
-  ASSERT_THROW(r.getJson("s"), nlohmann::json::parse_error);
+  ASSERT_THROW(r.get<nlohmann::json>("s"), nlohmann::json::parse_error);
   r.updateToNull("s");
-  ASSERT_THROW(r.getJson("s"), NullValueException);
-  auto oj = r.getJson2("s");
+  ASSERT_THROW(r.get<nlohmann::json>("s"), NullValueException);
+  auto oj = r.get2<nlohmann::json>("s");
   ASSERT_FALSE(oj.has_value());
   r.update("s", "null");
-  jsonOut1 = r.getJson("s");
+  jsonOut1 = r.get<nlohmann::json>("s");
   ASSERT_TRUE(jsonOut1.empty());
   ASSERT_EQ(nlohmann::json::value_t::null, jsonOut1.type());
   r.update("s", "{}");
-  jsonOut1 = r.getJson("s");
+  jsonOut1 = r.get<nlohmann::json>("s");
   ASSERT_TRUE(jsonOut1.empty());
   ASSERT_EQ(nlohmann::json::value_t::object, jsonOut1.type());
 
@@ -123,9 +123,9 @@ TEST_F(DatabaseTestScenario, TabRow_getters)
   // works for all types... thanks to templating
   r = TabRow(db, "t1", 2);
   ASSERT_EQ(2, r.id());
-  i = r.getInt2("i");
+  i = r.get2<int>("i");
   ASSERT_FALSE(i.has_value());
-  ASSERT_THROW(r.getInt("i"), NullValueException);
+  ASSERT_THROW(r.get<int>("i"), NullValueException);
 }
 
 //----------------------------------------------------------------
@@ -137,12 +137,12 @@ TEST_F(DatabaseTestScenario, TabRow_Update)
   ASSERT_EQ(1, r.id());
 
   // simple updates of one colum
-  ASSERT_EQ(42, r.getInt("i"));
+  ASSERT_EQ(42, r.get<int>("i"));
   ASSERT_NO_THROW(r.update("i", 88));
-  ASSERT_EQ(88, r.getInt("i"));
-  ASSERT_EQ(23.23, r.getDouble("f"));
+  ASSERT_EQ(88, r.get<int>("i"));
+  ASSERT_EQ(23.23, r.get<double>("f"));
   ASSERT_NO_THROW(r.update("f", 12.34));
-  ASSERT_EQ(12.34, r.getDouble("f"));
+  ASSERT_EQ(12.34, r.get<double>("f"));
   ASSERT_EQ("Hallo", r["s"]);
   ASSERT_NO_THROW(r.update("s", "xyz"));
   ASSERT_EQ("xyz", r["s"]);
@@ -153,21 +153,21 @@ TEST_F(DatabaseTestScenario, TabRow_Update)
   cvc.addNullCol("f");
   cvc.addCol("s", "xxx");
   ASSERT_NO_THROW(r.update(cvc));
-  ASSERT_EQ(55, r.getInt("i"));
+  ASSERT_EQ(55, r.get<int>("i"));
   ASSERT_EQ("xxx", r["s"]);
-  auto d = r.getDouble2("f");
+  auto d = r.get2<double>("f");
   ASSERT_FALSE(d.has_value());
-  ASSERT_THROW(r.getDouble("f"), NullValueException);
+  ASSERT_THROW(r.get<double>("f"), NullValueException);
 
   // invalid column names
   ASSERT_THROW(r.update("xycyxcyx", 88), std::invalid_argument);
   ASSERT_THROW(r.update("", 22.22), std::invalid_argument);
 
   // update to NULL
-  ASSERT_EQ(55, r.getInt("i"));
+  ASSERT_EQ(55, r.get<int>("i"));
   r.updateToNull("i");
-  ASSERT_FALSE(r.getInt2("i").has_value());
-  ASSERT_THROW(r.getInt("i"), NullValueException);
+  ASSERT_FALSE(r.get2<int>("i").has_value());
+  ASSERT_THROW(r.get<int>("i"), NullValueException);
 }
 
 //----------------------------------------------------------------
@@ -222,30 +222,30 @@ TEST_F(DatabaseTestScenario, TabRow_CopyMove)
   TabRow r2 = std::move(r1);
   ASSERT_EQ(1, r2.id());
   ASSERT_EQ(-1, r1.id());
-  ASSERT_EQ(42, r2.getInt("i"));
+  ASSERT_EQ(42, r2.get<int>("i"));
   ASSERT_FALSE(r1 == r2);
 
   // move ctor
   TabRow r3{std::move(r2)};
   ASSERT_EQ(1, r3.id());
   ASSERT_EQ(-1, r2.id());
-  ASSERT_EQ(42, r3.getInt("i"));
+  ASSERT_EQ(42, r3.get<int>("i"));
   ASSERT_FALSE(r2 == r3);
 
   // copy operator
   r2 = r3;
   ASSERT_EQ(1, r2.id());
-  ASSERT_EQ(42, r2.getInt("i"));
+  ASSERT_EQ(42, r2.get<int>("i"));
   ASSERT_EQ(1, r3.id());
-  ASSERT_EQ(42, r3.getInt("i"));
+  ASSERT_EQ(42, r3.get<int>("i"));
   ASSERT_TRUE(r2 == r3);
 
   // copy ctor
   TabRow r4{r3};
   ASSERT_EQ(1, r4.id());
-  ASSERT_EQ(42, r4.getInt("i"));
+  ASSERT_EQ(42, r4.get<int>("i"));
   ASSERT_EQ(1, r3.id());
-  ASSERT_EQ(42, r3.getInt("i"));
+  ASSERT_EQ(42, r3.get<int>("i"));
   ASSERT_TRUE(r4 == r3);
   ASSERT_TRUE(r4 == r2);
   ASSERT_TRUE(r2 == r3);
@@ -258,40 +258,13 @@ TEST_F(DatabaseTestScenario, TabRow_MultiGet)
   auto db = getScenario01();
   TabRow r(db, "t1", 1);
 
-  int i{0};
-  double f{0};
-  string s;
-
-  r.multiGetByRef("i", i, "f", f);
+  auto [i, f] = r.multiGetAsTuple<int, double>("i", "f");
   ASSERT_EQ(42, i);
   ASSERT_EQ(23.23, f);
 
   i = 0;
   f = 0;
-  r.multiGetByRef("i", i, "f", f, "s", s);
-  ASSERT_EQ(42, i);
-  ASSERT_EQ(23.23, f);
-  ASSERT_EQ("Hallo", s);
-
-  i = 0;
-  f = 0;
-  s.clear();
-  int id;
-  r.multiGetByRef("rowid", id, "i", i, "f", f, "s", s);
-  ASSERT_EQ(1, id);
-  ASSERT_EQ(42, i);
-  ASSERT_EQ(23.23, f);
-  ASSERT_EQ("Hallo", s);
-
-  i = 0;
-  f = 0;
-  tie(i, f) = r.multiGetAsTuple<int, double>("i", "f");
-  ASSERT_EQ(42, i);
-  ASSERT_EQ(23.23, f);
-
-  i = 0;
-  f = 0;
-  s.clear();
+  std::string s;
   tie(i, f, s) = r.multiGetAsTuple<int, double, string>("i", "f", "s");
   ASSERT_EQ(42, i);
   ASSERT_EQ(23.23, f);
@@ -300,33 +273,12 @@ TEST_F(DatabaseTestScenario, TabRow_MultiGet)
   i = 0;
   f = 0;
   s.clear();
-  id = 0;
+  int id = 0;
   tie(id, i, f, s) = r.multiGetAsTuple<int, int, double, string>("rowid", "i", "f", "s");
   ASSERT_EQ(1, id);
   ASSERT_EQ(42, i);
   ASSERT_EQ(23.23, f);
   ASSERT_EQ("Hallo", s);
-
-  // test invalid column names
-  ASSERT_THROW(r.multiGetByRef("sdfkjsdjkf", i, "f", f), std::invalid_argument);
-
-  // test optional<...> types
-  optional<int> oi = 0;
-  f = 0;
-  ASSERT_NO_THROW(r.multiGetByRef("i", oi, "f", f));
-  ASSERT_TRUE(oi.has_value());
-  ASSERT_EQ(42, oi.value());
-  ASSERT_EQ(23.23, f);
-
-  // test NULL values
-  r = TabRow{db, "t1", 2};  // in row #2, the column "i" is NULL
-  ASSERT_THROW(r.multiGetByRef("i", i, "f", f), NullValueException);
-
-  oi = 0;
-  f = 0;
-  ASSERT_NO_THROW(r.multiGetByRef("i", oi, "f", f));
-  ASSERT_FALSE(oi.has_value());
-  ASSERT_EQ(666.66, f);
 }
 
 //----------------------------------------------------------------
@@ -386,7 +338,7 @@ TEST_F(DatabaseTestScenario, TabRow_Blob)
   r.update("i", buf.view());
 
   // retrieve the value
-  auto bufBack = r.getBlob("i");
+  auto bufBack = r.get<Sloppy::MemArray>("i");
   ASSERT_FALSE(bufBack.empty());
   ASSERT_EQ(BufSize, bufBack.size());
 
@@ -394,12 +346,12 @@ TEST_F(DatabaseTestScenario, TabRow_Blob)
   ASSERT_TRUE(sodium->memcmp(buf.view(), bufBack.view()));
 
   // test the "optional" variant
-  auto opt = r.getBlob2("i");
+  auto opt = r.get2<Sloppy::MemArray>("i");
   ASSERT_TRUE(opt.has_value());
   ASSERT_TRUE(sodium->memcmp(buf.view(), opt->view()));
   r.updateToNull("i");
-  ASSERT_THROW(r.getBlob("i"), NullValueException);
-  opt = r.getBlob2("i");
+  ASSERT_THROW(r.get<Sloppy::MemArray>("i"), NullValueException);
+  opt = r.get2<Sloppy::MemArray>("i");
   ASSERT_FALSE(opt.has_value());
 }
 
