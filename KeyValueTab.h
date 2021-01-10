@@ -61,7 +61,7 @@ namespace SqliteOverlay
      * \throws std::invalid_argument if the table doesn't have the required key/value columns
      */
     KeyValueTab (
-        const SqliteDatabase& _db,   ///< the database that contains the table
+        SqliteDatabase* _db,   ///< the database that contains the table
         const std::string& _tabName   ///< the table name
         );
 
@@ -249,8 +249,8 @@ namespace SqliteOverlay
     void prepValueInsertStmt();
 
   private:
-    std::reference_wrapper<const SqliteDatabase> db;
-    std::string tabName;
+    SqliteDatabase* const db;
+    const std::string tabName;
     DbTab tab;
     bool cacheStatements{false};
     std::unique_ptr<SqlStatement> valSelectStatement;

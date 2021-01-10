@@ -41,10 +41,10 @@ TEST_F(DatabaseTestScenario, KeyValueTab_Ctor)
   db.createNewKeyValueTab("kvt");
 
   // try to get a non-existing table
-  ASSERT_THROW(KeyValueTab(db, "sfjklsdf"), NoSuchTableException);
+  ASSERT_THROW(KeyValueTab(&db, "sfjklsdf"), NoSuchTableException);
 
   // get an existing table
-  auto kvt = KeyValueTab(db, "kvt");
+  auto kvt = KeyValueTab(&db, "kvt");
 }
 
 //----------------------------------------------------------------

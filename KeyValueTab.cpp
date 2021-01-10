@@ -43,8 +43,8 @@ namespace SqliteOverlay
     
   //----------------------------------------------------------------------------
 
-  KeyValueTab::KeyValueTab(const SqliteDatabase& _db, const string& _tabName)
-    :db(_db), tabName(_tabName), tab(DbTab{db, tabName, true})
+  KeyValueTab::KeyValueTab(SqliteDatabase* _db, const string& _tabName)
+    :db(_db), tabName(_tabName), tab(DbTab{*db, tabName, true})
   {
     // make sure that the table has the columns for keys and values
     if (!(tab.hasColumn(KEY_COL_NAME)))
@@ -142,7 +142,7 @@ namespace SqliteOverlay
   void KeyValueTab::remove(const string& key)
   {
     std::string sql{"DELETE FROM " + tabName + " WHERE " + KEY_COL_NAME + "=?"};
-    auto stmt = db.get().prepStatement(sql);
+    auto stmt = db->prepStatement(sql);
     stmt.bind(1, key);
     stmt.step();
   }
@@ -154,7 +154,7 @@ namespace SqliteOverlay
     vector<string> result;
 
     std::string sql{"SELECT " + std::string{KEY_COL_NAME} + " FROM " + tabName};
-    auto stmt = db.get().prepStatement(sql);
+    auto stmt = db->prepStatement(sql);
 
     for (stmt.step() ; stmt.hasData() ; stmt.step())
     {
@@ -201,7 +201,7 @@ namespace SqliteOverlay
 
     // create the "true" select statement in a tmp variable
     // on the stack
-    auto tmpStatement = db.get().prepStatement(sql);
+    auto tmpStatement = db->prepStatement(sql);
 
     // move "from stack to heap" ;)
     //
@@ -232,7 +232,7 @@ namespace SqliteOverlay
 
     // create the "true" select statement in a tmp variable
     // on the stack
-    auto tmpStatement = db.get().prepStatement(sql);
+    auto tmpStatement = db->prepStatement(sql);
 
     // move "from stack to heap" ;)
     //
@@ -263,7 +263,7 @@ namespace SqliteOverlay
 
     // create the "true" select statement in a tmp variable
     // on the stack
-    auto tmpStatement = db.get().prepStatement(sql);
+    auto tmpStatement = db->prepStatement(sql);
 
     // move "from stack to heap" ;)
     //

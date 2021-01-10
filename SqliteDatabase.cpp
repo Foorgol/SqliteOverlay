@@ -990,7 +990,7 @@ namespace SqliteOverlay
     sql.arg(KeyValueTab::KEY_COL_NAME);
     execNonQuery(sql);
 
-    return KeyValueTab(*this, tabName);
+    return KeyValueTab(this, tabName);
   }
 
   //----------------------------------------------------------------------------
