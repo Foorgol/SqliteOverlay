@@ -184,11 +184,11 @@ TEST_F(DatabaseTestScenario, StmtGetters)
   ASSERT_EQ(42, stmt.get<int>(1)); // i column
   ASSERT_EQ(23.23, stmt.get<double>(2));
   ASSERT_EQ("Hallo", stmt.get<std::string>(3));
-  ASSERT_TRUE(stmt.getBool(1));
+  ASSERT_TRUE(stmt.get<bool>(1));
   for (int i=0; i < 4; ++i) ASSERT_FALSE(stmt.isNull(i));
 
   // test invalid columns
-  ASSERT_THROW(stmt.getBool(42), InvalidColumnException);
+  ASSERT_THROW(stmt.get<bool>(42), InvalidColumnException);
 }
 
 //----------------------------------------------------------------
