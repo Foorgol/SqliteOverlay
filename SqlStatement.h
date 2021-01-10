@@ -140,7 +140,6 @@ namespace SqliteOverlay
       }
     }
 
-
     /** \brief Binds a *zero-terminated* C-string to a placeholder in the statement
      *
      * \note The string length will be determined using `strlen()` so make sure that
@@ -293,6 +292,9 @@ namespace SqliteOverlay
       else if constexpr  (std::is_same_v<T, double>) {
         return sqlite3_column_double(stmt, colId);
       }
+      else if constexpr  (std::is_same_v<T, bool>) {
+        return (sqlite3_column_int(stmt, colId) != 0);
+      }
       else if constexpr (std::is_same_v<T, std::string>) {
         return std::string{reinterpret_cast<const char*>(sqlite3_column_text(stmt, colId))};
       }
@@ -308,7 +310,7 @@ namespace SqliteOverlay
         }
 
         // wrap the data from SQLite into a MemView
-        const void* srcPtr = sqlite3_column_blob(stmt, colId);
+        const void* const srcPtr = sqlite3_column_blob(stmt, colId);
         if (srcPtr == nullptr)  // shouldn't happen after the previous check, but we want to be sure
         {
           return Sloppy::MemArray{}; // empty blob
@@ -362,31 +364,6 @@ namespace SqliteOverlay
 
       return get<T>(colId);
     }
-
-    /** \brief Retrieves the value of a column in the statement result as bool value
-     *
-     * \warning This function assumes that the column content can be converted to an
-     * integer value! This is only a wrapper around `get<int>()` that compares the
-     * result with `0`.
-     *
-     * \throws NullValueException if the column contains NULL
-     *
-     * \throws NoDataException if the statement didn't return any data or is already finished
-     *
-     * \throws InvalidColumnException if the requested column does not exist
-     *
-     * \returns `false` if the column value is zero, `true` if it is not zero
-     *
-     * Test case: yes, but without implicit conversion and only with partial exception testing
-     *
-     */
-    bool getBool(
-        int colId   ///< the zero-based column ID in the result row
-        ) const
-    {
-      return (get<int>(colId) != 0);
-    }
-
 
     /** \brief Retrieves the value of a column in the statement result as LocalTimestamp instance;
      * requires the cell content to be an integer with "seconds since epoch".
@@ -554,6 +531,49 @@ namespace SqliteOverlay
             get<T2>(col2),
             get<T3>(col3),
             get<T4>(col4),
+      };
+    }
+
+    /** \brief Simple wrapper for retrieving five column values in a tuple.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: no
+     *
+     */
+    template<typename T1, typename T2, typename T3, typename T4, typename T5>
+    std::tuple<T1, T2, T3, T4, T5> tupleGet(int col1, int col2, int col3, int col4, int col5) const
+    {
+      return std::tuple{
+            get<T1>(col1),
+            get<T2>(col2),
+            get<T3>(col3),
+            get<T4>(col4),
+            get<T5>(col5),
+      };
+    }
+
+    /** \brief Simple wrapper for retrieving six column values in a tuple.
+     *
+     * \throws NoDataException if the statement didn't return any data or is already finished
+     *
+     * \throws InvalidColumnException if the requested column does not exist
+     *
+     * Test case: no
+     *
+     */
+    template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+    std::tuple<T1, T2, T3, T4, T5, T6> tupleGet(int col1, int col2, int col3, int col4, int col5, int col6) const
+    {
+      return std::tuple{
+            get<T1>(col1),
+            get<T2>(col2),
+            get<T3>(col3),
+            get<T4>(col4),
+            get<T5>(col5),
+            get<T6>(col6),
       };
     }
 

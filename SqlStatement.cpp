@@ -40,10 +40,10 @@ namespace SqliteOverlay
 
     if (sqlTxt.empty())
     {
-      throw invalid_argument("Received empty SQL statement");
+      throw std::invalid_argument("Received empty SQL statement");
     }
 
-    int err = sqlite3_prepare_v2(dbPtr, sqlTxt.c_str(), -1, &stmt, nullptr);
+    const int err = sqlite3_prepare_v2(dbPtr, sqlTxt.c_str(), -1, &stmt, nullptr);
     if (err != SQLITE_OK)
     {
       throw SqlStatementCreationError(err, sqlTxt, sqlite3_errmsg(dbPtr));
@@ -96,7 +96,7 @@ namespace SqliteOverlay
       return false;
     }
 
-    int err = sqlite3_step(stmt);
+    const int err = sqlite3_step(stmt);
     ++stepCount;
 
     if (err == SQLITE_BUSY)
@@ -115,23 +115,13 @@ namespace SqliteOverlay
     _hasData = (err == SQLITE_ROW);
     _isDone = (err == SQLITE_DONE);
 
-    if (_hasData)
-    {
-      //resultColCount = sqlite3_column_count(stmt);
-      resultColCount = sqlite3_data_count(stmt);
-    } else {
-      resultColCount = -1;
-    }
+    resultColCount = _hasData ? sqlite3_data_count(stmt) : -1;
 
     // for single-step statements that don't yield any
     // data, return "true" to indicate that everything was fine
     //
     // in all other cases, return "true" as long as we're not done
-    if (stepCount == 1)
-    {
-        return true;
-    }
-    return _hasData;
+    return (stepCount == 1) ? true : _hasData;
   }
 
   //----------------------------------------------------------------------------
@@ -204,17 +194,19 @@ namespace SqliteOverlay
 
   void SqlStatement::reset(bool clearBindings)
   {
-    int err = sqlite3_reset(stmt);
-    if (err != SQLITE_OK)
-    {
-      throw GenericSqliteException(err, "SqlStatement reset()");
-    }
-    if (clearBindings)
-    {
-      // no error checking here; the manual doesn't say
-      // anything about the return code. Most likely
-      // it's SQLITE_OK
-      sqlite3_clear_bindings(stmt);
+    if (stmt != nullptr) {
+      const int err = sqlite3_reset(stmt);
+      if (err != SQLITE_OK)
+      {
+        throw GenericSqliteException(err, "SqlStatement reset()");
+      }
+      if (clearBindings)
+      {
+        // no error checking here; the manual doesn't say
+        // anything about the return code. Most likely
+        // it's SQLITE_OK
+        sqlite3_clear_bindings(stmt);
+      }
     }
 
     _hasData = false;
@@ -271,7 +263,7 @@ namespace SqliteOverlay
       // add headers, if requested
       if (includeHeaders)
       {
-        auto headers = columnHeaders();
+        const auto headers = columnHeaders();
 
         if (!csvTab.setHeader(headers))
         {
@@ -283,7 +275,7 @@ namespace SqliteOverlay
       // iterate over rows and columns
       for ( ; _hasData; step())
       {
-        Sloppy::CSV_Row r = toCSV_currentRowOnly();
+        const Sloppy::CSV_Row r = toCSV_currentRowOnly();
 
         if (!csvTab.append(std::move(r)))
         {
