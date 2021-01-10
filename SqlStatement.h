@@ -74,11 +74,21 @@ namespace SqliteOverlay
      */
     SqlStatement& operator=(SqlStatement&& other);
 
-    /** \brief Catches all calls to `bind()` with unsupported
-     * value types at compile time.
+    /** \brief Binds a data of various types to a placeholder in the statement
+     *
+     * Original documentation [here](https://www.sqlite.org/c3ref/bind_blob.html), including
+     * a specification how placeholders are defined in the SQLite language.
+     *
+     * \throws GenericSqliteException incl. error code if anything goes wrong
+     *
+     * Test case: yes
+     *
      */
     template<typename T>
-    void bind(int argPos, const T& val) const
+    void bind(
+        int argPos,   ///< the placeholder to bind to (1-based if you use "?")
+        const T& val   ///< the value to bind to the placeholder
+        ) const
     {
       static_assert (sizeof(int) == 4, "'int' has to be 32-bit!");
 
