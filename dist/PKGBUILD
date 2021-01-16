@@ -6,7 +6,7 @@ arch=('i686' 'x86_64')
 url=""
 license=('GPL')
 groups=()
-depends=('boost' 'boost-libs' 'libSloppy')
+depends=('libSloppy>=0.6.1')
 makedepends=('git') # 'bzr', 'git', 'mercurial' or 'subversion'
 provides=("${pkgname%-git}")
 conflicts=("${pkgname%-git}")
