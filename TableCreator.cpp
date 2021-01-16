@@ -118,7 +118,7 @@ namespace SqliteOverlay
   DbTab TableCreator::createTableAndResetCreator(const SqliteDatabase& db, const string& tabName)
   {
     // get the SQL statement
-    string sql = getSqlStatement(tabName);
+    const string sql = getSqlStatement(tabName);
     db.execNonQuery(sql);
 
     reset();

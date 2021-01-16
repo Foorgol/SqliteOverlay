@@ -322,6 +322,37 @@ namespace SqliteOverlay
         const std::string& sqlStatement   ///< the SQL statement to execute
         ) const;
 
+    /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
+     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
+     *
+     * \note The provided statement is modified in place and can be used in subsequent calls
+     * to `execScalarQuery` (or other) for retrieving more rows.
+     *
+     * \throws BusyException if the statement couldn't be executed because the DB was busy
+     *
+     * \throws NoDataException if the SQL statement didn't return any data
+     *
+     * \throws NullValueException if the query returned NULL instead of a regular value
+     *
+     * \throws GenericSqliteException incl. error code if anything else goes wrong
+     *
+     * \returns the first value in the result row as int
+     *
+     * Test case: yes, but only with partial exception testing
+     *
+     */
+    template<typename T>
+    T execScalarQuery(
+        SqlStatement& stmt   ///< a prepared statement, ready for execution
+        ) const
+    {
+      // throws BusyException or GenericSqliteException
+      stmt.step();
+
+      // throws NoDataException
+      return stmt.get<T>(0);
+    }
+
     /** \brief Executes a SQL statement by calling `step()` once and returns the value
      * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
      *
@@ -344,32 +375,47 @@ namespace SqliteOverlay
      * Test case: yes, but only with partial exception testing
      *
      */
-    int execScalarQueryInt(
+    template<typename T>
+    T execScalarQuery(
         const std::string& sqlStatement   ///< the SQL statement to execute
-        ) const;
+        ) const
+    {
+      // throws invalid_argument or SqlStatementCreationError
+      SqlStatement stmt = prepStatement(sqlStatement);
+
+      // throws NoDataException
+      return execScalarQuery<T>(stmt);
+    }
 
     /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
      * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
      *
      * \note The provided statement is modified in place and can be used in subsequent calls
-     * to `execScalarQueryInt` (or other) for retrieving more rows.
+     * to `execScalarQuery2` (or other) for retrieving more rows.
      *
      * \throws BusyException if the statement couldn't be executed because the DB was busy
      *
      * \throws NoDataException if the SQL statement didn't return any data
      *
-     * \throws NullValueException if the query returned NULL instead of a regular value
-     *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
-     * \returns the first value in the result row as int
+     * \returns an `optional<T>` containing the first value in the result row; if the cell
+     * contained NULL the return value is empty.
      *
      * Test case: yes, but only with partial exception testing
      *
      */
-    int execScalarQueryInt(
+    template<typename T>
+    std::optional<T> execScalarQuery2(
         SqlStatement& stmt   ///< a prepared statement, ready for execution
-        ) const;
+        ) const
+    {
+      // throws BusyException or GenericSqliteException
+      stmt.step();
+
+      // throws NoDataException
+      return stmt.get2<T>(0);
+    }
 
     /** \brief Executes a SQL statement by calling `step()` once and returns the value
      * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
@@ -384,316 +430,22 @@ namespace SqliteOverlay
      *
      * \throws GenericSqliteException incl. error code if anything else goes wrong
      *
-     * \returns an `optional<int>` containing the first value in the first result row; if the cell
+     * \returns an `optional<T>` containing the first value in the first result row; if the cell
      * contained NULL the return value is empty.
      *
      * Test case: yes, but only with partial exception testing
      *
      */
-    std::optional<int> execScalarQueryIntOrNull(
+    template<typename T>
+    std::optional<T> execScalarQuery2(
         const std::string& sqlStatement   ///< the SQL statement to execute
-        ) const;
+        ) const
+    {
+      // throws invalid_argument or SqlStatementCreationError
+      SqlStatement stmt = prepStatement(sqlStatement);
 
-    /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \note The provided statement is modified in place and can be used in subsequent calls
-     * to `execScalarQueryInt` (or other) for retrieving more rows.
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns an `optional<int>` containing the first value in the result row; if the cell
-     * contained NULL the return value is empty.
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    std::optional<int> execScalarQueryIntOrNull(
-        SqlStatement& stmt   ///< a prepared statement, ready for execution
-        ) const;
-
-    /** \brief Executes a SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \note The column should contain a real value and not NULL
-     *
-     * \throws std::invalid_argument if the provided SQL string is empty or if the connection has been closed before calling this method
-     *
-     * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws NullValueException if the query returned NULL instead of a regular value
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns the first value in the first result row as a 64-bit integer
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    int64_t execScalarQueryLong(
-        const std::string& sqlStatement   ///< the SQL statement to execute
-        ) const;
-
-    /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \note The provided statement is modified in place and can be used in subsequent calls
-     * to `execScalarQueryInt` (or other) for retrieving more rows.
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws NullValueException if the query returned NULL instead of a regular value
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns the first value in the first result row as a 64-bit integer
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    int64_t execScalarQueryLong(
-        SqlStatement& stmt   ///< a prepared statement, ready for execution
-        ) const;
-
-    /** \brief Executes a SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \throws std::invalid_argument if the provided SQL string is empty or if the connection has been closed before calling this method
-     *
-     * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns an `optional<int64_t>` containing the first value in the first result row; if the cell
-     * contained NULL the return value is empty.
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    std::optional<int64_t> execScalarQueryLongOrNull(
-        const std::string& sqlStatement   ///< the SQL statement to execute
-        ) const;
-
-    /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \note The provided statement is modified in place and can be used in subsequent calls
-     * to `execScalarQueryInt` (or other) for retrieving more rows.
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns an `optional<int>` containing the first value in the result row; if the cell
-     * contained NULL the return value is empty.
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    std::optional<int64_t> execScalarQueryLongOrNull(
-        SqlStatement& stmt   ///< a prepared statement, ready for execution
-        ) const;
-
-    /** \brief Executes a SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \throws std::invalid_argument if the provided SQL string is empty or if the connection has been closed before calling this method
-     *
-     * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws NullValueException if the query returned NULL instead of a regular value
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns the first value in the first result row as double
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    double execScalarQueryDouble(
-        const std::string& sqlStatement   ///< the SQL statement to execute
-        ) const;
-
-    /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \note The provided statement is modified in place and can be used in subsequent calls
-     * to `execScalarQueryInt` (or other) for retrieving more rows.
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws NullValueException if the query returned NULL instead of a regular value
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns the first value in the result row as double
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    double execScalarQueryDouble(
-        SqlStatement& stmt   ///< a prepared statement, ready for execution
-        ) const;
-
-    /** \brief Executes a SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \throws std::invalid_argument if the provided SQL string is empty or if the connection has been closed before calling this method
-     *
-     * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns an `optional<double>` containing the first value in the first result row; if the cell
-     * contained NULL the return value is empty.
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    std::optional<double> execScalarQueryDoubleOrNull(
-        const std::string& sqlStatement   ///< the SQL statement to execute
-        ) const;
-
-    /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \note The provided statement is modified in place and can be used in subsequent calls
-     * to `execScalarQueryInt` (or other) for retrieving more rows.
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns an `optional<double>` containing the first value in the result row; if the cell
-     * contained NULL the return value is empty.
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    std::optional<double> execScalarQueryDoubleOrNull(
-        SqlStatement& stmt   ///< a prepared statement, ready for execution
-        ) const;
-
-    /** \brief Executes a SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \throws std::invalid_argument if the provided SQL string is empty or if the connection has been closed before calling this method
-     *
-     * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws NullValueException if the query returned NULL instead of a regular value
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns the first value in the first result row as string
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    std::string execScalarQueryString(
-        const std::string& sqlStatement   ///< the SQL statement to execute
-        ) const;
-
-    /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \note The provided statement is modified in place and can be used in subsequent calls
-     * to `execScalarQueryInt` (or other) for retrieving more rows.
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws NullValueException if the query returned NULL instead of a regular value
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns the first value in the result row as string
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    std::string execScalarQueryString(
-        SqlStatement& stmt   ///< a prepared statement, ready for execution
-        ) const;
-
-    /** \brief Executes a SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \throws std::invalid_argument if the provided SQL string is empty or if the connection has been closed before calling this method
-     *
-     * \throws SqlStatementCreationError if the statement could not be created, most likely due to invalid SQL syntax
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns an `optional<string>` containing the first value in the first result row; if the cell
-     * contained NULL the return value is empty.
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    std::optional<std::string> execScalarQueryStringOrNull(
-        const std::string& sqlStatement   ///< the SQL statement to execute
-        ) const;
-
-    /** \brief Executes a prepared SQL statement by calling `step()` once and returns the value
-     * in the first of column (index 0) of the returned row; all other rows and columns are ignored.
-     *
-     * \note The provided statement is modified in place and can be used in subsequent calls
-     * to `execScalarQueryInt` (or other) for retrieving more rows.
-     *
-     * \throws BusyException if the statement couldn't be executed because the DB was busy
-     *
-     * \throws NoDataException if the SQL statement didn't return any data
-     *
-     * \throws GenericSqliteException incl. error code if anything else goes wrong
-     *
-     * \returns an `optional<string>` containing the first value in the result row; if the cell
-     * contained NULL the return value is empty.
-     *
-     * Test case: yes, but only with partial exception testing
-     *
-     */
-    std::optional<std::string> execScalarQueryStringOrNull(
-        SqlStatement& stmt   ///< a prepared statement, ready for execution
-        ) const;
-
+      return execScalarQuery2<T>(stmt);
+    }
 
     /** \brief Switches synchronous writes on or off
      *

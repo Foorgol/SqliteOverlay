@@ -27,7 +27,7 @@ TEST_F(DatabaseTestScenario, LastInsertIdAndRowsAffected)
   SampleDB db = getScenario01();
 
   // get the current max ID
-  int maxId = db.execScalarQueryInt("SELECT MAX(rowid) FROM t1");
+  int maxId = db.execScalarQuery<int>("SELECT MAX(rowid) FROM t1");
   ASSERT_TRUE(maxId > 0);
 
   // insert a new row

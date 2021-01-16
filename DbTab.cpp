@@ -51,7 +51,7 @@ namespace SqliteOverlay
 
   int DbTab::insertRow() const
   {
-    ColumnValueClause empty;
+    const ColumnValueClause empty;
 
     return insertRow(empty);
   }
@@ -91,7 +91,7 @@ namespace SqliteOverlay
   {
     try
     {
-      int id = db.get().execScalarQueryInt(cachedSelectSql + col + " IS NULL");
+      const int id = db.get().execScalarQuery<int>(cachedSelectSql + col + " IS NULL");
       return TabRow(db, tabName, id, true);
     }
     catch (SqlStatementCreationError)
@@ -178,7 +178,7 @@ namespace SqliteOverlay
 
   vector<TabRow> DbTab::getAllRows() const
   {
-    string sql = "SELECT rowid FROM " + tabName;
+    const string sql = "SELECT rowid FROM " + tabName;
     auto stmt = db.get().prepStatement(sql);
 
     return statementResultsToVector(stmt);
@@ -202,7 +202,7 @@ namespace SqliteOverlay
 
   TabRow DbTab::getSingleRowByWhereClause(const string& w) const
   {
-    string sql = cachedSelectSql + w + " LIMIT 1";
+    const string sql = cachedSelectSql + w + " LIMIT 1";
 
     auto stmt = db.get().prepStatement(sql);
     stmt.step();
@@ -222,7 +222,7 @@ namespace SqliteOverlay
     stmt.step();
     if (!(stmt.hasData()))
     {
-      return optional<TabRow>{};
+      return std::nullopt;
     }
 
     return TabRow(db, tabName, stmt.get<int>(0), true);
@@ -232,13 +232,13 @@ namespace SqliteOverlay
 
   optional<TabRow> DbTab::getSingleRowByWhereClause2(const string& w) const
   {
-    string sql = cachedSelectSql + w + " LIMIT 1";
+    const string sql = cachedSelectSql + w + " LIMIT 1";
 
     auto stmt = db.get().prepStatement(sql);
     stmt.step();
     if (!(stmt.hasData()))
     {
-      return optional<TabRow>{};
+      return std::nullopt;
     }
 
     return TabRow(db, tabName, stmt.get<int>(0), true);
@@ -306,8 +306,7 @@ namespace SqliteOverlay
         val.reset();
       }
 
-      bool isOkay = Sloppy::checkConstraint(val, c);
-      if (!isOkay)
+      if (!Sloppy::checkConstraint(val, c))
       {
         result.push_back(stmt.get<int>(0));
       }
@@ -363,17 +362,13 @@ namespace SqliteOverlay
     auto trans = db.get().startTransaction(tt);
 
     // iterate over all data rows and import data one-by-one
-    size_t cnt{0};
-    for (auto rowIt = csvTab.cbegin(); rowIt != csvTab.cend(); ++rowIt)
-    {
+    std::for_each(csvTab.cbegin(), csvTab.cend(), [&stmt](const Sloppy::CSV_Row& row) {
       stmt.reset(true);
 
       // Note: SQLite bind parameters are 1-based while the
       // CSV columns are 0-based!
-      for (size_t colIdx = 1; colIdx <= csvTab.nCols(); ++colIdx)
-      {
-        const auto& val = rowIt->get(colIdx - 1);  // 1-based --> 0-based
-
+      size_t colIdx{1};
+      std::for_each(row.cbegin(), row.cend(), [&](const Sloppy::CSV_Value& val) {
         switch (val.valueType())
         {
         case Sloppy::CSV_Value::Type::Long:
@@ -392,16 +387,16 @@ namespace SqliteOverlay
           stmt.bindNull(colIdx);
           break;
         }
-      }
+        ++colIdx;
+      });
 
       // the actual insertion
       stmt.step();
-      ++cnt;
-    }
+    });
 
     trans.commit();
 
-    return cnt;
+    return csvTab.size();
   }
 
   //----------------------------------------------------------------------------
@@ -458,12 +453,8 @@ namespace SqliteOverlay
   {
     vector<TabRow> result;
 
-    stmt.step();
-    while (stmt.hasData())
-    {
+    while (stmt.dataStep()) {
       result.emplace_back(db, tabName, stmt.get<int>(0), true);
-
-      stmt.step();
     }
 
     return result;

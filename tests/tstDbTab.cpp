@@ -51,12 +51,12 @@ TEST_F(DatabaseTestScenario, DbTab_Insert)
   ASSERT_EQ(oldLen+1, newId);
   ASSERT_EQ(oldLen+1, t1.length());
   string sql = "SELECT i FROM t1 WHERE rowid=" + to_string(newId);
-  ASSERT_EQ(1234, db.execScalarQueryInt(sql));
+  ASSERT_EQ(1234, db.execScalarQuery<int>(sql));
   sql = "SELECT f FROM t1 WHERE rowid=" + to_string(newId);
-  ASSERT_EQ(99.88, db.execScalarQueryDouble(sql));
+  ASSERT_EQ(99.88, db.execScalarQuery<double>(sql));
   sql = "SELECT s FROM t1 WHERE rowid=" + to_string(newId);
-  ASSERT_THROW(db.execScalarQueryString(sql), NullValueException);
-  auto sOpt = db.execScalarQueryStringOrNull(sql);
+  ASSERT_THROW(db.execScalarQuery<std::string>(sql), NullValueException);
+  auto sOpt = db.execScalarQuery2<std::string>(sql);
   ASSERT_FALSE(sOpt.has_value());
 
   // insert nonsense values
@@ -395,7 +395,7 @@ TEST_F(DatabaseTestScenario, DbTab_AddColumn)
   // helper func for retrieving the CREATE TABLE string
   // for table t1 and checking for certain text snippets
   auto hasColDef = [&db](const string& snippet){
-    string s = db.execScalarQueryString("SELECT sql FROM sqlite_master WHERE name='t1'");
+    string s = db.execScalarQuery<std::string>("SELECT sql FROM sqlite_master WHERE name='t1'");
     cout << s << endl;
     auto idx = s.find(snippet);
     return (idx != string::npos);

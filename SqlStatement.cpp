@@ -377,7 +377,7 @@ namespace SqliteOverlay
 
   void SqlStatement::bind(int argPos, const char* val) const
   {
-    int e = sqlite3_bind_text(stmt, argPos, val, strlen(val), SQLITE_TRANSIENT);
+    const int e = sqlite3_bind_text(stmt, argPos, val, strlen(val), SQLITE_TRANSIENT);
     if (e != SQLITE_OK)
     {
       throw GenericSqliteException{e, "call to bindString() of a SqlStatement"};
@@ -388,7 +388,7 @@ namespace SqliteOverlay
 
   void SqlStatement::bind(int argPos, const void* ptr, size_t nBytes) const
   {
-    int e = sqlite3_bind_blob64(stmt, argPos, ptr, nBytes, SQLITE_TRANSIENT);
+    const int e = sqlite3_bind_blob64(stmt, argPos, ptr, nBytes, SQLITE_TRANSIENT);
     if (e != SQLITE_OK)
     {
       throw GenericSqliteException{e, "call to bindBlob64() of a SqlStatement"};
@@ -400,7 +400,7 @@ namespace SqliteOverlay
 
   void SqlStatement::bindNull(int argPos) const
   {
-    int e = sqlite3_bind_null(stmt, argPos);
+    const int e = sqlite3_bind_null(stmt, argPos);
     if (e != SQLITE_OK)
     {
       throw GenericSqliteException{e, "call to bindNull() of a SqlStatement"};

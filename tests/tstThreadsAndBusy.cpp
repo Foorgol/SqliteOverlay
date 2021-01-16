@@ -22,13 +22,13 @@ TEST_F(DatabaseTestScenario, BusyException)
   auto tr = con1.startTransaction(TransactionType::Exclusive);
 
   Sloppy::Timer t;
-  ASSERT_THROW(con2.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"), BusyException);
+  ASSERT_THROW(con2.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"), BusyException);
   t.stop();
   ASSERT_TRUE(t.getTime__ms() >= 500);
   ASSERT_TRUE(t.getTime__ms() <= 510);
 
   tr.rollback();
-  ASSERT_NO_THROW(con2.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_NO_THROW(con2.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 }
 
 //----------------------------------------------------------------

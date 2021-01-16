@@ -130,9 +130,9 @@ namespace SqliteOverlay
       
     while (stmt.hasData())
     {
-      int colId = stmt.get<int>(0);
-      string colName = stmt.get<std::string>(1);
-      string colType = stmt.get<std::string>(2);
+      const int colId = stmt.get<int>(0);
+      const string colName = stmt.get<std::string>(1);
+      const string colType = stmt.get<std::string>(2);
 
       result.emplace_back(colId, colName, colType);
       stmt.step();
@@ -238,7 +238,7 @@ namespace SqliteOverlay
     stmt.bind(1, tabName);
     stmt.bind(2, cid);
 
-    return (db.get().execScalarQueryInt(stmt) > 0);
+    return (db.get().execScalarQuery<int>(stmt) > 0);
   }
 
 //----------------------------------------------------------------------------
@@ -250,7 +250,7 @@ namespace SqliteOverlay
       throw std::invalid_argument("Match count for empty where clause");
     }
     SqlStatement stmt = w.getSelectStmt(db, tabName, true);
-    return db.get().execScalarQueryInt(stmt);
+    return db.get().execScalarQuery<int>(stmt);
   }
 
 //----------------------------------------------------------------------------
@@ -262,7 +262,7 @@ namespace SqliteOverlay
       throw std::invalid_argument("getMatchCountForColumnValue(): empty column name");
     }
 
-    string sql = sqlColumnCount + col + " IS NULL";
+    const string sql = sqlColumnCount + col + " IS NULL";
 
     try
     {
@@ -286,9 +286,9 @@ namespace SqliteOverlay
     }
 
     //string sql = "SELECT COUNT(*) FROM " + tabName + " WHERE " + where;
-    string sql = sqlColumnCount + where;
+    const string sql = sqlColumnCount + where;
 
-    return db.get().execScalarQueryInt(sql);
+    return db.get().execScalarQuery<int>(sql);
   }
 
 
@@ -296,7 +296,7 @@ namespace SqliteOverlay
 
   int CommonTabularClass::length() const
   {
-    return db.get().execScalarQueryInt("SELECT COUNT(*) FROM " + tabName);
+    return db.get().execScalarQuery<int>("SELECT COUNT(*) FROM " + tabName);
   }
 
   //----------------------------------------------------------------------------

@@ -11,29 +11,29 @@ TEST_F(DatabaseTestScenario, QueryInt)
 
   // first version: SQL statement as string
   string sql = "SELECT COUNT(*) FROM t1 WHERE rowid > 0";
-  ASSERT_EQ(5, db.execScalarQueryInt(sql));
-  auto opt = db.execScalarQueryIntOrNull(sql);
+  ASSERT_EQ(5, db.execScalarQuery<int>(sql));
+  auto opt = db.execScalarQuery2<int>(sql);
   ASSERT_TRUE(opt.has_value());
   ASSERT_EQ(5, opt.value());
 
   // second version: SQL statement as statement
   SqlStatement stmt = db.prepStatement(sql);
-  ASSERT_EQ(5, db.execScalarQueryInt(stmt));
+  ASSERT_EQ(5, db.execScalarQuery<int>(stmt));
   stmt = db.prepStatement(sql);
-  opt = db.execScalarQueryIntOrNull(stmt);
+  opt = db.execScalarQuery2<int>(stmt);
   ASSERT_TRUE(opt.has_value());
   ASSERT_EQ(5, opt.value());
 
   // special case: query returning NULL column value
   sql = "SELECT i FROM t1 WHERE rowid=2";
-  opt = db.execScalarQueryIntOrNull(sql);
+  opt = db.execScalarQuery2<int>(sql);
   ASSERT_FALSE(opt.has_value());
-  ASSERT_THROW(db.execScalarQueryInt(sql), NullValueException);
+  ASSERT_THROW(db.execScalarQuery<int>(sql), NullValueException);
 
   // special case: query returning no results
   sql = "SELECT i FROM t1 WHERE rowid=9999";
-  ASSERT_THROW(db.execScalarQueryIntOrNull(sql), NoDataException);
-  ASSERT_THROW(db.execScalarQueryInt(sql), NoDataException);
+  ASSERT_THROW(db.execScalarQuery2<int>(sql), NoDataException);
+  ASSERT_THROW(db.execScalarQuery<int>(sql), NoDataException);
 }
 
 //----------------------------------------------------------------
@@ -77,29 +77,29 @@ TEST_F(DatabaseTestScenario, QueryDouble)
 
   // first version: SQL statement as string
   string sql = "SELECT f FROM t1 WHERE rowid = 2";
-  ASSERT_EQ(666.66, db.execScalarQueryDouble(sql));
-  auto opt = db.execScalarQueryDoubleOrNull(sql);
+  ASSERT_EQ(666.66, db.execScalarQuery<double>(sql));
+  auto opt = db.execScalarQuery2<double>(sql);
   ASSERT_TRUE(opt.has_value());
   ASSERT_EQ(666.66, opt.value());
 
   // second version: SQL statement as statement
   SqlStatement stmt = db.prepStatement(sql);
-  ASSERT_EQ(666.66, db.execScalarQueryDouble(stmt));
+  ASSERT_EQ(666.66, db.execScalarQuery<double>(stmt));
   stmt = db.prepStatement(sql);
-  opt = db.execScalarQueryDoubleOrNull(stmt);
+  opt = db.execScalarQuery2<double>(stmt);
   ASSERT_TRUE(opt.has_value());
   ASSERT_EQ(666.66, opt.value());
 
   // special case: query returning NULL column value
   sql = "SELECT f FROM t1 WHERE rowid=3";
-  opt = db.execScalarQueryDoubleOrNull(sql);
+  opt = db.execScalarQuery2<double>(sql);
   ASSERT_FALSE(opt.has_value());
-  ASSERT_THROW(db.execScalarQueryDouble(sql), NullValueException);
+  ASSERT_THROW(db.execScalarQuery<double>(sql), NullValueException);
 
   // special case: query returning no results
   sql = "SELECT i FROM t1 WHERE rowid=9999";
-  ASSERT_THROW(db.execScalarQueryDoubleOrNull(sql), NoDataException);
-  ASSERT_THROW(db.execScalarQueryDouble(sql), NoDataException);
+  ASSERT_THROW(db.execScalarQuery2<double>(sql), NoDataException);
+  ASSERT_THROW(db.execScalarQuery<double>(sql), NoDataException);
 }
 
 //----------------------------------------------------------------
@@ -111,23 +111,23 @@ TEST_F(DatabaseTestScenario, QueryString)
   // first version: SQL statement as string
   string result = "Ho";
   string sql = "SELECT s FROM t1 WHERE rowid = 5";
-  ASSERT_EQ(result, db.execScalarQueryString(sql));
-  auto opt = db.execScalarQueryStringOrNull(sql);
+  ASSERT_EQ(result, db.execScalarQuery<std::string>(sql));
+  auto opt = db.execScalarQuery2<std::string>(sql);
   ASSERT_TRUE(opt.has_value());
   ASSERT_EQ(result, opt.value());
 
   // second version: SQL statement as statement
   SqlStatement stmt = db.prepStatement(sql);
-  ASSERT_EQ(result, db.execScalarQueryString(stmt));
+  ASSERT_EQ(result, db.execScalarQuery<std::string>(stmt));
   stmt = db.prepStatement(sql);
-  opt = db.execScalarQueryStringOrNull(stmt);
+  opt = db.execScalarQuery2<std::string>(stmt);
   ASSERT_TRUE(opt.has_value());
   ASSERT_EQ(result, opt.value());
 
   // special case: query returning no results
   sql = "SELECT s FROM t1 WHERE rowid=9999";
-  ASSERT_THROW(db.execScalarQueryStringOrNull(sql), NoDataException);
-  ASSERT_THROW(db.execScalarQueryString(sql), NoDataException);
+  ASSERT_THROW(db.execScalarQuery2<std::string>(sql), NoDataException);
+  ASSERT_THROW(db.execScalarQuery<std::string>(sql), NoDataException);
 }
 
 //----------------------------------------------------------------
@@ -137,7 +137,7 @@ TEST_F(DatabaseTestScenario, QueryStringUTF8)
   auto db = getScenario01();
 
   string sql = "SELECT s FROM t1 WHERE rowid = 3";
-  ASSERT_EQ(u8"äöüÄÖÜ", db.execScalarQueryString(sql));
+  ASSERT_EQ(u8"äöüÄÖÜ", db.execScalarQuery<std::string>(sql));
 }
 
 //----------------------------------------------------------------
@@ -168,28 +168,28 @@ TEST_F(DatabaseTestScenario, QueryLong)
 
   // first version: SQL statement as string
   string sql = "SELECT i FROM t1 WHERE rowid=1";
-  ASSERT_EQ(LONG_MAX, db.execScalarQueryLong(sql));
-  auto opt = db.execScalarQueryLongOrNull(sql);
+  ASSERT_EQ(LONG_MAX, db.execScalarQuery<int64_t>(sql));
+  auto opt = db.execScalarQuery2<int64_t>(sql);
   ASSERT_TRUE(opt.has_value());
   ASSERT_EQ(LONG_MAX, opt.value());
 
   // second version: SQL statement as statement
   stmt = db.prepStatement(sql);
-  ASSERT_EQ(LONG_MAX, db.execScalarQueryLong(stmt));
+  ASSERT_EQ(LONG_MAX, db.execScalarQuery<int64_t>(stmt));
   stmt = db.prepStatement(sql);
-  opt = db.execScalarQueryLongOrNull(stmt);
+  opt = db.execScalarQuery2<int64_t>(stmt);
   ASSERT_TRUE(opt.has_value());
   ASSERT_EQ(LONG_MAX, opt.value());
 
   // special case: query returning NULL column value
   sql = "SELECT i FROM t1 WHERE rowid=2";
-  opt = db.execScalarQueryLongOrNull(sql);
+  opt = db.execScalarQuery2<int64_t>(sql);
   ASSERT_FALSE(opt.has_value());
-  ASSERT_THROW(db.execScalarQueryLong(sql), NullValueException);
+  ASSERT_THROW(db.execScalarQuery<int64_t>(sql), NullValueException);
 
   // special case: query returning no results
   sql = "SELECT i FROM t1 WHERE rowid=9999";
-  ASSERT_THROW(db.execScalarQueryLongOrNull(sql), NoDataException);
-  ASSERT_THROW(db.execScalarQueryLong(sql), NoDataException);
+  ASSERT_THROW(db.execScalarQuery2<int64_t>(sql), NoDataException);
+  ASSERT_THROW(db.execScalarQuery<int64_t>(sql), NoDataException);
 }
 

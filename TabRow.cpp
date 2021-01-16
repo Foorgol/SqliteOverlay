@@ -68,7 +68,7 @@ namespace SqliteOverlay
     try
     {
       SqlStatement stmt = where.getSelectStmt(db, tabName, false);
-      rowId = db.get().execScalarQueryInt(stmt);
+      rowId = db.get().execScalarQuery<int>(stmt);
     }
     catch (BusyException e)
     {

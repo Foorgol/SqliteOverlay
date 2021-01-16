@@ -9,7 +9,7 @@ namespace SqliteOverlay
     if (customPtr == nullptr) return;
     ChangeLogCallbackContext* ctx = reinterpret_cast<ChangeLogCallbackContext*>(customPtr);
 
-    std::string dbName{_dbName};
+    const std::string dbName{_dbName};
 
     std::lock_guard<std::mutex> lg{*(ctx->logMutex)};
 

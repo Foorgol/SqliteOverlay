@@ -31,10 +31,10 @@ TEST_F(DatabaseTestScenario, BasicTransaction)
   // change a value via connection 1
   auto stmt = db.prepStatement("UPDATE t1 SET i=23 WHERE rowid=1");
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(23, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(23, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // make sure that connection 2 still sees the old value
-  ASSERT_EQ(42, db2.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(42, db2.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // make sure that connection 2 can't start a transaction
   // while the first one is still active
@@ -49,7 +49,7 @@ TEST_F(DatabaseTestScenario, BasicTransaction)
   ASSERT_TRUE(db2.isAutoCommit());
 
   // make sure that connection 2 now sees the new value
-  ASSERT_EQ(23, db2.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(23, db2.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   //
   // Start an immediate transaction and rollback
@@ -62,10 +62,10 @@ TEST_F(DatabaseTestScenario, BasicTransaction)
   // change a value via connection 1
   stmt = db.prepStatement("UPDATE t1 SET i=666 WHERE rowid=1");
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(666, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(666, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // make sure that connection 2 still sees the old value
-  ASSERT_EQ(23, db2.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(23, db2.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // rollback the changes of connection 1
   ASSERT_NO_THROW(tr.rollback());
@@ -74,8 +74,8 @@ TEST_F(DatabaseTestScenario, BasicTransaction)
   ASSERT_TRUE(db2.isAutoCommit());
 
   // make sure that both connections now see the old value
-  ASSERT_EQ(23, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
-  ASSERT_EQ(23, db2.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(23, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(23, db2.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 }
 
 //----------------------------------------------------------------
@@ -94,14 +94,14 @@ TEST_F(DatabaseTestScenario, TransactionDtor)
     ASSERT_FALSE(db.isAutoCommit());
     auto stmt = db.prepStatement("UPDATE t1 SET i=23 WHERE rowid=1");
     ASSERT_TRUE(stmt.step());
-    ASSERT_EQ(23, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+    ASSERT_EQ(23, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
     // transaction dtor is called when leaving the scope
   }
   ASSERT_TRUE(db.isAutoCommit());
 
   // we should see the original value now
-  ASSERT_EQ(42, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(42, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   //
   // Start an immediate transaction in a separate scope
@@ -112,14 +112,14 @@ TEST_F(DatabaseTestScenario, TransactionDtor)
     ASSERT_FALSE(db.isAutoCommit());
     auto stmt = db.prepStatement("UPDATE t1 SET i=23 WHERE rowid=1");
     ASSERT_TRUE(stmt.step());
-    ASSERT_EQ(23, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+    ASSERT_EQ(23, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
     // transaction dtor is called when leaving the scope
   }
   ASSERT_TRUE(db.isAutoCommit());
 
   // we should see the new value now
-  ASSERT_EQ(23, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(23, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 }
 
 //----------------------------------------------------------------
@@ -140,7 +140,7 @@ TEST_F(DatabaseTestScenario, NestedTransaction1)
   // apply a change within the first transaction
   auto stmt = db.prepStatement("UPDATE t1 SET i=23 WHERE rowid=1");
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(23, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(23, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // start a second transaction
   auto tr2 = db.startTransaction(TransactionType::Immediate, TransactionDtorAction::Rollback);
@@ -151,19 +151,19 @@ TEST_F(DatabaseTestScenario, NestedTransaction1)
   // apply a change within the second transaction
   stmt = db.prepStatement("UPDATE t1 SET i=666 WHERE rowid=1");
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(666, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(666, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // undo the second transaction
   tr2.rollback();
   ASSERT_FALSE(tr2.isActive());
   ASSERT_FALSE(db.isAutoCommit());
-  ASSERT_EQ(23, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(23, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // unto the first transaction
   tr1.rollback();
   ASSERT_TRUE(db.isAutoCommit());
   ASSERT_FALSE(tr1.isActive());
-  ASSERT_EQ(42, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(42, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 }
 
 //----------------------------------------------------------------
@@ -184,7 +184,7 @@ TEST_F(DatabaseTestScenario, NestedTransaction2)
   // apply a change within the first transaction
   auto stmt = db.prepStatement("UPDATE t1 SET i=23 WHERE rowid=1");
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(23, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(23, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // start a second transaction
   auto tr2 = db.startTransaction(TransactionType::Immediate, TransactionDtorAction::Rollback);
@@ -195,7 +195,7 @@ TEST_F(DatabaseTestScenario, NestedTransaction2)
   // apply a change within the second transaction
   stmt = db.prepStatement("UPDATE t1 SET i=666 WHERE rowid=1");
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(666, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(666, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // commit the outer transaction; this implicitly commits
   // the changes applied by the inner transaction.
@@ -204,7 +204,7 @@ TEST_F(DatabaseTestScenario, NestedTransaction2)
   tr1.commit();
   ASSERT_FALSE(tr1.isActive());
   ASSERT_TRUE(db.isAutoCommit());  // we've implicitly released the inner savepoint(s)
-  ASSERT_EQ(666, db.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(666, db.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // committing the inner transaction is now invalid
   // and the inner transaction is set to "finished"
@@ -231,12 +231,12 @@ TEST_F(DatabaseTestScenario, DeferredTransaction)
   // update command on connection 1
   auto stmt = db1.prepStatement("UPDATE t1 SET i=23 WHERE rowid=1");
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(23, db1.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(23, db1.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // This UPDATE statement on db1 got us an RESERVED lock on the database
 
   // make sure that connection 2 still sees the old value
-  ASSERT_EQ(42, db2.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(42, db2.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // This SELECT statement on db2 triggered db2's deferred transaction and
   // acquired a SHARED lock on the database
@@ -265,14 +265,14 @@ TEST_F(DatabaseTestScenario, DeferredTransaction)
   tr1.commit();
 
   // connection 2 now sees the new value
-  ASSERT_EQ(23, db2.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(23, db2.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // restart the transaction on db2
   tr2 = db2.startTransaction(TransactionType::Deferred, TransactionDtorAction::Rollback);
   stmt = db2.prepStatement("UPDATE t1 SET i=666 WHERE rowid=1");
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(666, db2.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));  // updated value
-  ASSERT_EQ(23, db1.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));  // value before UPDATE through connection 2
+  ASSERT_EQ(666, db2.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));  // updated value
+  ASSERT_EQ(23, db1.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));  // value before UPDATE through connection 2
 
   // connection 1 cannot modify because the DB is locked
   stmt = db1.prepStatement("UPDATE t1 SET i=0 WHERE rowid=1");
@@ -282,13 +282,13 @@ TEST_F(DatabaseTestScenario, DeferredTransaction)
   tr2.commit();
 
   // connection 1 now sees the new value
-  ASSERT_EQ(666, db1.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(666, db1.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 
   // connection 1 can now modify
   stmt = db1.prepStatement("UPDATE t1 SET i=0 WHERE rowid=1");
   ASSERT_TRUE(stmt.step());
-  ASSERT_EQ(0, db1.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
-  ASSERT_EQ(0, db2.execScalarQueryInt("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(0, db1.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
+  ASSERT_EQ(0, db2.execScalarQuery<int>("SELECT i FROM t1 WHERE rowid=1"));
 }
 
 /*

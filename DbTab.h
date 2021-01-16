@@ -214,7 +214,7 @@ namespace SqliteOverlay
 
       stmt.bind(1, val);
 
-      // don't use execScalarQueryInt here so that we can save some checks / calls
+      // don't use execScalarQuery<int> here so that we can save some checks / calls
       stmt.step();
       if (!stmt.hasData())
       {
@@ -252,7 +252,7 @@ namespace SqliteOverlay
 
       stmt.bind(1, val);
 
-      // don't use execScalarQueryInt here so that we can save some checks / calls
+      // don't use execScalarQuery<int> here so that we can save some checks / calls
       stmt.step();
       if (!stmt.hasData())
       {
