@@ -28,6 +28,11 @@ TEST_F(DatabaseTestScenario, StmtBind)
   stmt.bind(1, string{"abc"});
   ASSERT_EQ("SELECT * FROM t1 WHERE s='abc'", stmt.getExpandedSQL());
 
+  // try a string_view
+  stmt = SqlStatement{db.get(), sql};  // implicit test of "move assignment"
+  stmt.bind(1, string_view{"abc"});
+  ASSERT_EQ("SELECT * FROM t1 WHERE s='abc'", stmt.getExpandedSQL());
+
   // try a double
   stmt.reset(true);   // test of "reset()"
   stmt.bind(1, 42.42);

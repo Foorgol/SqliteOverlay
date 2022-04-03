@@ -105,6 +105,9 @@ namespace SqliteOverlay
       else if constexpr (std::is_same_v<T, std::string>) {
         e = sqlite3_bind_text(stmt, argPos, val.c_str(), val.length(), SQLITE_TRANSIENT);
       }
+      else if constexpr (std::is_same_v<T, std::string_view>) {
+        e = sqlite3_bind_text(stmt, argPos, val.data(), val.length(), SQLITE_TRANSIENT);
+      }
       else if constexpr (std::is_same_v<T, bool>) {
         e = sqlite3_bind_int(stmt, argPos, val ? 1 : 0);
       }
