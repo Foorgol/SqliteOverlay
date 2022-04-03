@@ -398,7 +398,7 @@ TEST_F(DatabaseTestScenario, WhereClause_StringCol)
   ASSERT_TRUE(w.isEmpty());
 
 
-  w.addCol("s", ">", "xyz");
+  w.addCol("s", ">", std::string_view{"xyz"});
   ASSERT_FALSE(w.isEmpty());
 
   stmt = w.getSelectStmt(db, "t1", false);
@@ -502,7 +502,7 @@ TEST_F(DatabaseTestScenario, WhereClause_MultipleCol)
 
   w.addCol("i", ">", 23);
   w.addCol("f", "<", 23.666);
-  w.addCol("s", "<>", "xyz");
+  w.addCol("s", "<>", std::string_view{"xyz"});
   w.addNotNullCol("d");
   ASSERT_FALSE(w.isEmpty());
 

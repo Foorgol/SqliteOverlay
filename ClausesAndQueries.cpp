@@ -92,54 +92,6 @@ namespace SqliteOverlay {
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
 
-  void WhereClause::addCol(const string& colName, const string& op, int val)
-  {
-    addCol(colName, val);
-    colVals.back().op = op;
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addCol(const string& colName, const string& op, int64_t val)
-  {
-    addCol(colName, val);
-    colVals.back().op = op;
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addCol(const string& colName, const string& op, double val)
-  {
-    addCol(colName, val);
-    colVals.back().op = op;
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addCol(const string& colName, const string& op, const string& val)
-  {
-    addCol(colName, val);
-    colVals.back().op = op;
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addCol(const string& colName, const string& op, const Sloppy::DateTime::WallClockTimepoint_secs& val)
-  {
-    addCol(colName, val);
-    colVals.back().op = op;
-  }
-
-  //----------------------------------------------------------------------------
-
-  void WhereClause::addCol(const string& colName, const string& op, const date::year_month_day& d)
-  {
-    addCol(colName, d);
-    colVals.back().op = op;
-  }
-
-  //----------------------------------------------------------------------------
-
   SqlStatement WhereClause::getSelectStmt(const SqliteDatabase& db, const string& tabName, bool countOnly) const
   {
     if (tabName.empty() || (!countOnly && isEmpty()))
@@ -280,14 +232,6 @@ namespace SqliteOverlay {
 
   //----------------------------------------------------------------------------
   //----------------------------------------------------------------------------
-  //----------------------------------------------------------------------------
-
-  void CommonClause::addCol(const string& colName, const nlohmann::json& val)
-  {
-    const string jsonData = val.dump();
-    addCol(colName, jsonData);
-  }
-
   //----------------------------------------------------------------------------
 
   void CommonClause::clear()

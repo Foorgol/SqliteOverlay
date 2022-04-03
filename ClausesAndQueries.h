@@ -26,49 +26,76 @@ namespace SqliteOverlay {
     /** \brief Default, empty dtor */
     virtual ~CommonClause() = default;
 
-    /** \brief Adds an integer to the list of column values;
-     * uses the default operation "=" (equals) between column name and value.
-     *
-     * Test case: yes
-     *
-     */
-    inline void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
-        int val   ///< the value itself
+    template<class T>
+    void addCol(
+        std::string_view colName,
+        const T& val
         )
     {
-      intVals.push_back(val);
-      colVals.push_back(ColValInfo{colName, ColValType::Int, static_cast<int>(intVals.size()) - 1, ""});
+      addCol(colName, "=", val);
     }
 
-    /** \brief Adds a 64-bit int to the list of column values;
-     * uses the default operation "=" (equals) between column name and value.
-     *
-     * Test case: yes
-     *
-     */
-    inline void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
-        int64_t val   ///< the value itself
+    template<class T>
+    void addCol(
+        std::string_view colName,
+        std::string_view op,
+        const T& val
         )
     {
-      longVals.push_back(val);
-      colVals.push_back(ColValInfo{colName, ColValType::Long, static_cast<int>(longVals.size()) - 1, ""});
-    }
+      ColValInfo cvi{
+        .colName = std::string{colName},
+        .type = ColValType::Int,   // dummy, will be overwritten later
+        .indexInList = -1,         // dummy, will be overwritten later
+        .op = std::string{op}
+      };
 
-    /** \brief Adds a double to the list of column values;
-     * uses the default operation "=" (equals) between column name and value.
-     *
-     * Test case: yes
-     *
-     */
-    inline void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
-        double val   ///< the value itself
-        )
-    {
-      doubleVals.push_back(val);
-      colVals.push_back(ColValInfo{colName, ColValType::Double, static_cast<int>(doubleVals.size()) - 1, ""});
+      if constexpr(std::is_same_v<T, int> || std::is_same_v<T, int16_t> || std::is_same_v<T, uint16_t>) {
+        intVals.push_back(val);
+        cvi.indexInList = static_cast<int>(intVals.size()) - 1;
+      }
+      else if constexpr(std::is_same_v<T, int16_t> || std::is_same_v<T, uint16_t>) {
+        intVals.push_back(static_cast<int>(val));
+        cvi.indexInList = static_cast<int>(intVals.size()) - 1;
+      }
+      else if constexpr(std::is_same_v<T, int64_t>) {
+        longVals.push_back(val);
+        cvi.type = ColValType::Long;
+        cvi.indexInList = static_cast<int>(longVals.size()) - 1;
+      }
+      else if constexpr(std::is_same_v<T, double>) {
+        doubleVals.push_back(val);
+        cvi.type = ColValType::Double;
+        cvi.indexInList = static_cast<int>(doubleVals.size()) - 1;
+      }
+      else if constexpr(std::is_same_v<T, std::string>) {
+        stringVals.push_back(val);
+        cvi.type = ColValType::String;
+        cvi.indexInList = static_cast<int>(stringVals.size()) - 1;
+      }
+      else if constexpr(std::is_same_v<T, std::string_view>) {
+        stringVals.push_back(std::string{val});
+        cvi.type = ColValType::String;
+        cvi.indexInList = static_cast<int>(stringVals.size()) - 1;
+      }
+      else if constexpr(std::is_same_v<T, nlohmann::json>) {
+        stringVals.push_back(val.dump());
+        cvi.type = ColValType::String;
+        cvi.indexInList = static_cast<int>(stringVals.size()) - 1;
+      }
+      else if constexpr(std::is_same_v<T, Sloppy::DateTime::WallClockTimepoint_secs>) {
+        longVals.push_back(val.to_time_t());
+        cvi.type = ColValType::Long;
+        cvi.indexInList = static_cast<int>(longVals.size()) - 1;
+      }
+      else if constexpr(std::is_same_v<T, date::year_month_day>) {
+        intVals.push_back(Sloppy::DateTime::intFromYmd(val));
+        cvi.indexInList = static_cast<int>(intVals.size()) - 1;
+      }
+      else {
+        static_assert (!std::is_same_v<T, T>, "addCol with unsupported value type");
+      }
+
+      colVals.push_back(cvi);
     }
 
     /** \brief Adds a C-string or string literal to the list of column values;
@@ -86,32 +113,6 @@ namespace SqliteOverlay {
       colVals.push_back(ColValInfo{colName, ColValType::String, static_cast<int>(stringVals.size()) - 1, ""});
     }
 
-    /** \brief Adds a string to the list of column values;
-     * uses the default operation "=" (equals) between column name and value.
-     *
-     * Test case: yes
-     *
-     */
-    void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
-        const std::string& val   ///< the value itself
-        )
-    {
-      stringVals.push_back(val);
-      colVals.push_back(ColValInfo{colName, ColValType::String, static_cast<int>(stringVals.size()) - 1, ""});
-    }
-
-    /** \brief Adds a JSON object to the list of column values;
-     * uses the default operation "=" (equals) between column name and value.
-     *
-     * Test case: yes
-     *
-     */
-    void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
-        const nlohmann::json& val   ///< the value itself
-        );
-
     /** \brief Adds a 'IS NULL' to the list of column values
      *
      * Test case: yes
@@ -122,34 +123,6 @@ namespace SqliteOverlay {
         )
     {
       colVals.push_back(ColValInfo{colName, ColValType::Null, -1, ""});
-    }
-
-    /** \brief Adds a timestamp to the list of column values;
-     * uses the default operation "=" (equals) between column name and value.
-     *
-     * Test case: yes
-     *
-     */
-    inline void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
-        const Sloppy::DateTime::WallClockTimepoint_secs& val  ///< the value itself
-        )
-    {
-      addCol(colName, val.to_time_t());
-    }
-
-    /** \brief Adds a date to the list of column values;
-     * uses the default operation "=" (equals) between column name and value.
-     *
-     * Test case: yes
-     *
-     */
-    inline void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
-        const date::year_month_day& d   ///< the value itself
-        )
-    {
-      addCol(colName, Sloppy::DateTime::intFromYmd(d));
     }
 
     /** \brief Deletes all column names and values from the internal lists and
@@ -282,66 +255,6 @@ namespace SqliteOverlay {
     using CommonClause::addCol;
     using CommonClause::addNullCol;
 
-
-    /** \brief Adds an integer to the list of column values with a custom
-     * operator (e.g., "!=") between column name and value.
-     *
-     * Test case: yes
-     *
-     */
-    void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
-        const std::string& op,   ///< the operator between column name and value
-        int val   ///< the value itself
-        );
-
-    /** \brief Adds a 64-bit integer to the list of column values with a custom
-     * operator (e.g., "!=") between column name and value.
-     *
-     * Test case: yes
-     *
-     */
-    void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
-        const std::string& op,   ///< the operator between column name and value
-        int64_t val   ///< the value itself
-        );
-
-    /** \brief Adds a double to the list of column values with a custom
-     * operator (e.g., "!=") between column name and value.
-     *
-     * Test case: yes
-     *
-     */
-    void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
-        const std::string& op,   ///< the operator between column name and value
-        double val   ///< the value itself
-        );
-
-    /** \brief Adds a string to the list of column values with a custom
-     * operator (e.g., "!=") between column name and value.
-     *
-     * Test case: yes
-     *
-     */
-    void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
-        const std::string& op,   ///< the operator between column name and value
-        const std::string& val   ///< the value itself
-        );
-
-    /** \brief Adds a timestamp to the list of column values with a custom
-     * operator (e.g., "!=") between column name and value.
-     *
-     * Test case: not yet
-     *
-     */
-    void addCol(const std::string& colName,   ///< the name of the column that should contain the value
-        const std::string& op,   ///< the operator between column name and value
-        const Sloppy::DateTime::WallClockTimepoint_secs& val   ///< the value itself
-        );
-
     /** \brief Adds a 'IS NOT NULL' to the list of column values
      *
      * Test case: yes
@@ -353,18 +266,6 @@ namespace SqliteOverlay {
     {
       colVals.push_back(ColValInfo{colName, ColValType::NotNull, -1, ""});
     }
-
-    /** \brief Adds a date to the list of column values with a custom
-     * operator (e.g., "!=") between column name and value.
-     *
-     * Test case: yes
-     *
-     */
-    void addCol(
-        const std::string& colName,   ///< the name of the column that should contain the value
-        const std::string& op,   ///< the operator between column name and value
-        const date::year_month_day& d   ///< the value itself
-        );
 
     /** \brief Constructs a "`SELECT rowid`" or "`SELECT COUNT(*)`" statement for a given
      * database and table name, the statement using a WHERE clause
