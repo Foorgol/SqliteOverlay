@@ -314,4 +314,12 @@ TEST_F(DatabaseTestScenario, Generics_UpdateColumn)
   // update invalid
   n = t.updateColumn(ExampleTable::Col::realCol, std::nullopt, ExampleTable::Col::intCol, ColumnValueComparisonOp::GreaterThan, 9999);
   ASSERT_EQ(n, 0);
+
+  // update all without WHERE
+  n = t.updateColumn(ExampleTable::Col::intCol, 1234);
+  ASSERT_EQ(n, 5);
+  auto allObj = t.allObj();
+  for (const auto& o : allObj) {
+    ASSERT_EQ(o.i, 1234);
+  }
 }
