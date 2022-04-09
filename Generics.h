@@ -354,6 +354,7 @@ namespace SqliteOverlay {
   public:
     using IdType = typename AC::IdType;
     using Parent = GenericView<AC>;
+    using Col = typename Parent::Col;
 
     using OptionalObjectOrError = typename Parent::OptionalObjectOrError;
     using DbObj = typename Parent::DbObj;
@@ -364,6 +365,7 @@ namespace SqliteOverlay {
       : GenericView<AC>(db)
       , sqlBaseDelete{"DELETE FROM " + std::string{AC::TabName}}
       , sqlBaseDeleteById{sqlBaseDelete + " WHERE " + std::string{AC::ColDefs[0].name} + "=?1"}
+      , sqlBaseUpdate{"UPDATE " + std::string{AC::TabName} + " SET "}
     {
       sqlBaseInsert =
           "INSERT INTO " + std::string{AC::TabName} +
@@ -478,9 +480,76 @@ namespace SqliteOverlay {
       }
     }
 
+    //---------------------------------------------------------------
+
+    template<typename ...Args>
+    DbErrorOr<int> updateSingle(const IdType& id, Args ... columnValuePairs) {
+      std::string sql = sqlBaseUpdate;
+      recursiveUpdateBuilder_langStep(sql, 1, std::forward<Args>(columnValuePairs)...);
+      sql += " WHERE " + std::string{AC::ColDefs[0].name} + "=";
+      if constexpr(std::is_same_v<IdType, int>) {
+        sql += std::to_string(id);
+      } else {
+      sql += std::to_string(id.get());
+      }
+
+      try {
+        auto stmt = this->dbPtr->prepStatement(sql);
+        recursiveValueBinder(stmt, 1, std::forward<Args>(columnValuePairs)...);
+        std::cout << stmt.getExpandedSQL() << std::endl;
+
+        stmt.step();  // always suceeds; might throw, though
+        return this->dbPtr->getRowsAffected();
+      }
+      catch (SqliteOverlay::BusyException&) {
+        return DbOperationError::Busy;
+      }
+      catch (SqliteOverlay::ConstraintFailedException&) {
+        return DbOperationError::Constraint;
+      }
+      catch (...) {
+        return DbOperationError::Other;
+      }
+    }
+
+  protected:
+
+    // Laufende Iteration mit  "Col = Val" und Nachfolgespalte
+    template<class T, typename ...Args>
+    void recursiveUpdateBuilder_langStep(std::string& s, int nextParaIdx, Col col, T&& val, Args ... args) const {
+      static_assert (!std::is_same_v<T, Col>, "fehler");
+      s += Parent::colNameFromEnum(col) + "=?" + std::to_string(nextParaIdx) + ",";
+      recursiveUpdateBuilder_langStep(s, nextParaIdx + 1, std::forward<Args>(args)...);
+    }
+
+    // Abschluss mit "Col = Val"
+    template<class T>
+    void recursiveUpdateBuilder_langStep(std::string& s, int nextParaIdx, Col col, T&& val) const {
+      static_assert (!std::is_same_v<T, Col>, "fehler");
+      s += Parent::colNameFromEnum(col) + "=?" + std::to_string(nextParaIdx);
+    }
+
+    // Laufende Iteration mit  "Col = Val" und Nachfolgespalte
+    template<class T, typename ...Args>
+    void recursiveValueBinder(SqliteOverlay::SqlStatement& stmt, int nextParaIdx, Col col, T&& val, Args ... args) const {
+      static_assert (!std::is_same_v<T, Col>, "fehler");
+
+      stmt.bind(nextParaIdx, std::forward<T>(val));
+      recursiveValueBinder(stmt, nextParaIdx + 1, std::forward<Args>(args)...);
+    }
+
+    // Abschluss mit "Col = Val"
+    template<class T>
+    void recursiveValueBinder(SqliteOverlay::SqlStatement& stmt, int nextParaIdx, Col col, T&& val) const {
+      static_assert (!std::is_same_v<T, Col>, "fehler");
+
+      stmt.bind(nextParaIdx, std::forward<T>(val));
+    }
+
   private:
     const std::string sqlBaseDelete;
     const std::string sqlBaseDeleteById;
+    const std::string sqlBaseUpdate;
     std::string sqlBaseInsert;
   };
 }

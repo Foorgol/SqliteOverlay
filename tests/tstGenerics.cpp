@@ -237,3 +237,30 @@ TEST_F(DatabaseTestScenario, Generics_Delete)
   check = t.singleObjectById(ExampleId{2});
   ASSERT_TRUE(equalsExampleObj(check, 2));
 }
+
+//------------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, Generics_UpdateSingle)
+{
+  SampleDB db = getScenario01();
+
+  ExampleTable t{&db};
+
+  auto n = t.updateSingle(ExampleId{2}, ExampleTable::Col::intCol, 4242);
+  ASSERT_TRUE(n.isOk());
+  ASSERT_EQ(*n, 1);
+  auto check = t.singleObjectById(ExampleId{2});
+  ASSERT_TRUE(check.isOk());
+  ASSERT_EQ((**check).i, 4242);
+
+  n = t.updateSingle(ExampleId{2},
+                     ExampleTable::Col::intCol, 9999,
+                     ExampleTable::Col::stringCol, "xyz"
+                     );
+  ASSERT_TRUE(n.isOk());
+  ASSERT_EQ(*n, 1);
+  check = t.singleObjectById(ExampleId{2});
+  ASSERT_TRUE(check.isOk());
+  ASSERT_EQ((**check).i, 9999);
+  ASSERT_EQ((**check).s, "xyz");
+}
