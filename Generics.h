@@ -98,7 +98,12 @@ namespace SqliteOverlay {
       , sqlBaseSelect{
           "SELECT " + std::string{AC::FullSelectColList} +
           " FROM " + std::string{AC::TabName}
-        } {}
+        }
+      , sqlCountAll{"SELECT COUNT(*) FROM " + std::string{AC::TabName}}
+      , sqlCountWhere{sqlCountAll + " WHERE "}
+    {
+
+    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -106,6 +111,22 @@ namespace SqliteOverlay {
       auto stmt = safeStmt(sqlBaseSelect);
       if (!stmt) return DbOperationError::Other;
       return stmt2ObjectList(*stmt);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    DbErrorOr<int> objCount() const noexcept {
+      try {
+        auto stmt = dbPtr->prepStatement(sqlCountAll);
+        if (!stmt.dataStep()) return DbOperationError::Other;
+        return stmt.get<int>(0);
+      }
+      catch (SqliteOverlay::BusyException&) {
+        return DbOperationError::Busy;
+      }
+      catch (...) {
+        return DbOperationError::Other;
+      }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -132,6 +153,8 @@ namespace SqliteOverlay {
   protected:
     SqliteOverlay::SqliteDatabase* dbPtr;
     const std::string sqlBaseSelect;
+    const std::string sqlCountAll;
+    const std::string sqlCountWhere;
 
     std::string colNameFromEnum(Col col) const {
       return std::string{AC::ColDefs[static_cast<int>(col)].name};
@@ -335,7 +358,13 @@ namespace SqliteOverlay {
     using OptionalObjectOrError = typename Parent::OptionalObjectOrError;
     using DbObj = typename Parent::DbObj;
 
-    explicit GenericTable(SqliteOverlay::SqliteDatabase* db) noexcept : GenericView<AC>(db) {
+    //---------------------------------------------------------------
+
+    explicit GenericTable(SqliteOverlay::SqliteDatabase* db) noexcept
+      : GenericView<AC>(db)
+      , sqlBaseDelete{"DELETE FROM " + std::string{AC::TabName}}
+      , sqlBaseDeleteById{sqlBaseDelete + " WHERE " + std::string{AC::ColDefs[0].name} + "=?1"}
+    {
       sqlBaseInsert =
           "INSERT INTO " + std::string{AC::TabName} +
           " (" + std::string{AC::FullSelectColList} + ") VALUES (";
@@ -346,9 +375,11 @@ namespace SqliteOverlay {
       }
 
       sqlBaseInsert += ")";
-      std::cout << sqlBaseInsert << std::endl;
+
+      std::cout << sqlBaseDeleteById << std::endl;
     }
 
+    //---------------------------------------------------------------
 
     OptionalObjectOrError singleObjectById(IdType id) const noexcept {
       const std::string sql = Parent::sqlBaseSelect + " WHERE rowid = ?1";
@@ -363,6 +394,8 @@ namespace SqliteOverlay {
 
       return Parent::stmt2SingleObject(*stmt);
     }
+
+    //---------------------------------------------------------------
 
     DbErrorOr<IdType> insert(const DbObj& obj) const noexcept {
       try {
@@ -390,7 +423,64 @@ namespace SqliteOverlay {
       }
     }
 
+    //---------------------------------------------------------------
+
+    DbErrorOr<int> del(const IdType& id) const noexcept {
+      try {
+        auto stmt = this->dbPtr->prepStatement(sqlBaseDeleteById);
+
+        if constexpr (std::is_same_v<IdType, int>) {
+          stmt.bind(1, id);
+        } else {
+          stmt.bind(1, id.get());   // for NamedTypes
+        }
+
+        stmt.step();  // always suceeds; might throw, though
+
+        return this->dbPtr->getRowsAffected();
+      }
+      catch (SqliteOverlay::BusyException&) {
+        return DbOperationError::Busy;
+      }
+      catch (SqliteOverlay::ConstraintFailedException&) {
+        return DbOperationError::Constraint;
+      }
+      catch (...) {
+        return DbOperationError::Other;
+      }
+    }
+
+    //---------------------------------------------------------------
+
+    DbErrorOr<int> del(const DbObj& obj) const noexcept {
+      return del(obj.id);
+    }
+
+    //---------------------------------------------------------------
+
+    template<typename ...Args>
+    DbErrorOr<int> del(Args ... whereArgs) const noexcept {
+      auto stmt = this->stmtWithWhere(sqlBaseDelete, 0, std::forward<Args>(whereArgs)...);
+      if (!stmt) return DbOperationError::Other;
+
+      try {
+        stmt->step();  // always suceeds; might throw, though
+        return this->dbPtr->getRowsAffected();
+      }
+      catch (SqliteOverlay::BusyException&) {
+        return DbOperationError::Busy;
+      }
+      catch (SqliteOverlay::ConstraintFailedException&) {
+        return DbOperationError::Constraint;
+      }
+      catch (...) {
+        return DbOperationError::Other;
+      }
+    }
+
   private:
+    const std::string sqlBaseDelete;
+    const std::string sqlBaseDeleteById;
     std::string sqlBaseInsert;
   };
 }

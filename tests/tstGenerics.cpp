@@ -153,6 +153,7 @@ TEST_F(DatabaseTestScenario, Generics_SelectMultiple)
   ASSERT_TRUE(v.isOk());
   ASSERT_EQ(v->size(), 0);
 }
+
 //------------------------------------------------------------------
 
 TEST_F(DatabaseTestScenario, Generics_Insert)
@@ -175,4 +176,64 @@ TEST_F(DatabaseTestScenario, Generics_Insert)
   ASSERT_TRUE(readbackObj.isOk());
   ASSERT_TRUE(readbackObj->has_value());
   ASSERT_EQ(**readbackObj, newObj);
+}
+
+//------------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, Generics_Count)
+{
+  SampleDB db = getScenario01();
+
+  ExampleTable t{&db};
+
+  auto n = t.objCount();
+  ASSERT_TRUE(n.isOk());
+  ASSERT_EQ(*n, 5);
+}
+
+//------------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, Generics_Delete)
+{
+  SampleDB db = getScenario01();
+
+  ExampleTable t{&db};
+
+  auto n = t.del(ExampleId{100});
+  ASSERT_TRUE(n.isOk());
+  ASSERT_EQ(*n, 0);
+  ASSERT_EQ(*t.objCount(), 5);
+
+  n = t.del(ExampleId{5});
+  ASSERT_TRUE(n.isOk());
+  ASSERT_EQ(*n, 1);
+  ASSERT_EQ(*t.objCount(), 4);
+  auto check = t.singleObjectById(ExampleId{5});
+  ASSERT_TRUE(check.isOk());
+  ASSERT_FALSE(check->has_value());
+
+  n = t.del(
+        ExampleTable::Col::realCol, ColumnValueComparisonOp::Null
+        );
+  ASSERT_TRUE(n.isOk());
+  ASSERT_EQ(*n, 2);
+  ASSERT_EQ(*t.objCount(), 2);
+  check = t.singleObjectById(ExampleId{3});
+  ASSERT_TRUE(check.isOk());
+  ASSERT_FALSE(check->has_value());
+  check = t.singleObjectById(ExampleId{4});
+  ASSERT_TRUE(check.isOk());
+  ASSERT_FALSE(check->has_value());
+
+  n = t.del(ExampleTable::Col::realCol, 23.23);
+  ASSERT_TRUE(n.isOk());
+  ASSERT_EQ(*n, 1);
+  ASSERT_EQ(*t.objCount(), 1);
+  check = t.singleObjectById(ExampleId{1});
+  ASSERT_TRUE(check.isOk());
+  ASSERT_FALSE(check->has_value());
+
+  // only ID 2 survived
+  check = t.singleObjectById(ExampleId{2});
+  ASSERT_TRUE(equalsExampleObj(check, 2));
 }
