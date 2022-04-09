@@ -49,16 +49,6 @@ namespace SqliteOverlay {
         { T::bindToStmt(obj, stmt) };   // we need a function that binds values of a database object to an SQL statement
       };
 
-  enum class DbOperationError {
-    Busy,
-    Constraint,
-    NoSuchObject,
-    Other
-  };
-
-  template<class ValueType>
-  using DbErrorOr = Sloppy::ResultOrError<ValueType, DbOperationError>;
-
   enum class ColumnValueComparisonOp {
     Equals,
     NotEqual,
@@ -89,9 +79,6 @@ namespace SqliteOverlay {
     using DbObj = typename AC::DbObj;
     using ObjList = std::vector<DbObj>;
     using OptOpject = std::optional<DbObj>;
-    using SingleObjectOrError = Sloppy::ResultOrError<DbObj, DbOperationError>;
-    using OptionalObjectOrError = Sloppy::ResultOrError<std::optional<DbObj>, DbOperationError>;
-    using ListOrError = Sloppy::ResultOrError<ObjList, DbOperationError>;
 
     explicit GenericView(SqliteOverlay::SqliteDatabase* db) noexcept
       : dbPtr{db}
@@ -107,44 +94,33 @@ namespace SqliteOverlay {
 
     //-------------------------------------------------------------------------------------------------
 
-    ListOrError allObj() const noexcept {
-      auto stmt = safeStmt(sqlBaseSelect);
-      if (!stmt) return DbOperationError::Other;
-      return stmt2ObjectList(*stmt);
+    ObjList allObj() const {
+      auto stmt = dbPtr->prepStatement(sqlBaseSelect);
+      return stmt2ObjectList(stmt);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    DbErrorOr<int> objCount() const noexcept {
-      try {
-        auto stmt = dbPtr->prepStatement(sqlCountAll);
-        if (!stmt.dataStep()) return DbOperationError::Other;
-        return stmt.get<int>(0);
-      }
-      catch (SqliteOverlay::BusyException&) {
-        return DbOperationError::Busy;
-      }
-      catch (...) {
-        return DbOperationError::Other;
-      }
+    int objCount() const {
+      auto stmt = dbPtr->prepStatement(sqlCountAll);
+      if (!stmt.dataStep()) return -1;  // should never happen
+      return stmt.get<int>(0);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     template<typename ...Args>
-    OptionalObjectOrError singleObjectByColumnValue(Args ... whereArgs) const noexcept {
+    OptOpject singleObjectByColumnValue(Args ... whereArgs) const {
       auto stmt = stmtWithWhere(sqlBaseSelect, 1, std::forward<Args>(whereArgs)...);
-      if (!stmt) return DbOperationError::Other;
-      return stmt2SingleObject(*stmt);
+      return stmt2SingleObject(stmt);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     template<typename ...Args>
-    ListOrError objectsByColumnValue(Args ... whereArgs) const noexcept {
+    ObjList objectsByColumnValue(Args ... whereArgs) const {
       auto stmt = stmtWithWhere(sqlBaseSelect, 0, std::forward<Args>(whereArgs)...);
-      if (!stmt) return DbOperationError::Other;
-      return stmt2ObjectList(*stmt);
+      return stmt2ObjectList(stmt);
     }
 
 
@@ -162,13 +138,15 @@ namespace SqliteOverlay {
 
     //-------------------------------------------------------------------------------------------------
 
-    std::optional<SqliteOverlay::SqlStatement> safeStmt(const std::string& sql) const noexcept {
-      try {
-        return dbPtr->prepStatement(sql);
+    /** \pre The parameters have been bound to the statement, but step()
+     *  has not yet been called
+     */
+    ObjList stmt2ObjectList(SqliteOverlay::SqlStatement& stmt) const noexcept {
+      ObjList result;
+      while (stmt.dataStep()) {
+        result.push_back(AC::fromSelectStmt(stmt));
       }
-      catch (...) {
-        return std::nullopt;
-      }
+      return result;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -176,40 +154,11 @@ namespace SqliteOverlay {
     /** \pre The parameters have been bound to the statement, but step()
      *  has not yet been called
      */
-    ListOrError stmt2ObjectList(SqliteOverlay::SqlStatement& stmt) const noexcept {
-      try {
-        ObjList result;
-        while (stmt.dataStep()) {
-          result.push_back(AC::fromSelectStmt(stmt));
-        }
-        return result;
-      }
-      catch (SqliteOverlay::BusyException&) {
-        return DbOperationError::Busy;
-      }
-      catch (...) {
-        return DbOperationError::Other;
-      }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    /** \pre The parameters have been bound to the statement, but step()
-     *  has not yet been called
-     */
-    OptionalObjectOrError stmt2SingleObject(SqliteOverlay::SqlStatement& stmt) const noexcept {
-      try {
-        if (stmt.dataStep()) {
-          return OptOpject{AC::fromSelectStmt(stmt)};
-        } else {
-          return OptOpject{std::nullopt};
-        }
-      }
-      catch (SqliteOverlay::BusyException&) {
-        return DbOperationError::Busy;
-      }
-      catch (...) {
-        return DbOperationError::Other;
+    OptOpject stmt2SingleObject(SqliteOverlay::SqlStatement& stmt) const noexcept {
+      if (stmt.dataStep()) {
+        return OptOpject{AC::fromSelectStmt(stmt)};
+      } else {
+        return OptOpject{std::nullopt};
       }
     }
 
@@ -327,22 +276,21 @@ namespace SqliteOverlay {
     //-------------------------------------------------------------------------------------------------
 
     template<typename ...Args>
-    std::optional<SqliteOverlay::SqlStatement> stmtWithWhere(const std::string& baseSql, int limit, Args ... whereArgs) const {
+    SqliteOverlay::SqlStatement stmtWithWhere(const std::string& baseSql, int limit, Args ... whereArgs) const {
       std::string sql = baseSql + " WHERE ";
       recursiveWhereBuilder_langStep(sql, 1, std::forward<Args>(whereArgs)...);
+
       if (limit > 0) {
         sql += " LIMIT " + std::to_string(limit);
       }
+
       std::cout << sql << std::endl;
-      try {
-        auto stmt = dbPtr->prepStatement(sql);
-        recursiveWhereBuilder_bindStep(stmt, 1, std::forward<Args>(whereArgs)...);
-        std::cout << stmt.getExpandedSQL() << "\n" << std::endl;
-        return stmt;
-      }
-      catch (...) {
-        return std::nullopt;
-      }
+
+      auto stmt = dbPtr->prepStatement(sql);
+      recursiveWhereBuilder_bindStep(stmt, 1, std::forward<Args>(whereArgs)...);
+
+      std::cout << stmt.getExpandedSQL() << "\n" << std::endl;
+      return stmt;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -354,10 +302,11 @@ namespace SqliteOverlay {
   public:
     using IdType = typename AC::IdType;
     using Parent = GenericView<AC>;
-    using Col = typename Parent::Col;
 
-    using OptionalObjectOrError = typename Parent::OptionalObjectOrError;
+    using Col = typename Parent::Col;
     using DbObj = typename Parent::DbObj;
+    using OptObj = typename Parent::OptOpject;
+    using ObjList = typename Parent::ObjList;
 
     //---------------------------------------------------------------
 
@@ -377,113 +326,76 @@ namespace SqliteOverlay {
       }
 
       sqlBaseInsert += ")";
-
-      std::cout << sqlBaseDeleteById << std::endl;
     }
 
     //---------------------------------------------------------------
 
-    OptionalObjectOrError singleObjectById(IdType id) const noexcept {
+    OptObj singleObjectById(IdType id) const {
       const std::string sql = Parent::sqlBaseSelect + " WHERE rowid = ?1";
-      auto stmt = Parent::safeStmt(sql);
-      if (!stmt) return DbOperationError::Other;
+      auto stmt = this->dbPtr->prepStatement(sql);
 
       if constexpr (std::is_same_v<IdType, int>) {
-        stmt->bind(1, id);
+        stmt.bind(1, id);
       } else {
-        stmt->bind(1, id.get());
+        stmt.bind(1, id.get());
       }
 
-      return Parent::stmt2SingleObject(*stmt);
+      return Parent::stmt2SingleObject(stmt);
     }
 
     //---------------------------------------------------------------
 
-    DbErrorOr<IdType> insert(const DbObj& obj) const noexcept {
-      try {
-        auto stmt = this->dbPtr->prepStatement(sqlBaseInsert);
+    IdType insert(const DbObj& obj) const {
+      auto stmt = this->dbPtr->prepStatement(sqlBaseInsert);
 
-        // let the adapter class bind the object values to
-        // the statement and then overwrite the ID value with
-        // NULL so that we get an SQLite-defined ID
-        AC::bindToStmt(obj, stmt);
-        stmt.bindNull(1);
-        std::cout << stmt.getExpandedSQL() << std::endl;
+      // let the adapter class bind the object values to
+      // the statement and then overwrite the ID value with
+      // NULL so that we get an SQLite-defined ID
+      AC::bindToStmt(obj, stmt);
+      stmt.bindNull(1);
+      std::cout << stmt.getExpandedSQL() << std::endl;
 
-        stmt.step();  // always suceeds; might throw, though
+      stmt.step();  // always suceeds; might throw, though
 
-        return IdType{this->dbPtr->getLastInsertId()};
-      }
-      catch (SqliteOverlay::BusyException&) {
-        return DbOperationError::Busy;
-      }
-      catch (SqliteOverlay::ConstraintFailedException&) {
-        return DbOperationError::Constraint;
-      }
-      catch (...) {
-        return DbOperationError::Other;
-      }
+      return IdType{this->dbPtr->getLastInsertId()};
     }
 
     //---------------------------------------------------------------
 
-    DbErrorOr<int> del(const IdType& id) const noexcept {
-      try {
-        auto stmt = this->dbPtr->prepStatement(sqlBaseDeleteById);
+    int del(const IdType& id) const {
+      auto stmt = this->dbPtr->prepStatement(sqlBaseDeleteById);
 
-        if constexpr (std::is_same_v<IdType, int>) {
-          stmt.bind(1, id);
-        } else {
-          stmt.bind(1, id.get());   // for NamedTypes
-        }
+      if constexpr (std::is_same_v<IdType, int>) {
+        stmt.bind(1, id);
+      } else {
+        stmt.bind(1, id.get());   // for NamedTypes
+      }
 
-        stmt.step();  // always suceeds; might throw, though
+      stmt.step();  // always suceeds; might throw, though
 
-        return this->dbPtr->getRowsAffected();
-      }
-      catch (SqliteOverlay::BusyException&) {
-        return DbOperationError::Busy;
-      }
-      catch (SqliteOverlay::ConstraintFailedException&) {
-        return DbOperationError::Constraint;
-      }
-      catch (...) {
-        return DbOperationError::Other;
-      }
+      return this->dbPtr->getRowsAffected();
     }
 
     //---------------------------------------------------------------
 
-    DbErrorOr<int> del(const DbObj& obj) const noexcept {
+    int del(const DbObj& obj) const {
       return del(obj.id);
     }
 
     //---------------------------------------------------------------
 
     template<typename ...Args>
-    DbErrorOr<int> del(Args ... whereArgs) const noexcept {
+    int del(Args ... whereArgs) const {
       auto stmt = this->stmtWithWhere(sqlBaseDelete, 0, std::forward<Args>(whereArgs)...);
-      if (!stmt) return DbOperationError::Other;
 
-      try {
-        stmt->step();  // always suceeds; might throw, though
-        return this->dbPtr->getRowsAffected();
-      }
-      catch (SqliteOverlay::BusyException&) {
-        return DbOperationError::Busy;
-      }
-      catch (SqliteOverlay::ConstraintFailedException&) {
-        return DbOperationError::Constraint;
-      }
-      catch (...) {
-        return DbOperationError::Other;
-      }
+      stmt.step();  // always suceeds; might throw, though
+      return this->dbPtr->getRowsAffected();
     }
 
     //---------------------------------------------------------------
 
     template<typename ...Args>
-    DbErrorOr<int> updateSingle(const IdType& id, Args ... columnValuePairs) {
+    int updateSingle(const IdType& id, Args ... columnValuePairs) const {
       std::string sql = sqlBaseUpdate;
       recursiveUpdateBuilder_langStep(sql, 1, std::forward<Args>(columnValuePairs)...);
       sql += " WHERE " + std::string{AC::ColDefs[0].name} + "=";
@@ -493,23 +405,12 @@ namespace SqliteOverlay {
       sql += std::to_string(id.get());
       }
 
-      try {
-        auto stmt = this->dbPtr->prepStatement(sql);
-        recursiveValueBinder(stmt, 1, std::forward<Args>(columnValuePairs)...);
-        std::cout << stmt.getExpandedSQL() << std::endl;
+      auto stmt = this->dbPtr->prepStatement(sql);
+      recursiveValueBinder(stmt, 1, std::forward<Args>(columnValuePairs)...);
+      std::cout << stmt.getExpandedSQL() << std::endl;
 
-        stmt.step();  // always suceeds; might throw, though
-        return this->dbPtr->getRowsAffected();
-      }
-      catch (SqliteOverlay::BusyException&) {
-        return DbOperationError::Busy;
-      }
-      catch (SqliteOverlay::ConstraintFailedException&) {
-        return DbOperationError::Constraint;
-      }
-      catch (...) {
-        return DbOperationError::Other;
-      }
+      stmt.step();  // always suceeds; might throw, though
+      return this->dbPtr->getRowsAffected();
     }
 
   protected:

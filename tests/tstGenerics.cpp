@@ -48,12 +48,8 @@ inline const std::array<ExampleObj, 5> ExampleObjects = {
   }
 };
 
-bool equalsExampleObj(const ExampleTable::OptionalObjectOrError& o, int refId) {
-  return (o.isOk() && o->has_value() && ((**o) == ExampleObjects[refId - 1]));
-}
-
-bool okayButEmpty(const ExampleTable::OptionalObjectOrError& o) {
-  return (o.isOk() && !o->has_value());
+bool equalsExampleObj(const ExampleTable::OptObj& o, int refId) {
+  return (o.has_value() && (*o == ExampleObjects[refId - 1]));
 }
 
 TEST_F(DatabaseTestScenario, Generics_SelectSingle)
@@ -93,7 +89,7 @@ TEST_F(DatabaseTestScenario, Generics_SelectSingle)
           ExampleTable::Col::realCol, ColumnValueComparisonOp::Null,
           ExampleTable::Col::intCol, ColumnValueComparisonOp::LessThan, 80
           );
-  ASSERT_TRUE(okayButEmpty(obj));
+  ASSERT_FALSE(obj);
   obj = t.singleObjectByColumnValue(
           ExampleTable::Col::realCol, ColumnValueComparisonOp::Null,
           ExampleTable::Col::intCol, ColumnValueComparisonOp::GreaterThan, 80
@@ -105,7 +101,7 @@ TEST_F(DatabaseTestScenario, Generics_SelectSingle)
           ExampleTable::Col::realCol, ColumnValueComparisonOp::Null,
           ExampleTable::Col::intCol, 80
           );
-  ASSERT_TRUE(okayButEmpty(obj));
+  ASSERT_FALSE(obj);
   obj = t.singleObjectByColumnValue(
           ExampleTable::Col::realCol, ColumnValueComparisonOp::Null,
           ExampleTable::Col::intCol, 84
@@ -115,7 +111,7 @@ TEST_F(DatabaseTestScenario, Generics_SelectSingle)
           ExampleTable::Col::intCol, 80,
           ExampleTable::Col::realCol, ColumnValueComparisonOp::Null
           );
-  ASSERT_TRUE(okayButEmpty(obj));
+  ASSERT_FALSE(obj);
   obj = t.singleObjectByColumnValue(
           ExampleTable::Col::intCol, 84,
           ExampleTable::Col::realCol, ColumnValueComparisonOp::Null
@@ -132,26 +128,22 @@ TEST_F(DatabaseTestScenario, Generics_SelectMultiple)
   ExampleTable t{&db};
 
   auto v = t.allObj();
-  ASSERT_TRUE(v.isOk());
-  ASSERT_EQ(v->size(), 5);
+  ASSERT_EQ(v.size(), 5);
   for (int idx = 0; idx < 5; ++idx) {
-    ASSERT_EQ((*v)[idx], ExampleObjects[idx]);
+    ASSERT_EQ(v[idx], ExampleObjects[idx]);
   }
 
   v = t.objectsByColumnValue(ExampleTable::Col::realCol, ColumnValueComparisonOp::Null);
-  ASSERT_TRUE(v.isOk());
-  ASSERT_EQ(v->size(), 2);
-  ASSERT_EQ((*v)[0], ExampleObjects[2]);
-  ASSERT_EQ((*v)[1], ExampleObjects[3]);
+  ASSERT_EQ(v.size(), 2);
+  ASSERT_EQ(v[0], ExampleObjects[2]);
+  ASSERT_EQ(v[1], ExampleObjects[3]);
 
   v = t.objectsByColumnValue(ExampleTable::Col::realCol, 42.42);
-  ASSERT_TRUE(v.isOk());
-  ASSERT_EQ(v->size(), 1);
-  ASSERT_EQ((*v)[0], ExampleObjects[4]);
+  ASSERT_EQ(v.size(), 1);
+  ASSERT_EQ(v[0], ExampleObjects[4]);
 
   v = t.objectsByColumnValue(ExampleTable::Col::realCol, ColumnValueComparisonOp::GreaterThan, 1000);
-  ASSERT_TRUE(v.isOk());
-  ASSERT_EQ(v->size(), 0);
+  ASSERT_EQ(v.size(), 0);
 }
 
 //------------------------------------------------------------------
@@ -169,13 +161,11 @@ TEST_F(DatabaseTestScenario, Generics_Insert)
     .d = Sloppy::DateTime::WallClockTimepoint_secs().ymd()
   };
   auto newId = t.insert(newObj);
-  ASSERT_TRUE(newId.isOk());
-  ASSERT_EQ(*newId, ExampleId{6});
+  ASSERT_EQ(newId, ExampleId{6});
   newObj.id = ExampleId{6};
   const auto readbackObj = t.singleObjectById(newObj.id);
-  ASSERT_TRUE(readbackObj.isOk());
-  ASSERT_TRUE(readbackObj->has_value());
-  ASSERT_EQ(**readbackObj, newObj);
+  ASSERT_TRUE(readbackObj);
+  ASSERT_EQ(*readbackObj, newObj);
 }
 
 //------------------------------------------------------------------
@@ -187,8 +177,7 @@ TEST_F(DatabaseTestScenario, Generics_Count)
   ExampleTable t{&db};
 
   auto n = t.objCount();
-  ASSERT_TRUE(n.isOk());
-  ASSERT_EQ(*n, 5);
+  ASSERT_EQ(n, 5);
 }
 
 //------------------------------------------------------------------
@@ -200,38 +189,30 @@ TEST_F(DatabaseTestScenario, Generics_Delete)
   ExampleTable t{&db};
 
   auto n = t.del(ExampleId{100});
-  ASSERT_TRUE(n.isOk());
-  ASSERT_EQ(*n, 0);
-  ASSERT_EQ(*t.objCount(), 5);
+  ASSERT_EQ(n, 0);
+  ASSERT_EQ(t.objCount(), 5);
 
   n = t.del(ExampleId{5});
-  ASSERT_TRUE(n.isOk());
-  ASSERT_EQ(*n, 1);
-  ASSERT_EQ(*t.objCount(), 4);
+  ASSERT_EQ(n, 1);
+  ASSERT_EQ(t.objCount(), 4);
   auto check = t.singleObjectById(ExampleId{5});
-  ASSERT_TRUE(check.isOk());
-  ASSERT_FALSE(check->has_value());
+  ASSERT_FALSE(check);
 
   n = t.del(
         ExampleTable::Col::realCol, ColumnValueComparisonOp::Null
         );
-  ASSERT_TRUE(n.isOk());
-  ASSERT_EQ(*n, 2);
-  ASSERT_EQ(*t.objCount(), 2);
+  ASSERT_EQ(n, 2);
+  ASSERT_EQ(t.objCount(), 2);
   check = t.singleObjectById(ExampleId{3});
-  ASSERT_TRUE(check.isOk());
-  ASSERT_FALSE(check->has_value());
+  ASSERT_FALSE(check);
   check = t.singleObjectById(ExampleId{4});
-  ASSERT_TRUE(check.isOk());
-  ASSERT_FALSE(check->has_value());
+  ASSERT_FALSE(check);
 
   n = t.del(ExampleTable::Col::realCol, 23.23);
-  ASSERT_TRUE(n.isOk());
-  ASSERT_EQ(*n, 1);
-  ASSERT_EQ(*t.objCount(), 1);
+  ASSERT_EQ(n, 1);
+  ASSERT_EQ(t.objCount(), 1);
   check = t.singleObjectById(ExampleId{1});
-  ASSERT_TRUE(check.isOk());
-  ASSERT_FALSE(check->has_value());
+  ASSERT_FALSE(check);
 
   // only ID 2 survived
   check = t.singleObjectById(ExampleId{2});
@@ -247,20 +228,18 @@ TEST_F(DatabaseTestScenario, Generics_UpdateSingle)
   ExampleTable t{&db};
 
   auto n = t.updateSingle(ExampleId{2}, ExampleTable::Col::intCol, 4242);
-  ASSERT_TRUE(n.isOk());
-  ASSERT_EQ(*n, 1);
+  ASSERT_EQ(n, 1);
   auto check = t.singleObjectById(ExampleId{2});
-  ASSERT_TRUE(check.isOk());
-  ASSERT_EQ((**check).i, 4242);
+  ASSERT_TRUE(check);
+  ASSERT_EQ(check->i, 4242);
 
   n = t.updateSingle(ExampleId{2},
                      ExampleTable::Col::intCol, 9999,
                      ExampleTable::Col::stringCol, "xyz"
                      );
-  ASSERT_TRUE(n.isOk());
-  ASSERT_EQ(*n, 1);
+  ASSERT_EQ(n, 1);
   check = t.singleObjectById(ExampleId{2});
-  ASSERT_TRUE(check.isOk());
-  ASSERT_EQ((**check).i, 9999);
-  ASSERT_EQ((**check).s, "xyz");
+  ASSERT_TRUE(check);
+  ASSERT_EQ(check->i, 9999);
+  ASSERT_EQ(check->s, "xyz");
 }
