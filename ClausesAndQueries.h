@@ -67,6 +67,10 @@ namespace SqliteOverlay {
         cvi.type = ColValType::Double;
         cvi.indexInList = static_cast<int>(doubleVals.size()) - 1;
       }
+      else if constexpr(std::is_same_v<T, bool>) {
+        intVals.push_back(val ? 1 : 0);
+        cvi.indexInList = static_cast<int>(intVals.size()) - 1;
+      }
       else if constexpr(std::is_same_v<T, std::string>) {
         stringVals.push_back(val);
         cvi.type = ColValType::String;
