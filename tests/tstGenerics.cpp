@@ -227,31 +227,62 @@ TEST_F(DatabaseTestScenario, Generics_UpdateSingle)
 
   ExampleTable t{&db};
 
-  auto n = t.updateObject(ExampleId{2}, ExampleTable::Col::intCol, 4242);
-  ASSERT_EQ(n, 1);
+  auto isOkay = t.updateObject(ExampleId{2}, ExampleTable::Col::intCol, 4242);
+  ASSERT_TRUE(isOkay);
   auto check = t.singleObjectById(ExampleId{2});
   ASSERT_TRUE(check);
   ASSERT_EQ(check->i, 4242);
 
-  n = t.updateObject(ExampleId{2},
+  isOkay = t.updateObject(ExampleId{2},
                      ExampleTable::Col::intCol, 9999,
                      ExampleTable::Col::stringCol, "xyz"
                      );
-  ASSERT_EQ(n, 1);
+  ASSERT_TRUE(isOkay);
   check = t.singleObjectById(ExampleId{2});
   ASSERT_TRUE(check);
   ASSERT_EQ(check->i, 9999);
   ASSERT_EQ(check->s, "xyz");
 
   // update a value to NULL
-  n = t.updateObject(ExampleId{2},
+  isOkay = t.updateObject(ExampleId{2},
                      ExampleTable::Col::intCol, std::nullopt,
                      ExampleTable::Col::realCol, std::nullopt
                      );
-  ASSERT_EQ(n, 1);
+  ASSERT_TRUE(isOkay);
   check = t.singleObjectById(ExampleId{2});
   ASSERT_TRUE(check);
   ASSERT_EQ(check->i, std::nullopt);
   ASSERT_EQ(check->f, std::nullopt);
 
+  // update with invalid ID
+  isOkay = t.updateObject(ExampleId{20}, ExampleTable::Col::intCol, 4242);
+  ASSERT_FALSE(isOkay);
+}
+
+//------------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, Generics_OverwriteObject)
+{
+  SampleDB db = getScenario01();
+
+  ExampleTable t{&db};
+
+  ExampleObj o{
+    .id = ExampleId{2},
+    .i = 1000,
+    .f = 3.1415,
+    .s = "abc",
+    .d = date::year_month_day{date::day{15} / 1 / 1980}
+  };
+
+  auto isOkay = t.overwrite(o);
+  ASSERT_TRUE(isOkay);
+  auto check = t.singleObjectById(ExampleId{2});
+  ASSERT_TRUE(check);
+  ASSERT_EQ(*check, o);
+
+  // update with invalid ID
+  o.id = ExampleId{99};
+  isOkay = t.overwrite(o);
+  ASSERT_FALSE(isOkay);
 }

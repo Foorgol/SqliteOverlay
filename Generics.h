@@ -326,6 +326,13 @@ namespace SqliteOverlay {
       }
 
       sqlBaseInsert += ")";
+
+      sqlOverwriteUpdate = sqlBaseUpdate;
+      for (int i = 1; i < AC::nCols; ++i) {
+        sqlOverwriteUpdate += std::string{AC::ColDefs[i].name} + "=?" + std::to_string(i+1) + ",";
+      }
+      sqlOverwriteUpdate.pop_back();   // remove the last ','
+      sqlOverwriteUpdate += " WHERE " + std::string{AC::ColDefs[0].name} + "=?1";
     }
 
     //---------------------------------------------------------------
@@ -395,7 +402,7 @@ namespace SqliteOverlay {
     //---------------------------------------------------------------
 
     template<typename ...Args>
-    int updateObject(const IdType& id, Args ... columnValuePairs) const {
+    bool updateObject(const IdType& id, Args ... columnValuePairs) const {
       std::string sql = sqlBaseUpdate;
       recursiveUpdateBuilder_langStep(sql, 1, std::forward<Args>(columnValuePairs)...);
       sql += " WHERE " + std::string{AC::ColDefs[0].name} + "=";
@@ -410,7 +417,18 @@ namespace SqliteOverlay {
       std::cout << stmt.getExpandedSQL() << std::endl;
 
       stmt.step();  // always suceeds; might throw, though
-      return this->dbPtr->getRowsAffected();
+      return (this->dbPtr->getRowsAffected() != 0);
+    }
+
+    //---------------------------------------------------------------
+
+    bool overwrite(const DbObj& obj) const {
+      auto stmt = this->dbPtr->prepStatement(sqlOverwriteUpdate);
+      AC::bindToStmt(obj, stmt);
+      std::cout << stmt.getExpandedSQL() << std::endl;
+
+      stmt.step();  // always suceeds; might throw, though
+      return (this->dbPtr->getRowsAffected() != 0);
     }
 
   protected:
@@ -419,6 +437,8 @@ namespace SqliteOverlay {
     template<class T, typename ...Args>
     void recursiveUpdateBuilder_langStep(std::string& s, int nextParaIdx, Col col, T&& val, Args ... args) const {
       static_assert (!std::is_same_v<T, Col>, "fehler");
+      assert(col != Col::id);
+
       s += Parent::colNameFromEnum(col) + "=?" + std::to_string(nextParaIdx) + ",";
       recursiveUpdateBuilder_langStep(s, nextParaIdx + 1, std::forward<Args>(args)...);
     }
@@ -427,6 +447,8 @@ namespace SqliteOverlay {
     template<class T>
     void recursiveUpdateBuilder_langStep(std::string& s, int nextParaIdx, Col col, T&& val) const {
       static_assert (!std::is_same_v<T, Col>, "fehler");
+      assert(col != Col::id);
+
       s += Parent::colNameFromEnum(col) + "=?" + std::to_string(nextParaIdx);
     }
 
@@ -460,6 +482,7 @@ namespace SqliteOverlay {
     const std::string sqlBaseDelete;
     const std::string sqlBaseDeleteById;
     const std::string sqlBaseUpdate;
+    std::string sqlOverwriteUpdate;
     std::string sqlBaseInsert;
   };
 }
