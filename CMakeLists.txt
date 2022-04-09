@@ -56,6 +56,7 @@ set(LIB_SOURCES
     TabRow.h
     ClausesAndQueries.cpp
     ClausesAndQueries.h
+    Generics.h
     #GenericDatabaseObject.cpp
     #GenericObjectManager.cpp
     GenericDatabaseObject.h
@@ -150,6 +151,8 @@ set(LIB_SOURCES_TST
     tests/tstTableCreator.cpp
     tests/tstIterators.cpp
     tests/tstThreadsAndBusy.cpp
+    tests/tstGenerics.cpp
+    tests/ExampleTableAdapter.h
 )
 
 find_package(GTest)
@@ -159,7 +162,7 @@ if (GTEST_FOUND AND BUILD_TESTS)
     include_directories("." ${GTEST_INCLUDE_DIRS})
 
     add_executable(${PROJECT_NAME}_Tests ${LIB_SOURCES_TST})
-    set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD 17)
+    set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD 20)
     set_property(TARGET ${PROJECT_NAME}_Tests PROPERTY CXX_STANDARD_REQUIRED ON)
 
     set_target_properties(${PROJECT_NAME}_Tests PROPERTIES

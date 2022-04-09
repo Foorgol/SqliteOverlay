@@ -121,7 +121,7 @@ void DatabaseTestScenario::prepScenario01()
   execStmt("INSERT INTO t1 VALUES (42, 23.23, 'Hallo', " + nowStr + ")");
   execStmt("INSERT INTO t1 VALUES (NULL, 666.66, 'Hi', " + nowStr + ")");
   sql = "INSERT INTO t1 VALUES (84, NULL, '";
-  sql += u8"äöüÄÖÜ";
+  sql += "äöüÄÖÜ";
   sql += "', " + nowStr + ")";
   execStmt(sql);
   execStmt("INSERT INTO t1 VALUES (84, NULL, 'Ho', " + nowStr + ")");

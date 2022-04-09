@@ -137,7 +137,7 @@ TEST_F(DatabaseTestScenario, QueryStringUTF8)
   auto db = getScenario01();
 
   string sql = "SELECT s FROM t1 WHERE rowid = 3";
-  ASSERT_EQ(u8"äöüÄÖÜ", db.execScalarQuery<std::string>(sql));
+  ASSERT_EQ("äöüÄÖÜ", db.execScalarQuery<std::string>(sql));
 }
 
 //----------------------------------------------------------------
