@@ -111,7 +111,7 @@ namespace SqliteOverlay {
 
     template<typename ...Args>
     OptOpject singleObjectByColumnValue(Args ... whereArgs) const {
-      auto stmt = stmtWithWhere(sqlBaseSelect, 1, std::forward<Args>(whereArgs)...);
+      auto stmt = stmtWithWhere(sqlBaseSelect, 1, 1, std::forward<Args>(whereArgs)...);
       return stmt2SingleObject(stmt);
     }
 
@@ -119,7 +119,7 @@ namespace SqliteOverlay {
 
     template<typename ...Args>
     ObjList objectsByColumnValue(Args ... whereArgs) const {
-      auto stmt = stmtWithWhere(sqlBaseSelect, 0, std::forward<Args>(whereArgs)...);
+      auto stmt = stmtWithWhere(sqlBaseSelect, 0, 1, std::forward<Args>(whereArgs)...);
       return stmt2ObjectList(stmt);
     }
 
@@ -276,9 +276,9 @@ namespace SqliteOverlay {
     //-------------------------------------------------------------------------------------------------
 
     template<typename ...Args>
-    SqliteOverlay::SqlStatement stmtWithWhere(const std::string& baseSql, int limit, Args ... whereArgs) const {
+    SqliteOverlay::SqlStatement stmtWithWhere(const std::string& baseSql, int limit, int firstWhereParaIdx, Args ... whereArgs) const {
       std::string sql = baseSql + " WHERE ";
-      recursiveWhereBuilder_langStep(sql, 1, std::forward<Args>(whereArgs)...);
+      recursiveWhereBuilder_langStep(sql, firstWhereParaIdx, std::forward<Args>(whereArgs)...);
 
       if (limit > 0) {
         sql += " LIMIT " + std::to_string(limit);
@@ -287,7 +287,7 @@ namespace SqliteOverlay {
       std::cout << sql << std::endl;
 
       auto stmt = dbPtr->prepStatement(sql);
-      recursiveWhereBuilder_bindStep(stmt, 1, std::forward<Args>(whereArgs)...);
+      recursiveWhereBuilder_bindStep(stmt, firstWhereParaIdx, std::forward<Args>(whereArgs)...);
 
       std::cout << stmt.getExpandedSQL() << "\n" << std::endl;
       return stmt;
@@ -393,7 +393,7 @@ namespace SqliteOverlay {
 
     template<typename ...Args>
     int del(Args ... whereArgs) const {
-      auto stmt = this->stmtWithWhere(sqlBaseDelete, 0, std::forward<Args>(whereArgs)...);
+      auto stmt = this->stmtWithWhere(sqlBaseDelete, 0, 1, std::forward<Args>(whereArgs)...);
 
       stmt.step();  // always suceeds; might throw, though
       return this->dbPtr->getRowsAffected();
@@ -418,6 +418,42 @@ namespace SqliteOverlay {
 
       stmt.step();  // always suceeds; might throw, though
       return (this->dbPtr->getRowsAffected() != 0);
+    }
+
+    //---------------------------------------------------------------
+
+    template<class T, typename ...Args>
+    int updateColumn(Col col, T&& val, Args ... whereArgs) const {
+      std::string sql = sqlBaseUpdate;
+      sql += this->colNameFromEnum(col) + "=?1";
+      auto stmt = this->stmtWithWhere(sql, 0, 2, std::forward<Args>(whereArgs)...);
+      if constexpr (std::is_same_v<T, std::nullopt_t> || std::is_same_v<T, std::nullopt_t&> || std::is_same_v<T, const std::nullopt_t&>) {
+        stmt.bindNull(1);
+      } else {
+        stmt.bind(1, std::forward<T>(val));
+      }
+      std::cout << stmt.getExpandedSQL() << std::endl;
+
+      stmt.step();  // always suceeds; might throw, though
+      return this->dbPtr->getRowsAffected();
+    }
+
+    //---------------------------------------------------------------
+
+    template<class T>
+    int updateColumn(Col col, T&& val) const {
+      std::string sql = sqlBaseUpdate;
+      sql += this->colNameFromEnum(col) + "=?1";
+      auto stmt = this->dbPtr->prepStatement(sql);
+      if constexpr(std::is_same_v<T, std::nullopt_t>) {
+        stmt.bindNull(1);
+      } else {
+        stmt.bind(1, std::forward<T>(val));
+      }
+      std::cout << stmt.getExpandedSQL() << std::endl;
+
+      stmt.step();  // always suceeds; might throw, though
+      return this->dbPtr->getRowsAffected();
     }
 
     //---------------------------------------------------------------
@@ -457,7 +493,7 @@ namespace SqliteOverlay {
     void recursiveValueBinder(SqliteOverlay::SqlStatement& stmt, int nextParaIdx, Col col, T&& val, Args ... args) const {
       static_assert (!std::is_same_v<T, Col>, "fehler");
 
-      if constexpr (std::is_same_v<T, std::nullopt_t>) {
+      if constexpr (std::is_same_v<T, std::nullopt_t> || std::is_same_v<T, std::nullopt_t&> || std::is_same_v<T, const std::nullopt_t&>) {
         stmt.bindNull(nextParaIdx);
       } else {
         stmt.bind(nextParaIdx, std::forward<T>(val));
@@ -471,7 +507,7 @@ namespace SqliteOverlay {
     void recursiveValueBinder(SqliteOverlay::SqlStatement& stmt, int nextParaIdx, Col col, T&& val) const {
       static_assert (!std::is_same_v<T, Col>, "fehler");
 
-      if constexpr (std::is_same_v<T, std::nullopt_t>) {
+      if constexpr (std::is_same_v<T, std::nullopt_t> || std::is_same_v<T, std::nullopt_t&> || std::is_same_v<T, const std::nullopt_t&>) {
         stmt.bindNull(nextParaIdx);
       } else {
         stmt.bind(nextParaIdx, std::forward<T>(val));

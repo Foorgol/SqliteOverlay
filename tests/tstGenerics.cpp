@@ -286,3 +286,32 @@ TEST_F(DatabaseTestScenario, Generics_OverwriteObject)
   isOkay = t.overwrite(o);
   ASSERT_FALSE(isOkay);
 }
+
+//------------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, Generics_UpdateColumn)
+{
+  SampleDB db = getScenario01();
+
+  ExampleTable t{&db};
+
+  auto n = t.updateColumn(ExampleTable::Col::realCol, 3.14, ExampleTable::Col::realCol, ColumnValueComparisonOp::Null);
+  ASSERT_EQ(n, 2);
+  auto check = t.singleObjectById(ExampleId{3});
+  ASSERT_TRUE(check);
+  ASSERT_EQ(check->f, 3.14);
+  check = t.singleObjectById(ExampleId{3});
+  ASSERT_TRUE(check);
+  ASSERT_EQ(check->f, 3.14);
+
+  // update to NULL
+  n = t.updateColumn(ExampleTable::Col::realCol, std::nullopt, ExampleTable::Col::intCol, 42);
+  ASSERT_EQ(n, 1);
+  check = t.singleObjectById(ExampleId{1});
+  ASSERT_TRUE(check);
+  ASSERT_FALSE(check->f);
+
+  // update invalid
+  n = t.updateColumn(ExampleTable::Col::realCol, std::nullopt, ExampleTable::Col::intCol, ColumnValueComparisonOp::GreaterThan, 9999);
+  ASSERT_EQ(n, 0);
+}
