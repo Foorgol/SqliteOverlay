@@ -110,6 +110,22 @@ namespace SqliteOverlay {
     //-------------------------------------------------------------------------------------------------
 
     template<typename ...Args>
+    int objCount(Args ... whereArgs) const {
+      auto stmt = stmtWithWhere(sqlCountAll, 0, 1, std::forward<Args>(whereArgs)...);
+      if (!stmt.dataStep()) return -1;  // should never happen
+      return stmt.template get<int>(0);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    template<typename ...Args>
+    bool has(Args ... whereArgs) const {
+      return (objCount(std::forward<Args>(whereArgs)...) > 0);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    template<typename ...Args>
     OptOpject singleObjectByColumnValue(Args ... whereArgs) const {
       auto stmt = stmtWithWhere(sqlBaseSelect, 1, 1, std::forward<Args>(whereArgs)...);
       return stmt2SingleObject(stmt);
@@ -308,6 +324,8 @@ namespace SqliteOverlay {
     using OptObj = typename Parent::OptOpject;
     using ObjList = typename Parent::ObjList;
 
+    using Parent::has;
+
     //---------------------------------------------------------------
 
     explicit GenericTable(SqliteOverlay::SqliteDatabase* db) noexcept
@@ -348,6 +366,16 @@ namespace SqliteOverlay {
       }
 
       return Parent::stmt2SingleObject(stmt);
+    }
+
+    //---------------------------------------------------------------
+
+    bool has(const IdType& id) const {
+      if constexpr (std::is_same_v<IdType, int>) {
+        return (this->objCount(Col::id, id) > 0);
+      } else {
+        return (this->objCount(Col::id, id.get()) > 0);
+      }
     }
 
     //---------------------------------------------------------------

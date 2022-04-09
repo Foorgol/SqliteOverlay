@@ -178,6 +178,23 @@ TEST_F(DatabaseTestScenario, Generics_Count)
 
   auto n = t.objCount();
   ASSERT_EQ(n, 5);
+
+  n = t.objCount(ExampleTable::Col::realCol, ColumnValueComparisonOp::Null);
+  ASSERT_EQ(n, 2);
+
+  n = t.objCount(
+        ExampleTable::Col::intCol, ColumnValueComparisonOp::Null,
+        ExampleTable::Col::realCol, ColumnValueComparisonOp::GreaterThan, 100
+        );
+  ASSERT_EQ(n, 1);
+
+  ASSERT_TRUE(t.has(ExampleId{3}));
+  ASSERT_FALSE(t.has(ExampleId{42}));
+
+  ASSERT_TRUE(t.has(
+                ExampleTable::Col::intCol, ColumnValueComparisonOp::Null,
+                ExampleTable::Col::realCol, ColumnValueComparisonOp::GreaterThan, 100
+                ));
 }
 
 //------------------------------------------------------------------
