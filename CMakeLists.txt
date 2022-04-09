@@ -117,6 +117,7 @@ set(INSTALLATION_HEADERS
     ClausesAndQueries.h
     GenericDatabaseObject.h
     GenericObjectManager.h
+    Generics.h
     KeyValueTab.h
     TableCreator.h
     Transaction.h
