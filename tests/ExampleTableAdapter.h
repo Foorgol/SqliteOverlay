@@ -2,6 +2,7 @@
 
 #include <Sloppy/NamedType.h>
 #include <Sloppy/DateTime/DateAndTime.h>
+#include <Sloppy/Utils.h>
 
 #include "../Generics.h"
 
@@ -73,11 +74,10 @@ public:
     obj.f ? stmt.bind(3, obj.f.value()) : stmt.bindNull(3);
     stmt.bind(4, obj.s);
     std::string d = std::to_string(static_cast<int>(obj.d.year())) + "-";
-    d += std::to_string(static_cast<unsigned>(obj.d.month())) + "-";
-    d += std::to_string(static_cast<unsigned>(obj.d.day()));
+    d += Sloppy::zeroPaddedNumber(static_cast<unsigned>(obj.d.month()), 2) + "-";
+    d += Sloppy::zeroPaddedNumber(static_cast<unsigned>(obj.d.day()), 2);
     stmt.bind(5, d);
   }
 };
-
 
 using ExampleTable = SqliteOverlay::GenericTable<ExampleAdapterClass>;

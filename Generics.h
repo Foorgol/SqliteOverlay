@@ -56,6 +56,9 @@ namespace SqliteOverlay {
     Other
   };
 
+  template<class ValueType>
+  using DbErrorOr = Sloppy::ResultOrError<ValueType, DbOperationError>;
+
   enum class ColumnValueComparisonOp {
     Equals,
     NotEqual,
@@ -83,10 +86,11 @@ namespace SqliteOverlay {
   public:
     using Col = typename AC::Col;
 
-    using ObjList = std::vector<typename AC::DbObj>;
-    using OptOpject = std::optional<typename AC::DbObj>;
-    using SingleObjectOrError = Sloppy::ResultOrError<typename AC::DbObj, DbOperationError>;
-    using OptionalObjectOrError = Sloppy::ResultOrError<std::optional<typename AC::DbObj>, DbOperationError>;
+    using DbObj = typename AC::DbObj;
+    using ObjList = std::vector<DbObj>;
+    using OptOpject = std::optional<DbObj>;
+    using SingleObjectOrError = Sloppy::ResultOrError<DbObj, DbOperationError>;
+    using OptionalObjectOrError = Sloppy::ResultOrError<std::optional<DbObj>, DbOperationError>;
     using ListOrError = Sloppy::ResultOrError<ObjList, DbOperationError>;
 
     explicit GenericView(SqliteOverlay::SqliteDatabase* db) noexcept
@@ -329,10 +333,22 @@ namespace SqliteOverlay {
     using Parent = GenericView<AC>;
 
     using OptionalObjectOrError = typename Parent::OptionalObjectOrError;
+    using DbObj = typename Parent::DbObj;
 
+    explicit GenericTable(SqliteOverlay::SqliteDatabase* db) noexcept : GenericView<AC>(db) {
+      sqlBaseInsert =
+          "INSERT INTO " + std::string{AC::TabName} +
+          " (" + std::string{AC::FullSelectColList} + ") VALUES (";
 
-    explicit GenericTable(SqliteOverlay::SqliteDatabase* db) noexcept
-      : GenericView<AC>(db) {}
+      for (int i = 1; i <= AC::nCols; ++i) {
+        sqlBaseInsert += "?" + std::to_string(i);
+        if (i != AC::nCols) sqlBaseInsert += ",";
+      }
+
+      sqlBaseInsert += ")";
+      std::cout << sqlBaseInsert << std::endl;
+    }
+
 
     OptionalObjectOrError singleObjectById(IdType id) const noexcept {
       const std::string sql = Parent::sqlBaseSelect + " WHERE rowid = ?1";
@@ -347,5 +363,34 @@ namespace SqliteOverlay {
 
       return Parent::stmt2SingleObject(*stmt);
     }
+
+    DbErrorOr<IdType> insert(const DbObj& obj) const noexcept {
+      try {
+        auto stmt = this->dbPtr->prepStatement(sqlBaseInsert);
+
+        // let the adapter class bind the object values to
+        // the statement and then overwrite the ID value with
+        // NULL so that we get an SQLite-defined ID
+        AC::bindToStmt(obj, stmt);
+        stmt.bindNull(1);
+        std::cout << stmt.getExpandedSQL() << std::endl;
+
+        stmt.step();  // always suceeds; might throw, though
+
+        return IdType{this->dbPtr->getLastInsertId()};
+      }
+      catch (SqliteOverlay::BusyException&) {
+        return DbOperationError::Busy;
+      }
+      catch (SqliteOverlay::ConstraintFailedException&) {
+        return DbOperationError::Constraint;
+      }
+      catch (...) {
+        return DbOperationError::Other;
+      }
+    }
+
+  private:
+    std::string sqlBaseInsert;
   };
 }

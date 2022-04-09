@@ -153,3 +153,26 @@ TEST_F(DatabaseTestScenario, Generics_SelectMultiple)
   ASSERT_TRUE(v.isOk());
   ASSERT_EQ(v->size(), 0);
 }
+//------------------------------------------------------------------
+
+TEST_F(DatabaseTestScenario, Generics_Insert)
+{
+  SampleDB db = getScenario01();
+
+  ExampleTable t{&db};
+  ExampleObj newObj {
+    .id = ExampleId{999},
+    .i = 100,
+    .f = 3.1415,
+    .s = "my insert",
+    .d = Sloppy::DateTime::WallClockTimepoint_secs().ymd()
+  };
+  auto newId = t.insert(newObj);
+  ASSERT_TRUE(newId.isOk());
+  ASSERT_EQ(*newId, ExampleId{6});
+  newObj.id = ExampleId{6};
+  const auto readbackObj = t.singleObjectById(newObj.id);
+  ASSERT_TRUE(readbackObj.isOk());
+  ASSERT_TRUE(readbackObj->has_value());
+  ASSERT_EQ(**readbackObj, newObj);
+}
