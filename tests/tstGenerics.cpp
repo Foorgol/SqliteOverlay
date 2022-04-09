@@ -227,13 +227,13 @@ TEST_F(DatabaseTestScenario, Generics_UpdateSingle)
 
   ExampleTable t{&db};
 
-  auto n = t.updateSingle(ExampleId{2}, ExampleTable::Col::intCol, 4242);
+  auto n = t.updateObject(ExampleId{2}, ExampleTable::Col::intCol, 4242);
   ASSERT_EQ(n, 1);
   auto check = t.singleObjectById(ExampleId{2});
   ASSERT_TRUE(check);
   ASSERT_EQ(check->i, 4242);
 
-  n = t.updateSingle(ExampleId{2},
+  n = t.updateObject(ExampleId{2},
                      ExampleTable::Col::intCol, 9999,
                      ExampleTable::Col::stringCol, "xyz"
                      );
@@ -242,4 +242,16 @@ TEST_F(DatabaseTestScenario, Generics_UpdateSingle)
   ASSERT_TRUE(check);
   ASSERT_EQ(check->i, 9999);
   ASSERT_EQ(check->s, "xyz");
+
+  // update a value to NULL
+  n = t.updateObject(ExampleId{2},
+                     ExampleTable::Col::intCol, std::nullopt,
+                     ExampleTable::Col::realCol, std::nullopt
+                     );
+  ASSERT_EQ(n, 1);
+  check = t.singleObjectById(ExampleId{2});
+  ASSERT_TRUE(check);
+  ASSERT_EQ(check->i, std::nullopt);
+  ASSERT_EQ(check->f, std::nullopt);
+
 }
