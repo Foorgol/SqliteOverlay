@@ -520,7 +520,7 @@ namespace SqliteOverlay {
         }
       }
 
-      tc.createTableAndResetCreator(*(this->dbPtr), AC::tabName);
+      tc.createTableAndResetCreator(*(this->dbPtr), AC::TabName);
     }
 
   protected:
