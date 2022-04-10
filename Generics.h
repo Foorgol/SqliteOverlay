@@ -37,7 +37,7 @@ namespace SqliteOverlay {
       std::is_same_v<decltype (T::TabName), const std::string_view> &&   // we need the name of the underlying SQLite table
       ConstStdArray<decltype (T::ColDefs), ColumnDescription, T::nCols> &&   // we need a list of column names
       std::is_same_v<decltype (T::FullSelectColList), const std::string_view> &&   // we need a comma-separated string of column names for SELECT, INSERT, ...
-      std::is_aggregate_v<typename T::DbObj> &&   // we need a standardized name for the database object struct
+      (std::is_aggregate_v<typename T::DbObj> || std::is_class_v<typename T::DbObj>) &&   // we need a standardized name for the database object struct
       requires (T v, const SqliteOverlay::SqlStatement& stmt) {
         { T::fromSelectStmt(stmt) } -> std::same_as<typename T::DbObj>;   // we need a function that fills/generates an object from a SELECT statement
       };
@@ -46,7 +46,6 @@ namespace SqliteOverlay {
   concept TableAdapterClass =
       ViewAdapterClass<T> &&  // we need everything from a ViewAdapter plus ....
       (std::is_same_v<typename T::IdType, int> || std::is_same_v<typename T::IdType::UnderlyingType, int>) &&   // an "int" or "named type type" as ID type
-      std::is_same_v<decltype (T::DbObj::id), typename T::IdType> &&   // the database object must have an "id" field
       (static_cast<int>(T::Col::id) == 0) &&  // there must be a column enum named "id" and it must have index 0
       requires (T v, SqliteOverlay::SqlStatement& stmt, const typename T::DbObj obj) {
         { T::bindToStmt(obj, stmt) };   // we need a function that binds values of a database object to an SQL statement
@@ -412,12 +411,6 @@ namespace SqliteOverlay {
       stmt.step();  // always suceeds; might throw, though
 
       return this->dbPtr->getRowsAffected();
-    }
-
-    //---------------------------------------------------------------
-
-    int del(const DbObj& obj) const {
-      return del(obj.id);
     }
 
     //---------------------------------------------------------------
