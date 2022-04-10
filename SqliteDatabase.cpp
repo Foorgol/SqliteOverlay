@@ -859,9 +859,9 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  string buildForeignKeyClause(const string& referedTable, ConsistencyAction onDelete, ConsistencyAction onUpdate, string referedColumn)
+  string buildForeignKeyClause(string_view referedTable, ConsistencyAction onDelete, ConsistencyAction onUpdate, string_view referedColumn)
   {
-    string result = "REFERENCES " + referedTable + "(" + referedColumn + ")";
+    string result = "REFERENCES " + std::string{referedTable} + "(" + std::string{referedColumn} + ")";
 
     result += " ON DELETE " + to_string(onDelete);
 

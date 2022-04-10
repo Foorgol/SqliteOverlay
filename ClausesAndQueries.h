@@ -29,10 +29,10 @@ namespace SqliteOverlay {
     template<class T>
     void addCol(
         std::string_view colName,
-        const T& val
+        T&& val
         )
     {
-      addCol(colName, "=", val);
+      addCol(colName, "=", std::forward<T>(val));
     }
 
     template<class T>

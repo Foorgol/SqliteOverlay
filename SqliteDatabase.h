@@ -100,10 +100,10 @@ namespace SqliteOverlay
    * \returns a string with a foreign key clause for use in a CREATE TABLE statement.
    */
   std::string buildForeignKeyClause(
-      const std::string& referedTable,   ///< the name of the table that this column refers to
+      std::string_view referedTable,   ///< the name of the table that this column refers to
       ConsistencyAction onDelete,   ///< the action to be taken if the refered row is being deleted
       ConsistencyAction onUpdate,   ///< the action to be taken if the refered row is updated
-      std::string referedColumn="id"   ///< the name of the column we're pointing to in the refered table
+      std::string_view referedColumn="id"   ///< the name of the column we're pointing to in the refered table
       );
 
   //----------------------------------------------------------------------------

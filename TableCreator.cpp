@@ -30,7 +30,7 @@ using namespace std;
 namespace SqliteOverlay
 {
 
-  void TableCreator::addCol(const string& colName, ColumnDataType t, ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause)
+  void TableCreator::addCol(std::string_view colName, ColumnDataType t, ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause)
   {
     if (colName.empty())
     {
@@ -39,23 +39,23 @@ namespace SqliteOverlay
 
     string colDef = buildColumnConstraint(uniqueConflictClause, notNullConflictClause);
 
-    colDef = colName + " " + to_string(t) + " " + colDef;
+    colDef = std::string{colName} + " " + to_string(t) + " " + colDef;
 
     colDefs.push_back(colDef);
   }
 
   //----------------------------------------------------------------------------
 
-  void TableCreator::addCol(const string& colDef)
+  void TableCreator::addCol(std::string_view colDef)
   {
-    colDefs.push_back(colDef);
+    colDefs.push_back(std::string{colDef});
   }
 
   //----------------------------------------------------------------------------
 
-  void TableCreator::addForeignKey(const string& keyName, const string& referedTable, ConsistencyAction onDelete, ConsistencyAction onUpdate, ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause, const string& referedColumn)
+  void TableCreator::addForeignKey(std::string_view keyName, std::string_view referedTable, ConsistencyAction onDelete, ConsistencyAction onUpdate, ConflictClause uniqueConflictClause, ConflictClause notNullConflictClause, std::string_view referedColumn)
   {
-    string ref = "FOREIGN KEY (" + keyName + ") ";
+    string ref = "FOREIGN KEY (" + std::string{keyName} + ") ";
     ref += buildForeignKeyClause(referedTable, onDelete, onUpdate, referedColumn);
 
     constraintCache.push_back(ref);
@@ -86,11 +86,11 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  string TableCreator::getSqlStatement(const string& tabName) const
+  string TableCreator::getSqlStatement(string_view tabName) const
   {
     // assemble a "create table" statement from the column definitions and the
     // stored foreign key clauses
-    string sql = "CREATE TABLE IF NOT EXISTS " + tabName + " (";
+    string sql = "CREATE TABLE IF NOT EXISTS " + std::string{tabName} + " (";
 
     // we always define a column "id" that becomes an alias for "rowid"
     // but can be referenced by a foreign key constraint
@@ -115,7 +115,7 @@ namespace SqliteOverlay
 
   //----------------------------------------------------------------------------
 
-  DbTab TableCreator::createTableAndResetCreator(const SqliteDatabase& db, const string& tabName)
+  DbTab TableCreator::createTableAndResetCreator(const SqliteDatabase& db, std::string_view tabName)
   {
     // get the SQL statement
     const string sql = getSqlStatement(tabName);
@@ -123,7 +123,7 @@ namespace SqliteOverlay
 
     reset();
 
-    return DbTab(db, tabName, false);
+    return DbTab(db, std::string{tabName}, false);
   }
 
   //----------------------------------------------------------------------------

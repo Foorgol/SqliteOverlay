@@ -8,11 +8,14 @@
 
 #include "SqliteDatabase.h"
 #include "SqlStatement.h"
+#include "TableCreator.h"
 
 namespace SqliteOverlay {
   struct ForeignKeyDescription {
     std::string_view referredTableName;
     std::string_view referredColumnName;
+    SqliteOverlay::ConsistencyAction onDelete;
+    SqliteOverlay::ConsistencyAction onUpdate;
   };
 
   struct ColumnDescription {
@@ -493,6 +496,31 @@ namespace SqliteOverlay {
 
       stmt.step();  // always suceeds; might throw, though
       return (this->dbPtr->getRowsAffected() != 0);
+    }
+
+    //---------------------------------------------------------------
+
+    void createTable(bool includeIdColumn) const {
+      SqliteOverlay::TableCreator tc;
+      const int firstIdx = includeIdColumn ? 0 : 1;
+      for (int idx = firstIdx ; idx < AC::nCols; ++idx) {
+        const ColumnDescription& descr = AC::ColDefs[idx];
+        if (descr.foreignKey) {
+          tc.addForeignKey(
+                std::string{descr.name},
+                descr.foreignKey->referredTableName,
+                descr.foreignKey->onDelete,
+                descr.foreignKey->onUpdate,
+                descr.uniqueConflictClause,
+                descr.notNullConflictClause,
+                descr.foreignKey->referredColumnName
+                );
+        } else {
+          tc.addCol(descr.name, descr.dataType, descr.uniqueConflictClause, descr.notNullConflictClause);
+        }
+      }
+
+      tc.createTableAndResetCreator(*(this->dbPtr), AC::tabName);
     }
 
   protected:
