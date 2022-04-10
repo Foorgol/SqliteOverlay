@@ -113,8 +113,8 @@ namespace SqliteOverlay {
     //-------------------------------------------------------------------------------------------------
 
     template<typename ...Args>
-    int objCount(Args ... whereArgs) const {
-      auto stmt = stmtWithWhere(sqlCountAll, 0, 1, std::forward<Args>(whereArgs)...);
+    int objCount(Col col, Args&& ... whereArgs) const {
+      auto stmt = stmtWithWhere(sqlCountAll, 0, 1, col, std::forward<Args>(whereArgs)...);
       if (!stmt.dataStep()) return -1;  // should never happen
       return stmt.template get<int>(0);
     }
@@ -122,23 +122,23 @@ namespace SqliteOverlay {
     //-------------------------------------------------------------------------------------------------
 
     template<typename ...Args>
-    bool has(Args ... whereArgs) const {
-      return (objCount(std::forward<Args>(whereArgs)...) > 0);
+    bool has(Col col, Args&& ... whereArgs) const {
+      return (objCount(col, std::forward<Args>(whereArgs)...) > 0);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     template<typename ...Args>
-    OptOpject singleObjectByColumnValue(Args ... whereArgs) const {
-      auto stmt = stmtWithWhere(sqlBaseSelect, 1, 1, std::forward<Args>(whereArgs)...);
+    OptOpject singleObjectByColumnValue(Col col, Args&& ... whereArgs) const {
+      auto stmt = stmtWithWhere(sqlBaseSelect, 1, 1, col, std::forward<Args>(whereArgs)...);
       return stmt2SingleObject(stmt);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     template<typename ...Args>
-    ObjList objectsByColumnValue(Args ... whereArgs) const {
-      auto stmt = stmtWithWhere(sqlBaseSelect, 0, 1, std::forward<Args>(whereArgs)...);
+    ObjList objectsByColumnValue(Col col, Args&& ... whereArgs) const {
+      auto stmt = stmtWithWhere(sqlBaseSelect, 0, 1, col, std::forward<Args>(whereArgs)...);
       return stmt2ObjectList(stmt);
     }
 
@@ -185,7 +185,7 @@ namespace SqliteOverlay {
 
     // Laufende Iteration mit  "Col = Val" und Nachfolgespalte
     template<class T, typename ...Args>
-    void recursiveWhereBuilder_langStep(std::string& w, int nextParaIdx, Col col, T&& val, Col nextCol, Args ... args) const {
+    void recursiveWhereBuilder_langStep(std::string& w, int nextParaIdx, Col col, T&& val, Col nextCol, Args&& ... args) const {
       static_assert (!std::is_same_v<T, Col>, "fehler");
       static_assert (!std::is_same_v<T, ColumnValueComparisonOp>, "fehler");
       w += colNameFromEnum(col) + "=?" + std::to_string(nextParaIdx) + " AND ";
@@ -195,7 +195,7 @@ namespace SqliteOverlay {
 
     // Laufende Iteration mit  "Col NOT NULL" und Nachfolgespalte
     template<typename ...Args>
-    void recursiveWhereBuilder_langStep(std::string& w, int nextParaIdx, Col col, ColumnValueComparisonOp op, Col nextCol, Args ... args) const {
+    void recursiveWhereBuilder_langStep(std::string& w, int nextParaIdx, Col col, ColumnValueComparisonOp op, Col nextCol, Args&& ... args) const {
       assert((op == ColumnValueComparisonOp::NotNull) || (op == ColumnValueComparisonOp::Null));
 
       w += colNameFromEnum(col) + std::string{ComparisonOp2String[static_cast<int>(op)]};
@@ -205,7 +205,7 @@ namespace SqliteOverlay {
 
     // Laufende Iteration mit  "Col op Val" und Nachfolgespalte
     template<class T, typename ...Args>
-    void recursiveWhereBuilder_langStep(std::string& w, int nextParaIdx, Col col, ColumnValueComparisonOp op, T&& val, Col nextCol, Args ... args) const {
+    void recursiveWhereBuilder_langStep(std::string& w, int nextParaIdx, Col col, ColumnValueComparisonOp op, T&& val, Col nextCol, Args&& ... args) const {
       static_assert (!std::is_same_v<T, Col>, "fehler");
       static_assert (!std::is_same_v<T, ColumnValueComparisonOp>, "fehler");
 
@@ -241,7 +241,7 @@ namespace SqliteOverlay {
 
     // Laufende Iteration mit  "Col = Val" und Nachfolgespalte
     template<class T, typename ...Args>
-    void recursiveWhereBuilder_bindStep(SqliteOverlay::SqlStatement& stmt, int nextParaIdx, Col col, T&& val, Col nextCol, Args ... args) const {
+    void recursiveWhereBuilder_bindStep(SqliteOverlay::SqlStatement& stmt, int nextParaIdx, Col col, T&& val, Col nextCol, Args&& ... args) const {
       static_assert (!std::is_same_v<T, Col>, "fehler");
       static_assert (!std::is_same_v<T, ColumnValueComparisonOp>, "fehler");
 
@@ -251,7 +251,7 @@ namespace SqliteOverlay {
 
     // Laufende Iteration mit  "Col NOT NULL" und Nachfolgespalte
     template<typename ...Args>
-    void recursiveWhereBuilder_bindStep(SqliteOverlay::SqlStatement& stmt, int nextParaIdx, Col col, ColumnValueComparisonOp op, Col nextCol, Args ... args) const {
+    void recursiveWhereBuilder_bindStep(SqliteOverlay::SqlStatement& stmt, int nextParaIdx, Col col, ColumnValueComparisonOp op, Col nextCol, Args&& ... args) const {
       assert((op == ColumnValueComparisonOp::NotNull) || (op == ColumnValueComparisonOp::Null));
 
       recursiveWhereBuilder_bindStep(stmt, nextParaIdx, nextCol, std::forward<Args>(args)...);
@@ -259,7 +259,7 @@ namespace SqliteOverlay {
 
     // Laufende Iteration mit  "Col op Val" und Nachfolgespalte
     template<class T, typename ...Args>
-    void recursiveWhereBuilder_bindStep(SqliteOverlay::SqlStatement& stmt, int nextParaIdx, Col col, ColumnValueComparisonOp op, T&& val, Col nextCol, Args ... args) const {
+    void recursiveWhereBuilder_bindStep(SqliteOverlay::SqlStatement& stmt, int nextParaIdx, Col col, ColumnValueComparisonOp op, T&& val, Col nextCol, Args&& ... args) const {
       static_assert (!std::is_same_v<T, Col>, "fehler");
       static_assert (!std::is_same_v<T, ColumnValueComparisonOp>, "fehler");
 
@@ -295,9 +295,9 @@ namespace SqliteOverlay {
     //-------------------------------------------------------------------------------------------------
 
     template<typename ...Args>
-    SqliteOverlay::SqlStatement stmtWithWhere(const std::string& baseSql, int limit, int firstWhereParaIdx, Args ... whereArgs) const {
+    SqliteOverlay::SqlStatement stmtWithWhere(const std::string& baseSql, int limit, int firstWhereParaIdx, Col col, Args&& ... whereArgs) const {
       std::string sql = baseSql + " WHERE ";
-      recursiveWhereBuilder_langStep(sql, firstWhereParaIdx, std::forward<Args>(whereArgs)...);
+      recursiveWhereBuilder_langStep(sql, firstWhereParaIdx, col, std::forward<Args>(whereArgs)...);
 
       if (limit > 0) {
         sql += " LIMIT " + std::to_string(limit);
@@ -306,7 +306,7 @@ namespace SqliteOverlay {
       std::cout << sql << std::endl;
 
       auto stmt = dbPtr->prepStatement(sql);
-      recursiveWhereBuilder_bindStep(stmt, firstWhereParaIdx, std::forward<Args>(whereArgs)...);
+      recursiveWhereBuilder_bindStep(stmt, firstWhereParaIdx, col, std::forward<Args>(whereArgs)...);
 
       std::cout << stmt.getExpandedSQL() << "\n" << std::endl;
       return stmt;
@@ -423,8 +423,8 @@ namespace SqliteOverlay {
     //---------------------------------------------------------------
 
     template<typename ...Args>
-    int del(Args ... whereArgs) const {
-      auto stmt = this->stmtWithWhere(sqlBaseDelete, 0, 1, std::forward<Args>(whereArgs)...);
+    int del(Col col, Args&& ... whereArgs) const {
+      auto stmt = this->stmtWithWhere(sqlBaseDelete, 0, 1, col, std::forward<Args>(whereArgs)...);
 
       stmt.step();  // always suceeds; might throw, though
       return this->dbPtr->getRowsAffected();
@@ -433,7 +433,7 @@ namespace SqliteOverlay {
     //---------------------------------------------------------------
 
     template<typename ...Args>
-    bool updateObject(const IdType& id, Args ... columnValuePairs) const {
+    bool updateObject(const IdType& id, Args&& ... columnValuePairs) const {
       std::string sql = sqlBaseUpdate;
       recursiveUpdateBuilder_langStep(sql, 1, std::forward<Args>(columnValuePairs)...);
       sql += " WHERE " + std::string{AC::ColDefs[0].name} + "=";
@@ -454,7 +454,7 @@ namespace SqliteOverlay {
     //---------------------------------------------------------------
 
     template<class T, typename ...Args>
-    int updateColumn(Col col, T&& val, Args ... whereArgs) const {
+    int updateColumn(Col col, T&& val, Args&& ... whereArgs) const {
       std::string sql = sqlBaseUpdate;
       sql += this->colNameFromEnum(col) + "=?1";
       auto stmt = this->stmtWithWhere(sql, 0, 2, std::forward<Args>(whereArgs)...);
@@ -527,7 +527,7 @@ namespace SqliteOverlay {
 
     // Laufende Iteration mit  "Col = Val" und Nachfolgespalte
     template<class T, typename ...Args>
-    void recursiveUpdateBuilder_langStep(std::string& s, int nextParaIdx, Col col, T&& val, Args ... args) const {
+    void recursiveUpdateBuilder_langStep(std::string& s, int nextParaIdx, Col col, T&& val, Args&& ... args) const {
       static_assert (!std::is_same_v<T, Col>, "fehler");
       assert(col != Col::id);
 
@@ -546,7 +546,7 @@ namespace SqliteOverlay {
 
     // Laufende Iteration mit  "Col = Val" und Nachfolgespalte
     template<class T, typename ...Args>
-    void recursiveValueBinder(SqliteOverlay::SqlStatement& stmt, int nextParaIdx, Col col, T&& val, Args ... args) const {
+    void recursiveValueBinder(SqliteOverlay::SqlStatement& stmt, int nextParaIdx, Col col, T&& val, Args&& ... args) const {
       static_assert (!std::is_same_v<T, Col>, "fehler");
 
       if constexpr (std::is_same_v<T, std::nullopt_t> || std::is_same_v<T, std::nullopt_t&> || std::is_same_v<T, const std::nullopt_t&>) {
