@@ -33,7 +33,7 @@ namespace SqliteOverlay {
   template <class T>
   concept ViewAdapterClass =
       EnumType<typename T::Col> &&  // we need an enum with column names
-      std::is_same_v<decltype (T::nCols), const int> &&   // we the number of columns
+      std::is_same_v<decltype (T::nCols), const int> &&   // we need the number of columns
       std::is_same_v<decltype (T::TabName), const std::string_view> &&   // we need the name of the underlying SQLite table
       ConstStdArray<decltype (T::ColDefs), ColumnDescription, T::nCols> &&   // we need a list of column names
       std::is_same_v<decltype (T::FullSelectColList), const std::string_view> &&   // we need a comma-separated string of column names for SELECT, INSERT, ...
@@ -77,6 +77,7 @@ namespace SqliteOverlay {
   class GenericView {
   public:
     using Col = typename AC::Col;
+    static constexpr std::string_view TabName = AC::TabName;
 
     using DbObj = typename AC::DbObj;
     using ObjList = std::vector<DbObj>;
