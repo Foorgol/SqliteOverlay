@@ -142,6 +142,11 @@ namespace SqliteOverlay {
       return stmt2ObjectList(stmt);
     }
 
+    //-------------------------------------------------------------------------------------------------
+
+    static std::string colNameFromEnum(Col col) {
+      return std::string{AC::ColDefs[static_cast<int>(col)].name};
+    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -150,12 +155,6 @@ namespace SqliteOverlay {
     const std::string sqlBaseSelect;
     const std::string sqlCountAll;
     const std::string sqlCountWhere;
-
-    std::string colNameFromEnum(Col col) const {
-      return std::string{AC::ColDefs[static_cast<int>(col)].name};
-    }
-
-    //-------------------------------------------------------------------------------------------------
 
     /** \pre The parameters have been bound to the statement, but step()
      *  has not yet been called
